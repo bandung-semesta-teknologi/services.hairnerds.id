@@ -10,6 +10,8 @@ use App\Http\Requests\AuthResetPasswordRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -48,6 +50,8 @@ class AuthController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
+
+        event(new Registered($user));
 
         return response()->json(['message' => 'Registered Successfully'], 201);
     }
@@ -104,6 +108,18 @@ class AuthController extends Controller
         return $status === Password::PASSWORD_RESET
             ? response()->json(['message' => 'Password has been reset.'], 200)
             : response()->json(['message' => 'Invalid token or email.'], 400);
+    }
+
+    public function verifyEmail(EmailVerificationRequest $request)
+    {
+        $request->fulfill();
+        return response()->json(['message' => 'Email verified successfully'], 201);
+    }
+
+    public function resendEmail(Request $request)
+    {
+        $request->user()->sendEmailVerificationNotification();
+        return response()->json(['message' => 'Verification link sent!'], 200);
     }
 
     public function user(Request $request)

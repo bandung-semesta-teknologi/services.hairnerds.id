@@ -2,14 +2,19 @@
 
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\URL;
 
+use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\get;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\withHeader;
 
@@ -34,7 +39,7 @@ describe('restful api authentication flow', function () {
             'email' => 'check@example.com',
             'password' => 'password',
         ])
-            ->assertStatus(200)
+            ->assertOk()
             ->assertJsonStructure([
                 'token',
                 'token_expire_at',
@@ -59,7 +64,7 @@ describe('restful api authentication flow', function () {
         $refreshResponse = withHeader('Authorization', 'Bearer ' . $refreshToken)
             ->postJson('/api/refresh-token');
 
-        $refreshResponse->assertStatus(200)
+        $refreshResponse->assertOk()
             ->assertJsonStructure([
                 'token',
                 'token_expire_at',
@@ -80,7 +85,7 @@ describe('restful api authentication flow', function () {
         $logoutResponse = withHeader('Authorization', 'Bearer ' . $accessToken)
             ->postJson('/api/logout');
 
-        $logoutResponse->assertStatus(200)
+        $logoutResponse->assertOk()
             ->assertJson(['message' => 'Logout successfully']);
     });
 
@@ -113,5 +118,43 @@ describe('restful api authentication flow', function () {
         $response->assertOk();
         expect(Hash::check('new-password', $user->fresh()->password));
         Event::assertDispatched(PasswordReset::class);
+    });
+
+    it('email verification is sent after registration', function () {
+        Notification::fake();
+
+        $user = User::factory()->unverified()->create();
+        event(new Registered($user));
+
+        Notification::assertSentTo($user, VerifyEmail::class);
+    });
+
+    it('user verifying email via signed URL', function () {
+        $user = User::factory()->unverified()->create();
+
+        actingAs($user);
+
+        $url = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1($user->email)],
+        );
+
+        get($url)->assertRedirect();
+
+        expect($user->fresh()->email_verified_at)->not->toBeNull();
+    });
+
+    it('user can resend verification email', function () {
+        Notification::fake();
+
+        $user = User::factory()->unverified()->create();
+
+        $response = actingAs($user)
+            ->postJson('/api/email/verification-notification')
+            ->assertOk()
+            ->assertJson(['message' => 'Verification link sent!']);
+
+        Notification::assertSentTo($user, VerifyEmail::class);
     });
 });
