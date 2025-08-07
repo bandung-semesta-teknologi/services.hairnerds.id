@@ -3,17 +3,22 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\LoginRequest;
-use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\AuthForgotPasswordRequest;
+use App\Http\Requests\AuthLoginRequest;
+use App\Http\Requests\AuthRegisterRequest;
+use App\Http\Requests\AuthResetPasswordRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
-    public function login(LoginRequest $request)
+    public function login(AuthLoginRequest $request)
     {
         $user = User::where('email', $request->email)->first();
 
@@ -36,7 +41,7 @@ class AuthController extends Controller
         ], 200);
     }
 
-    public function register(RegisterRequest $request)
+    public function register(AuthRegisterRequest $request)
     {
         $user = User::create([
             'name' => $request->name,
@@ -76,14 +81,29 @@ class AuthController extends Controller
         ], 200);
     }
 
-    public function forgotPassword()
+    public function forgotPassword(AuthForgotPasswordRequest $request)
     {
-        return response()->json([], 200);
+        $status = Password::sendResetLink($request->only('email'));
+        return $status === Password::RESET_LINK_SENT
+            ? response()->json(['message' => 'Reset link sent to your email.'], 200)
+            : response()->json(['message' => 'Unable to send reset link.'], 400);
     }
 
-    public function resetPassword()
+    public function resetPassword(AuthResetPasswordRequest $request)
     {
-        return response()->json([], 200);
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password) {
+                $user->forceFill(['password' => Hash::make($password)])
+                    ->setRememberToken(Str::random(60));
+                $user->save();
+
+                event(new PasswordReset($user));
+            },
+        );
+        return $status === Password::PASSWORD_RESET
+            ? response()->json(['message' => 'Password has been reset.'], 200)
+            : response()->json(['message' => 'Invalid token or email.'], 400);
     }
 
     public function user(Request $request)
