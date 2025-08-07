@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Http\Resources\AuthResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Traits\ApiResponse;
@@ -16,21 +17,20 @@ class AuthController extends Controller
 {
     use ApiResponse;
 
-    public function login(LoginRequest $request): RedirectResponse
+    public function login(LoginRequest $request)
     {
         $user = User::firstWhere('email', $request->email);
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return RedirectResponse::json(['error' => 'Invalid credentials'], 401);
+            return response()->json(['error' => 'Invalid credentials'], 401);
         }
 
-        return RedirectResponse::json([
-            'token' => $user->createToken('auth_token')->plainTextToken,
-            'user' => new UserResource($user),
-        ], 200);
+        $user->tokens()->delete();
+
+        return response()->json(new AuthResource($user), 200);
     }
 
-    public function register(RegisterRequest $request): RedirectResponse
+    public function register(RegisterRequest $request)
     {
         $user = User::create([
             'name' => $request->name,
@@ -38,29 +38,41 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        return RedirectResponse::json([
-            'token' => $user->createToken('auth_token')->plainTextToken,
-            'user' => new UserResource($user),
-        ], 201);
+        return response()->json(new AuthResource($user), 201);
     }
 
-    public function logout(): RedirectResponse
+    public function logout(Request $request)
     {
-        return RedirectResponse::json([], 200);
+        $request->user()->tokens()->delete();
+        return response()->json(['message' => 'Logout successfully'], 200);
     }
 
-    public function forgotPassword(): RedirectResponse
+    public function refreshToken(Request $request)
     {
-        return RedirectResponse::json([], 200);
+        $refreshToken = $request->refreshToken();
+
+        if (!$refreshToken || !$refreshToken->can('refresh') || $refreshToken->expire_at->isPast()) {
+            return response()->json(['error' => 'Invalid or expired refresh token'], 401);
+        }
+
+        $user = $refreshToken->tokenable;
+        $refreshToken->delete();
+
+        return response()->json(new AuthResource($user), 200);
     }
 
-    public function resetPassword(): RedirectResponse
+    public function forgotPassword()
     {
-        return RedirectResponse::json([], 200);
+        return response()->json([], 200);
     }
 
-    public function user(): RedirectResponse
+    public function resetPassword()
     {
-        return RedirectResponse::json([], 200);
+        return response()->json([], 200);
+    }
+
+    public function user(Request $request)
+    {
+        return response()->json(new UserResource($request->user), 200);
     }
 }
