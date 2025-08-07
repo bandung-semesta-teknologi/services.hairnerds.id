@@ -26,5 +26,8 @@ jobs:
       - name: Generate APP_KEY
         run: php artisan key:generate
 
+      - name: Migrate Database
+        run: php artisan migrate --force
+
       - name: Tests
         run: ./vendor/bin/pest --ci
