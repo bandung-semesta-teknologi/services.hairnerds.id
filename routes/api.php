@@ -11,7 +11,9 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
+
     Route::get('/user', [AuthController::class, 'user']);
+    Route::put('/user', [AuthController::class, 'updateUser']);
 
     Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
     Route::post('/email/verification-notification', [AuthController::class, 'resendEmail'])->name('verification.send');

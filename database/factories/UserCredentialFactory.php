@@ -47,7 +47,7 @@ class UserCredentialFactory extends Factory
     {
         return $this->state(fn(array $attributes) => [
             'type' => 'phone',
-            'identifier' => fake()->phoneNumber(),
+            'identifier' => $attributes['identifier'] ?? fake()->phoneNumber(),
         ]);
     }
 

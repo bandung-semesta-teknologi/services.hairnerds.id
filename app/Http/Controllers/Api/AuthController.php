@@ -7,6 +7,7 @@ use App\Http\Requests\AuthForgotPasswordRequest;
 use App\Http\Requests\AuthLoginRequest;
 use App\Http\Requests\AuthRegisterRequest;
 use App\Http\Requests\AuthResetPasswordRequest;
+use App\Http\Requests\AuthUpdateRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Models\UserCredential;
@@ -57,12 +58,12 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $user->credentials()->create([
+        $user->userCredentials()->create([
             'type' => 'email',
             'identifier' => $user->email,
         ]);
 
-        $user->credentials()->create([
+        $user->userCredentials()->create([
             'type' => 'phone',
             'identifier' => $request->phone,
         ]);
@@ -130,7 +131,7 @@ class AuthController extends Controller
     {
         $request->fulfill();
 
-        $userCredential = $request->user()->credentials()->where([
+        $userCredential = $request->user()->userCredentials()->where([
             ['type', 'email'],
             ['identifier', $request->user()->email],
         ])->first();
@@ -149,5 +150,32 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         return response()->json(new UserResource($request->user), 200);
+    }
+
+    public function updateUser(AuthUpdateRequest $request)
+    {
+        $user = $request->user();
+
+        $user->update([
+            'name' => $request->name ?? $user->name,
+        ]);
+
+        $user->userProfile()->update([
+            'address' => $request->address ?? $user->userProfile->address,
+            'date_of_birth' => $request->date_of_birth ?? $user->userProfile->date_of_birth,
+        ]);
+
+        $status = 200;
+
+        if ($request->hasFile('avatar')) {
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->userProfile()->update(['avatar' => $path]);
+            $status = 204;
+        }
+
+        return response()->json([
+            'message' => 'User Profile updated successfully',
+            'user' => new UserResource($user),
+        ], $status);
     }
 }
