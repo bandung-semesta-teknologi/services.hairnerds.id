@@ -41,6 +41,11 @@ describe('restful api authentication flow', function () {
     it('user verifying email via signed URL', function () {
         $user = User::factory()->unverified()->create();
 
+        $userCredential = UserCredential::factory()->emailCredential()->unverified()->create([
+            'user_id' => $user->id,
+            'identifier' => $user->email,
+        ]);
+
         actingAs($user);
 
         $url = URL::temporarySignedRoute(
@@ -52,6 +57,7 @@ describe('restful api authentication flow', function () {
         get($url)->assertRedirect();
 
         expect($user->fresh()->email_verified_at)->not->toBeNull();
+        expect($userCredential->fresh()->verified_at)->not->toBeNull();
     });
 
     it('user can resend verification email', function () {

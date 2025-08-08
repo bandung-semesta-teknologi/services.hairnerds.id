@@ -129,6 +129,14 @@ class AuthController extends Controller
     public function verifyEmail(EmailVerificationRequest $request)
     {
         $request->fulfill();
+
+        $userCredential = $request->user()->userCredentials()->where([
+            ['type', 'email'],
+            ['identifier', $request->user()->email],
+        ])->first();
+
+        $userCredential->update(['verified_at' => now()]);
+
         return response()->json(['message' => 'Email verified successfully'], 201);
     }
 
