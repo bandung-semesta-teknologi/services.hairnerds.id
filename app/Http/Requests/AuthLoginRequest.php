@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\CredentialType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class AuthLoginRequest extends FormRequest
 {
@@ -21,9 +23,17 @@ class AuthLoginRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'email' => 'required|email',
-            'password' => 'required|string',
+        $type = $this->input('type');
+        $rules = [
+            'type' => ['required', Rule::enum(CredentialType::class)],
+            'identifier' => ['required', 'string'],
+            'password' => ['required', 'string'],
         ];
+
+        if ($type === CredentialType::Email->value) {
+            $rules['identifier'][] = 'email';
+        }
+
+        return $rules;
     }
 }

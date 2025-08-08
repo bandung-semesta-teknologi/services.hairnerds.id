@@ -9,6 +9,7 @@ use App\Http\Requests\AuthRegisterRequest;
 use App\Http\Requests\AuthResetPasswordRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Models\UserCredential;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -22,11 +23,16 @@ class AuthController extends Controller
 {
     public function login(AuthLoginRequest $request)
     {
-        $user = User::where('email', $request->email)->first();
+        $credential = UserCredential::where([
+            ['type', '=', $request->type],
+            ['identifier', '=', $request->identifier],
+        ])->firstOrFail();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$credential || !Hash::check($request->password, $credential->user->password)) {
             return response()->json(['error' => 'Invalid credentials'], 401);
         }
+
+        $user = $credential->user;
 
         $user->tokens()->delete();
 
@@ -49,6 +55,16 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+        ]);
+
+        $user->userCredentials()->create([
+            'type' => 'email',
+            'identifier' => $user->email,
+        ]);
+
+        $user->userCredentials()->create([
+            'type' => 'phone',
+            'identifier' => $request->phone,
         ]);
 
         event(new Registered($user));

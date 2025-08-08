@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Models\UserCredential;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -22,6 +23,7 @@ describe('restful api authentication flow', function () {
         postJson('/api/register', [
             'name' => 'John Doe',
             'email' => 'check@example.com',
+            'phone' => '6281234567890',
             'password' => 'password',
             'password_confirmation' => 'password',
         ])->assertStatus(201);
@@ -65,14 +67,33 @@ describe('restful api authentication flow', function () {
         Notification::assertSentTo($user, VerifyEmail::class);
     });
 
-    it('user can login and receive token', function () {
-        $user = User::factory()->create([
-            'name' => 'John Doe',
-            'email' => 'check@example.com',
-        ]);
+    it('user can login by email and receive token', function () {
+        $user = UserCredential::factory()->emailCredential()->create();
 
         postJson('/api/login', [
-            'email' => 'check@example.com',
+            'type' => 'email',
+            'identifier' => $user->identifier,
+            'password' => 'password',
+        ])
+            ->assertOk()
+            ->assertJsonStructure([
+                'token',
+                'token_expire_at',
+                'token_type',
+                'refresh_token',
+                'user' => [
+                    'name',
+                    'email',
+                ],
+            ]);
+    });
+
+    it('user can login by phone and receive token', function () {
+        $user = UserCredential::factory()->phoneCredential()->create();
+
+        postJson('/api/login', [
+            'type' => 'phone',
+            'identifier' => $user->identifier,
             'password' => 'password',
         ])
             ->assertOk()
@@ -89,9 +110,10 @@ describe('restful api authentication flow', function () {
     });
 
     it('user can refresh token', function () {
-        $user = User::factory()->create();
+        $user = UserCredential::factory()->emailCredential()->create();
         $loginResponse = postJson('/api/login', [
-            'email' => $user->email,
+            'type' => 'email',
+            'identifier' => $user->identifier,
             'password' => 'password',
         ]);
 
@@ -110,10 +132,11 @@ describe('restful api authentication flow', function () {
     });
 
     it('user can logout', function () {
-        $user = User::factory()->create();
+        $user = UserCredential::factory()->emailCredential()->create();
         $loginResponse = postJson('/api/login', [
-            'email' => $user->email,
-            'password' => 'password'
+            'type' => 'email',
+            'identifier' => $user->identifier,
+            'password' => 'password',
         ]);
 
         $accessToken = $loginResponse->json('token');
