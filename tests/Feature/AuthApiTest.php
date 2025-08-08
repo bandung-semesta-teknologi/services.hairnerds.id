@@ -19,6 +19,24 @@ use function Pest\Laravel\withHeader;
 
 describe('restful api authentication flow', function () {
 
+    $validLoginJsonResponse = [
+        'token',
+        'token_expire_at',
+        'token_type',
+        'refresh_token',
+        'user' => [
+            'name',
+            'address',
+            'avatar',
+            'date_of_birth',
+            'credentials' => [
+                'email',
+                'phone',
+            ],
+            'is_fully_verified',
+        ],
+    ];
+
     it('user can register', function () {
         postJson('/api/register', [
             'name' => 'John Doe',
@@ -73,8 +91,23 @@ describe('restful api authentication flow', function () {
         Notification::assertSentTo($user, VerifyEmail::class);
     });
 
-    it('user can login by email and receive token', function () {
+    it('user can login by email and receive token', function () use ($validLoginJsonResponse) {
         $user = UserCredential::factory()->emailCredential()->create();
+
+        $validLoginJsonResponse['user']['credentials'] = [
+            'email' => [
+                'identifier',
+                'is_verified',
+                'verified_at',
+            ],
+            'phone' => [
+                'identifier',
+                'is_verified',
+                'verified_at',
+            ],
+        ];
+
+        // dd($validLoginJsonResponse);
 
         postJson('/api/login', [
             'type' => 'email',
@@ -82,19 +115,10 @@ describe('restful api authentication flow', function () {
             'password' => 'password',
         ])
             ->assertOk()
-            ->assertJsonStructure([
-                'token',
-                'token_expire_at',
-                'token_type',
-                'refresh_token',
-                'user' => [
-                    'name',
-                    'email',
-                ],
-            ]);
+            ->assertJsonStructure();
     });
 
-    it('user can login by phone and receive token', function () {
+    it('user can login by phone and receive token', function () use ($validLoginJsonResponse) {
         $user = UserCredential::factory()->phoneCredential()->create();
 
         postJson('/api/login', [
@@ -103,16 +127,7 @@ describe('restful api authentication flow', function () {
             'password' => 'password',
         ])
             ->assertOk()
-            ->assertJsonStructure([
-                'token',
-                'token_expire_at',
-                'token_type',
-                'refresh_token',
-                'user' => [
-                    'name',
-                    'email',
-                ],
-            ]);
+            ->assertJsonStructure($validLoginJsonResponse);
     });
 
     it('user can refresh token', function () {

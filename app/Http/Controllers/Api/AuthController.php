@@ -57,12 +57,12 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $user->userCredentials()->create([
+        $user->credentials()->create([
             'type' => 'email',
             'identifier' => $user->email,
         ]);
 
-        $user->userCredentials()->create([
+        $user->credentials()->create([
             'type' => 'phone',
             'identifier' => $request->phone,
         ]);
@@ -130,7 +130,7 @@ class AuthController extends Controller
     {
         $request->fulfill();
 
-        $userCredential = $request->user()->userCredentials()->where([
+        $userCredential = $request->user()->credentials()->where([
             ['type', 'email'],
             ['identifier', $request->user()->email],
         ])->first();

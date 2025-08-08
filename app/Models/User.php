@@ -36,6 +36,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'remember_token',
     ];
 
+    protected $with = ['profile', 'credentials'];
+
     /**
      * Get the attributes that should be cast.
      *
@@ -49,12 +51,12 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
-    public function userCredentials(): HasMany
+    public function credentials(): HasMany
     {
         return $this->hasMany(UserCredential::class);
     }
 
-    public function userProfile(): HasOne
+    public function profile(): HasOne
     {
         return $this->hasOne(UserProfile::class);
     }
