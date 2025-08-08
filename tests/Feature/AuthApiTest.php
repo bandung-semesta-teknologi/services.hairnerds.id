@@ -191,19 +191,13 @@ describe('restful api authentication flow', function () {
             ->has(UserCredential::factory()->phoneCredential(['6281234567890']))
             ->create();
 
-        $res = postJson('/api/login', [
+        postJson('/api/login', [
             'type' => 'email',
             'identifier' => $verifiedUser->userCredentials()->firstWhere('type', 'email')->identifier,
             'password' => 'password',
-        ]);
-
-        $res->assertOk();
-
-        expect($res->json('user.is_fully_verified'))->toBeTrue();
-
-
-        // dd($res->status()/);
-        // ->assertJsonPath('user.is_fully_verified', true);
+        ])
+            ->assertOk()
+            ->assertJsonPath('user.is_fully_verified', true);
     });
 
     it('check if user is unverified', function () {
@@ -215,15 +209,13 @@ describe('restful api authentication flow', function () {
             'password_confirmation' => 'password',
         ])->assertStatus(201);
 
-        $res = postJson('/api/login', [
+        postJson('/api/login', [
             'type' => 'email',
             'identifier' => 'check@example.com',
             'password' => 'password',
-        ]);
-
-        $res->assertOk();
-
-        expect($res->json('user.is_fully_verified'))->not->toBeTrue();
+        ])
+            ->assertOk()
+            ->assertJsonPath('user.is_fully_verified', false);
     });
 
     it('user can update profile and upload avatar', function () {

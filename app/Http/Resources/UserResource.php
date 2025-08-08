@@ -23,7 +23,7 @@ class UserResource extends JsonResource
             'avatar' => optional($profile)->avatar,
             'date_of_birth' => optional($profile)->address,
             'credentials' => $credentials,
-            'is_fully_verified' => collect($credentials->resolve())->every(fn($c) => $c['is_verified']),
+            'is_fully_verified' => (bool) collect($credentials->resolve())->every(fn($c) => $c['is_verified']),
         ];
     }
 }
