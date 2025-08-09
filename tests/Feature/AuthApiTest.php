@@ -58,10 +58,11 @@ describe('restful api authentication flow', function () {
     it('user verifying email via signed URL', function () {
         $user = User::factory()->unverified()->create();
 
-        $userCredential = UserCredential::factory()->emailCredential()->unverified()->create([
-            'user_id' => $user->id,
-            'identifier' => $user->email,
-        ]);
+        $userCredential = UserCredential::factory()
+            ->for($user)
+            ->emailCredential($user->email)
+            ->unverified()
+            ->create();
 
         actingAs($user);
 
@@ -116,6 +117,7 @@ describe('restful api authentication flow', function () {
 
     it('user can refresh token', function () {
         $user = UserCredential::factory()->emailCredential()->create();
+
         $loginResponse = postJson('/api/login', [
             'type' => 'email',
             'identifier' => $user->identifier,
@@ -124,10 +126,9 @@ describe('restful api authentication flow', function () {
 
         $refreshToken = $loginResponse->json('refresh_token');
 
-        $refreshResponse = withHeader('Authorization', 'Bearer ' . $refreshToken)
-            ->postJson('/api/refresh-token');
-
-        $refreshResponse->assertOk()
+        withHeader('Authorization', 'Bearer ' . $refreshToken)
+            ->postJson('/api/refresh-token')
+            ->assertOk()
             ->assertJsonStructure([
                 'token',
                 'token_expire_at',
@@ -138,6 +139,7 @@ describe('restful api authentication flow', function () {
 
     it('user can logout', function () {
         $user = UserCredential::factory()->emailCredential()->create();
+
         $loginResponse = postJson('/api/login', [
             'type' => 'email',
             'identifier' => $user->identifier,
@@ -146,10 +148,9 @@ describe('restful api authentication flow', function () {
 
         $accessToken = $loginResponse->json('token');
 
-        $logoutResponse = withHeader('Authorization', 'Bearer ' . $accessToken)
-            ->postJson('/api/logout');
-
-        $logoutResponse->assertOk()
+        withHeader('Authorization', 'Bearer ' . $accessToken)
+            ->postJson('/api/logout')
+            ->assertOk()
             ->assertJson(['message' => 'Logout successfully']);
     });
 
@@ -188,7 +189,7 @@ describe('restful api authentication flow', function () {
         $verifiedUser = User::factory()
             ->has(UserProfile::factory())
             ->has(UserCredential::factory()->emailCredential())
-            ->has(UserCredential::factory()->phoneCredential(['6281234567890']))
+            ->has(UserCredential::factory()->phoneCredential('6281234567890'))
             ->create();
 
         postJson('/api/login', [

@@ -15,6 +15,7 @@ use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -27,7 +28,7 @@ class AuthController extends Controller
         $credential = UserCredential::where([
             ['type', '=', $request->type],
             ['identifier', '=', $request->identifier],
-        ])->firstOrFail();
+        ])->first();
 
         if (!$credential || !Hash::check($request->password, $credential->user->password)) {
             return response()->json(['error' => 'Invalid credentials'], 401);
@@ -52,25 +53,27 @@ class AuthController extends Controller
 
     public function register(AuthRegisterRequest $request)
     {
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        return DB::transaction(function () use ($request) {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
 
-        $user->userCredentials()->create([
-            'type' => 'email',
-            'identifier' => $user->email,
-        ]);
+            $user->userCredentials()->create([
+                'type' => 'email',
+                'identifier' => $user->email,
+            ]);
 
-        $user->userCredentials()->create([
-            'type' => 'phone',
-            'identifier' => $request->phone,
-        ]);
+            $user->userCredentials()->create([
+                'type' => 'phone',
+                'identifier' => $request->phone,
+            ]);
 
-        event(new Registered($user));
+            event(new Registered($user));
 
-        return response()->json(['message' => 'Registered Successfully'], 201);
+            return response()->json(['message' => 'Registered Successfully'], 201);
+        });
     }
 
     public function logout(Request $request)

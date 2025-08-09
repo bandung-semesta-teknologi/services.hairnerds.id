@@ -10,8 +10,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class UserCredentialFactory extends Factory
 {
-    protected static ?string $type;
-    protected static ?string $identifier;
     /**
      * Define the model's default state.
      *
@@ -21,8 +19,8 @@ class UserCredentialFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'type' => static::$type ??= 'email',
-            'identifier' => static::$identifier ??= fake()->safeEmail(),
+            'type' => 'email',
+            'identifier' => fake()->safeEmail(),
             'verified_at' => now(),
         ];
     }
@@ -30,12 +28,12 @@ class UserCredentialFactory extends Factory
     /**
      * Indicate that the model's credential use type of email credential.
      */
-    public function emailCredential(): static
+    public function emailCredential(?string $identifier = null): static
     {
-        return $this->state(function (array $attributes) {
+        return $this->state(function (array $attributes) use ($identifier) {
             return [
                 'type' => 'email',
-                'identifier' => $attributes['identifier'] ?? fake()->safeEmail(),
+                'identifier' => $identifier ?? fake()->unique()->safeEmail(),
             ];
         });
     }
@@ -43,12 +41,14 @@ class UserCredentialFactory extends Factory
     /**
      * Indicate that the model's credential use type of phone credential.
      */
-    public function phoneCredential(): static
+    public function phoneCredential(?string $identifier = null): static
     {
-        return $this->state(fn(array $attributes) => [
-            'type' => 'phone',
-            'identifier' => $attributes['identifier'] ?? fake()->phoneNumber(),
-        ]);
+        return $this->state(function (array $attributes) use ($identifier) {
+            return [
+                'type' => 'phone',
+                'identifier' => $identifier ?? fake()->unique()->phoneNumber(),
+            ];
+        });
     }
 
     /**

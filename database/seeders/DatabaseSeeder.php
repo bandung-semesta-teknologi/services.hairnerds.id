@@ -16,18 +16,14 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         User::factory(5)->create()->each(function ($user) {
-            UserProfile::factory()->create([
-                'user_id' => $user->id,
-            ]);
-
-            UserCredential::factory()->emailCredential()->create([
-                'user_id' => $user->id,
-                'identifier' => $user->email,
-            ]);
-
-            UserCredential::factory()->phoneCredential()->create([
-                'user_id' => $user->id,
-            ]);
+            UserProfile::factory()->for($user)->create();
+            UserCredential::factory()->for($user)->emailCredential($user->email)->create();
+            UserCredential::factory()->for($user)->phoneCredential()->create();
         });
+        // User::factory(5)
+        //     ->has(UserProfile::factory())
+        //     ->has(UserCredential::factory()->emailCredential())
+        //     ->has(UserCredential::factory()->phoneCredential())
+        //     ->create();
     }
 }
