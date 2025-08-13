@@ -25,5 +25,11 @@ class DatabaseSeeder extends Seeder
         //     ->has(UserCredential::factory()->emailCredential())
         //     ->has(UserCredential::factory()->phoneCredential())
         //     ->create();
+
+        $this->call([
+            CourseCategorySeeder::class,
+            CourseSeeder::class,
+            CourseFaqSeeder::class,
+        ]);
     }
 }
