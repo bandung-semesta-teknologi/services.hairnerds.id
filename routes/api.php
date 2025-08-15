@@ -20,8 +20,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
     Route::post('/email/verification-notification', [AuthController::class, 'resendEmail'])->name('verification.send');
+
+    Route::apiResource('course-categories', CourseCategoryController::class);
+    Route::apiResource('courses', CourseController::class);
+    Route::apiResource('courses-faqs', CourseFaqController::class);
 });
 
-Route::apiResource('course-categories', CourseCategoryController::class);
-Route::apiResource('courses', CourseController::class);
-Route::apiResource('courses-faqs', CourseFaqController::class);
