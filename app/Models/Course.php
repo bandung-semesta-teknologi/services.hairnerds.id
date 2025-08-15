@@ -56,6 +56,11 @@ class Course extends Model
         return $slug;
     }
 
+    public function scopePublished($query)
+    {
+        return $query->where('status', 'published');
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(CourseCategory::class, 'category_id');
