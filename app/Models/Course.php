@@ -43,4 +43,9 @@ class Course extends Model
     {
         return $this->hasMany(CourseFaq::class);
     }
+
+    public function sections()
+    {
+        return $this->hasMany(Section::class)->orderBy('sequence');
+    }
 }

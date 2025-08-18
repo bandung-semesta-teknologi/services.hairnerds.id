@@ -14,7 +14,7 @@ class CourseController extends Controller
     public function index(Request $request)
     {
         $courses = Course::query()
-            ->with(['categories', 'faqs'])
+            ->with(['categories', 'faqs', 'sections'])
             ->when($request->category_id, fn($q) => $q->whereHas('categories', fn($q) => $q->where('categories.id', $request->category_id)))
             ->when($request->level, fn($q) => $q->where('level', $request->level))
             ->when($request->search, fn($q) => $q->where('title', 'like', '%' . $request->search . '%'))
@@ -47,7 +47,7 @@ class CourseController extends Controller
 
     public function show(Course $course)
     {
-        $course->load(['categories', 'faqs']);
+        $course->load(['categories', 'faqs', 'sections']);
 
         return new CourseResource($course);
     }

@@ -47,6 +47,7 @@ describe('course crud api', function () {
                         'thumbnail',
                         'verified_at',
                         'faqs',
+                        'sections',
                         'created_at',
                         'updated_at',
                     ]
@@ -136,14 +137,15 @@ describe('course crud api', function () {
     });
 
     it('user can get single course with relationships', function () {
-        $course = Course::factory()->hasFaqs(3)->create();
+        $course = Course::factory()->hasFaqs(3)->hasSections(5)->create();
         $course->categories()->attach($this->categories->take(2)->pluck('id'));
 
         getJson("/api/courses/{$course->id}")
             ->assertOk()
             ->assertJsonPath('data.id', $course->id)
             ->assertJsonCount(2, 'data.categories')
-            ->assertJsonCount(3, 'data.faqs');
+            ->assertJsonCount(3, 'data.faqs')
+            ->assertJsonCount(5, 'data.sections');
     });
 
     it('returns 404 when course not found', function () {
