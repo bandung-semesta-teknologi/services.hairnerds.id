@@ -8,6 +8,7 @@ use App\Http\Requests\ReviewUpdateRequest;
 use App\Http\Resources\ReviewResource;
 use App\Models\Review;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ReviewController extends Controller
 {
@@ -27,10 +28,23 @@ class ReviewController extends Controller
 
     public function store(ReviewStoreRequest $request)
     {
-        $review = Review::create($request->validated());
-        $review->load(['course', 'user']);
+        try {
+            $review = Review::create($request->validated());
+            $review->load(['course', 'user']);
 
-        return new ReviewResource($review);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Review created successfully',
+                'data' => new ReviewResource($review)
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating review: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create review'
+            ], 500);
+        }
     }
 
     public function show(Review $review)
@@ -42,18 +56,41 @@ class ReviewController extends Controller
 
     public function update(ReviewUpdateRequest $request, Review $review)
     {
-        $review->update($request->validated());
-        $review->load(['course', 'user']);
+        try {
+            $review->update($request->validated());
+            $review->load(['course', 'user']);
 
-        return new ReviewResource($review);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Review updated successfully',
+                'data' => new ReviewResource($review)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating review: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update review'
+            ], 500);
+        }
     }
 
     public function destroy(Review $review)
     {
-        $review->delete();
+        try {
+            $review->delete();
 
-        return response()->json([
-            'message' => 'Review deleted successfully'
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Review deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error deleting review: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete review'
+            ], 500);
+        }
     }
 }

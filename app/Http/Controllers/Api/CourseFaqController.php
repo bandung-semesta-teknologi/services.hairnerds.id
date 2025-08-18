@@ -9,12 +9,10 @@ use App\Http\Resources\CourseFaqResource;
 use App\Models\Course;
 use App\Models\CourseFaq;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CourseFaqController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $faqs = CourseFaq::query()
@@ -25,20 +23,27 @@ class CourseFaqController extends Controller
         return CourseFaqResource::collection($faqs);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(CourseFaqStoreRequest $request)
     {
-        $faq = CourseFaq::create($request->validated());
-        $faq->load('course');
+        try {
+            $faq = CourseFaq::create($request->validated());
+            $faq->load('course');
 
-        return new CourseFaqResource($faq);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'FAQ created successfully',
+                'data' => new CourseFaqResource($faq)
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating FAQ: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create FAQ'
+            ], 500);
+        }
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(CourseFaq $coursesFaq)
     {
         $coursesFaq->load('course');
@@ -46,26 +51,43 @@ class CourseFaqController extends Controller
         return new CourseFaqResource($coursesFaq);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(CourseFaqUpdateRequest $request, CourseFaq $coursesFaq)
     {
-        $coursesFaq->update($request->validated());
-        $coursesFaq->load('course');
+        try {
+            $coursesFaq->update($request->validated());
+            $coursesFaq->load('course');
 
-        return new CourseFaqResource($coursesFaq);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'FAQ updated successfully',
+                'data' => new CourseFaqResource($coursesFaq)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating FAQ: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update FAQ'
+            ], 500);
+        }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(CourseFaq $coursesFaq)
     {
-        $coursesFaq->delete();
+        try {
+            $coursesFaq->delete();
 
-        return response()->json([
-            'message' => 'FAQ deleted successfully'
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'FAQ deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error deleting FAQ: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete FAQ'
+            ], 500);
+        }
     }
 }

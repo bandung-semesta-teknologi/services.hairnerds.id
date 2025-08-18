@@ -8,6 +8,7 @@ use App\Http\Requests\LessonUpdateRequest;
 use App\Http\Resources\LessonResource;
 use App\Models\Lesson;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class LessonController extends Controller
 {
@@ -26,10 +27,23 @@ class LessonController extends Controller
 
     public function store(LessonStoreRequest $request)
     {
-        $lesson = Lesson::create($request->validated());
-        $lesson->load(['section', 'course']);
+        try {
+            $lesson = Lesson::create($request->validated());
+            $lesson->load(['section', 'course']);
 
-        return new LessonResource($lesson);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Lesson created successfully',
+                'data' => new LessonResource($lesson)
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating lesson: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create lesson'
+            ], 500);
+        }
     }
 
     public function show(Lesson $lesson)
@@ -41,18 +55,41 @@ class LessonController extends Controller
 
     public function update(LessonUpdateRequest $request, Lesson $lesson)
     {
-        $lesson->update($request->validated());
-        $lesson->load(['section', 'course']);
+        try {
+            $lesson->update($request->validated());
+            $lesson->load(['section', 'course']);
 
-        return new LessonResource($lesson);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Lesson updated successfully',
+                'data' => new LessonResource($lesson)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating lesson: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update lesson'
+            ], 500);
+        }
     }
 
     public function destroy(Lesson $lesson)
     {
-        $lesson->delete();
+        try {
+            $lesson->delete();
 
-        return response()->json([
-            'message' => 'Lesson deleted successfully'
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Lesson deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error deleting lesson: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete lesson'
+            ], 500);
+        }
     }
 }

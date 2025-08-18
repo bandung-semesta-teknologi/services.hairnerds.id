@@ -8,6 +8,7 @@ use App\Http\Requests\SectionUpdateRequest;
 use App\Http\Resources\SectionResource;
 use App\Models\Section;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class SectionController extends Controller
 {
@@ -24,10 +25,23 @@ class SectionController extends Controller
 
     public function store(SectionStoreRequest $request)
     {
-        $section = Section::create($request->validated());
-        $section->load('course');
+        try {
+            $section = Section::create($request->validated());
+            $section->load('course');
 
-        return new SectionResource($section);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Section created successfully',
+                'data' => new SectionResource($section)
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating section: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create section'
+            ], 500);
+        }
     }
 
     public function show(Section $section)
@@ -39,18 +53,41 @@ class SectionController extends Controller
 
     public function update(SectionUpdateRequest $request, Section $section)
     {
-        $section->update($request->validated());
-        $section->load('course');
+        try {
+            $section->update($request->validated());
+            $section->load('course');
 
-        return new SectionResource($section);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Section updated successfully',
+                'data' => new SectionResource($section)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating section: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update section'
+            ], 500);
+        }
     }
 
     public function destroy(Section $section)
     {
-        $section->delete();
+        try {
+            $section->delete();
 
-        return response()->json([
-            'message' => 'Section deleted successfully'
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Section deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error deleting section: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete section'
+            ], 500);
+        }
     }
 }

@@ -8,6 +8,7 @@ use App\Http\Requests\CategoryUpdateRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CategoryController extends Controller
 {
@@ -20,9 +21,22 @@ class CategoryController extends Controller
 
     public function store(CategoryStoreRequest $request)
     {
-        $category = Category::create($request->validated());
+        try {
+            $category = Category::create($request->validated());
 
-        return new CategoryResource($category);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Category created successfully',
+                'data' => new CategoryResource($category)
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating category: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create category'
+            ], 500);
+        }
     }
 
     public function show(Category $category)
@@ -32,23 +46,47 @@ class CategoryController extends Controller
 
     public function update(CategoryUpdateRequest $request, Category $category)
     {
-        $category->update($request->validated());
+        try {
+            $category->update($request->validated());
 
-        return new CategoryResource($category);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Category updated successfully',
+                'data' => new CategoryResource($category)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating category: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update category'
+            ], 500);
+        }
     }
 
     public function destroy(Category $category)
     {
-        if ($category->courses()->exists()) {
+        try {
+            if ($category->courses()->exists()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Cannot delete category with existing courses'
+                ], 422);
+            }
+
+            $category->delete();
+
             return response()->json([
-                'message' => 'Cannot delete category with existing courses'
-            ], 422);
+                'status' => 'success',
+                'message' => 'Category deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error deleting category: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete category'
+            ], 500);
         }
-
-        $category->delete();
-
-        return response()->json([
-            'message' => 'Category deleted successfully'
-        ]);
     }
 }
