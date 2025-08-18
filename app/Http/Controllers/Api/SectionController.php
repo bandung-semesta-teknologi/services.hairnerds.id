@@ -14,7 +14,7 @@ class SectionController extends Controller
     public function index(Request $request)
     {
         $sections = Section::query()
-            ->with('course')
+            ->with(['course', 'lessons'])
             ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
             ->ordered()
             ->paginate($request->per_page ?? 15);
@@ -32,7 +32,7 @@ class SectionController extends Controller
 
     public function show(Section $section)
     {
-        $section->load('course');
+        $section->load(['course', 'lessons']);
 
         return new SectionResource($section);
     }

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\CourseFaqController;
+use App\Http\Controllers\Api\LessonController;
 use App\Http\Controllers\Api\SectionController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,4 +27,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('courses', CourseController::class);
     Route::apiResource('courses-faqs', CourseFaqController::class);
     Route::apiResource('sections', SectionController::class);
+    Route::apiResource('lessons', LessonController::class);
 });
