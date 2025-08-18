@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -16,57 +14,32 @@ class Course extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'enable_drip_content' => 'boolean',
-        'price' => 'decimal:2',
+        'verified_at' => 'datetime',
     ];
-
-    public function getRouteKeyName()
-    {
-        return 'slug';
-    }
 
     protected static function boot()
     {
         parent::boot();
 
         static::creating(function ($course) {
-            $course->slug = static::generateUniqueSlug($course->title);
+            if (empty($course->slug)) {
+                $course->slug = Str::slug($course->title);
+            }
         });
 
         static::updating(function ($course) {
             if ($course->isDirty('title')) {
-                $course->slug = static::generateUniqueSlug($course->title, $course->id);
+                $course->slug = Str::slug($course->title);
             }
         });
     }
 
-    protected static function generateUniqueSlug($title, $excludeId = null)
+    public function categories()
     {
-        $slug = Str::slug($title);
-        $originalSlug = $slug;
-        $counter = 1;
-
-        while (static::where('slug', $slug)
-            ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
-            ->exists()) {
-            $slug = $originalSlug . '-' . $counter;
-            $counter++;
-        }
-
-        return $slug;
+        return $this->belongsToMany(Category::class, 'course_categories');
     }
 
-    public function scopePublished($query)
-    {
-        return $query->where('status', 'published');
-    }
-
-    public function category(): BelongsTo
-    {
-        return $this->belongsTo(CourseCategory::class, 'category_id');
-    }
-
-    public function faqs(): HasMany
+    public function faqs()
     {
         return $this->hasMany(CourseFaq::class);
     }

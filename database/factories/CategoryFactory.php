@@ -2,12 +2,12 @@
 
 namespace Database\Factories;
 
-use App\Models\CourseCategory;
+use App\Models\Category;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class CourseCategoryFactory extends Factory
+class CategoryFactory extends Factory
 {
-    protected $model = CourseCategory::class;
+    protected $model = Category::class;
 
     public function definition(): array
     {
@@ -25,7 +25,7 @@ class CourseCategoryFactory extends Factory
         ];
 
         return [
-            'name' => $this->faker->randomElement($categories),
+            'name' => $this->faker->unique()->randomElement($categories),
         ];
     }
 }

@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Course;
-use App\Models\CourseCategory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class CourseFactory extends Factory
@@ -20,27 +19,28 @@ class CourseFactory extends Factory
             'Scissor Cutting Methods',
             'Clipper Techniques for Beginners',
             'Hair Color and Highlights',
+            'Modern Barbering Fundamentals',
+            'Classic Scissor Over Comb',
+            'Skin Fade Mastery Course'
         ];
 
         return [
-            'title' => $this->faker->randomElement($titles),
+            'title' => $this->faker->unique()->randomElement($titles),
             'short_description' => $this->faker->paragraph(2),
             'description' => $this->faker->paragraphs(3, true),
-            'what_will_learn' => implode('. ', $this->faker->sentences(4)),
-            'requirements' => implode('. ', $this->faker->sentences(2)),
-            'category_id' => $this->faker->numberBetween(1, 4),
-            'level' => $this->faker->randomElement(['beginner', 'intermediate', 'advanced']),
-            'language' => 'english',
-            'enable_drip_content' => $this->faker->boolean(),
-            'price' => $this->faker->randomFloat(2, 29.99, 199.99),
-            'status' => $this->faker->randomElement(['draft', 'published', 'archived']),
+            'requirements' => implode(', ', $this->faker->words(3)),
+            'level' => $this->faker->randomElement(['beginner', 'adv', 'interm']),
+            'lang' => $this->faker->randomElement(['english', 'indonesian', 'spanish']),
+            'price' => $this->faker->numberBetween(0, 199),
+            'thumbnail' => $this->faker->optional(0.7)->imageUrl(640, 480, 'education'),
+            'verified_at' => $this->faker->optional(0.7)->dateTimeBetween('-1 month', 'now'),
         ];
     }
 
-    public function published()
+    public function verified()
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'published',
+            'verified_at' => now(),
         ]);
     }
 
@@ -54,14 +54,14 @@ class CourseFactory extends Factory
     public function intermediate()
     {
         return $this->state(fn (array $attributes) => [
-            'level' => 'intermediate',
+            'level' => 'interm',
         ]);
     }
 
     public function advanced()
     {
         return $this->state(fn (array $attributes) => [
-            'level' => 'advanced',
+            'level' => 'adv',
         ]);
     }
 }

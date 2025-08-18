@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\CourseCategoryController;
+use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\CourseFaqController;
 use Illuminate\Support\Facades\Route;
@@ -21,8 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
     Route::post('/email/verification-notification', [AuthController::class, 'resendEmail'])->name('verification.send');
 
-    Route::apiResource('course-categories', CourseCategoryController::class);
+    Route::apiResource('categories', CategoryController::class);
     Route::apiResource('courses', CourseController::class);
     Route::apiResource('courses-faqs', CourseFaqController::class);
 });
-

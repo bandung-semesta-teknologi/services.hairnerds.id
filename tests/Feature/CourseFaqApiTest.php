@@ -1,7 +1,7 @@
 <?php
 
+use App\Models\Category;
 use App\Models\Course;
-use App\Models\CourseCategory;
 use App\Models\CourseFaq;
 use App\Models\User;
 use App\Models\UserCredential;
@@ -20,8 +20,9 @@ describe('course faq crud api', function () {
 
         actingAs($this->user);
 
-        $this->category = CourseCategory::factory()->create();
-        $this->course = Course::factory()->create(['category_id' => $this->category->id]);
+        $this->categories = Category::factory()->count(2)->create();
+        $this->course = Course::factory()->create();
+        $this->course->categories()->attach($this->categories->first()->id);
     });
 
     it('user can get all faqs with pagination', function () {
@@ -47,8 +48,11 @@ describe('course faq crud api', function () {
     });
 
     it('user can filter faqs by course', function () {
-        $course1 = Course::factory()->create(['category_id' => $this->category->id]);
-        $course2 = Course::factory()->create(['category_id' => $this->category->id]);
+        $course1 = Course::factory()->create();
+        $course2 = Course::factory()->create();
+
+        $course1->categories()->attach($this->categories->first()->id);
+        $course2->categories()->attach($this->categories->last()->id);
 
         CourseFaq::factory()->count(3)->create(['course_id' => $course1->id]);
         CourseFaq::factory()->count(2)->create(['course_id' => $course2->id]);

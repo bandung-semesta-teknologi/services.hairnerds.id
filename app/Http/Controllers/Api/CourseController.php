@@ -11,16 +11,12 @@ use Illuminate\Http\Request;
 
 class CourseController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $courses = Course::query()
-            ->with(['category', 'faqs'])
-            ->when($request->category_id, fn($q) => $q->where('category_id', $request->category_id))
+            ->with(['categories', 'faqs'])
+            ->when($request->category_id, fn($q) => $q->whereHas('categories', fn($q) => $q->where('categories.id', $request->category_id)))
             ->when($request->level, fn($q) => $q->where('level', $request->level))
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->when($request->search, fn($q) => $q->where('title', 'like', '%' . $request->search . '%'))
             ->latest()
             ->paginate($request->per_page ?? 15);
@@ -28,53 +24,55 @@ class CourseController extends Controller
         return CourseResource::collection($courses);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(CourseStoreRequest $request)
     {
         $data = $request->validated();
+        $categoryIds = $data['category_ids'] ?? [];
+        unset($data['category_ids']);
 
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail'] = $request->file('thumbnail')->store('courses/thumbnails', 'public');
         }
 
         $course = Course::create($data);
-        $course->load('category');
+
+        if (!empty($categoryIds)) {
+            $course->categories()->attach($categoryIds);
+        }
+
+        $course->load('categories');
 
         return new CourseResource($course);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Course $course)
     {
-        $course->load(['category', 'faqs']);
+        $course->load(['categories', 'faqs']);
 
         return new CourseResource($course);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(CourseUpdateRequest $request, Course $course)
     {
         $data = $request->validated();
+        $categoryIds = $data['category_ids'] ?? null;
+        unset($data['category_ids']);
 
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail'] = $request->file('thumbnail')->store('courses/thumbnails', 'public');
         }
 
         $course->update($data);
-        $course->load('category');
+
+        if ($categoryIds !== null) {
+            $course->categories()->sync($categoryIds);
+        }
+
+        $course->load('categories');
 
         return new CourseResource($course);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Course $course)
     {
         $course->delete();
