@@ -44,6 +44,7 @@ class DatabaseSeeder extends Seeder
             CourseFaqSeeder::class,
             SectionSeeder::class,
             LessonSeeder::class,
+            ReviewSeeder::class,
         ]);
     }
 }

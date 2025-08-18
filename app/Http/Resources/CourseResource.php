@@ -17,6 +17,7 @@ class CourseResource extends JsonResource
             'description' => $this->description,
             'requirements' => $this->requirements,
             'categories' => CategoryResource::collection($this->whenLoaded('categories')),
+            'instructors' => UserResource::collection($this->whenLoaded('instructors')),
             'level' => $this->level,
             'lang' => $this->lang,
             'price' => $this->price,
@@ -24,6 +25,18 @@ class CourseResource extends JsonResource
             'verified_at' => $this->verified_at,
             'faqs' => CourseFaqResource::collection($this->whenLoaded('faqs')),
             'sections' => SectionResource::collection($this->whenLoaded('sections')),
+            'reviews' => $this->when($this->relationLoaded('reviews'), function () {
+                return $this->reviews->map(function ($review) {
+                    return [
+                        'id' => $review->id,
+                        'user_id' => $review->user_id,
+                        'comments' => $review->comments,
+                        'rating' => $review->rating,
+                        'is_visible' => $review->is_visible,
+                        'created_at' => $review->created_at,
+                    ];
+                });
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

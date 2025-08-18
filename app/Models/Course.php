@@ -53,4 +53,14 @@ class Course extends Model
     {
         return $this->hasMany(Lesson::class)->orderBy('sequence');
     }
+
+    public function instructors()
+    {
+        return $this->belongsToMany(User::class, 'course_instructures');
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
 }

@@ -14,7 +14,7 @@ class CourseController extends Controller
     public function index(Request $request)
     {
         $courses = Course::query()
-            ->with(['categories', 'faqs', 'sections'])
+            ->with(['categories', 'faqs', 'sections', 'instructors', 'reviews'])
             ->when($request->category_id, fn($q) => $q->whereHas('categories', fn($q) => $q->where('categories.id', $request->category_id)))
             ->when($request->level, fn($q) => $q->where('level', $request->level))
             ->when($request->search, fn($q) => $q->where('title', 'like', '%' . $request->search . '%'))
@@ -28,7 +28,8 @@ class CourseController extends Controller
     {
         $data = $request->validated();
         $categoryIds = $data['category_ids'] ?? [];
-        unset($data['category_ids']);
+        $instructorIds = $data['instructor_ids'] ?? [];
+        unset($data['category_ids'], $data['instructor_ids']);
 
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail'] = $request->file('thumbnail')->store('courses/thumbnails', 'public');
@@ -40,14 +41,18 @@ class CourseController extends Controller
             $course->categories()->attach($categoryIds);
         }
 
-        $course->load('categories');
+        if (!empty($instructorIds)) {
+            $course->instructors()->attach($instructorIds);
+        }
+
+        $course->load(['categories', 'instructors']);
 
         return new CourseResource($course);
     }
 
     public function show(Course $course)
     {
-        $course->load(['categories', 'faqs', 'sections']);
+        $course->load(['categories', 'faqs', 'sections', 'instructors', 'reviews']);
 
         return new CourseResource($course);
     }
@@ -56,7 +61,8 @@ class CourseController extends Controller
     {
         $data = $request->validated();
         $categoryIds = $data['category_ids'] ?? null;
-        unset($data['category_ids']);
+        $instructorIds = $data['instructor_ids'] ?? null;
+        unset($data['category_ids'], $data['instructor_ids']);
 
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail'] = $request->file('thumbnail')->store('courses/thumbnails', 'public');
@@ -68,7 +74,11 @@ class CourseController extends Controller
             $course->categories()->sync($categoryIds);
         }
 
-        $course->load('categories');
+        if ($instructorIds !== null) {
+            $course->instructors()->sync($instructorIds);
+        }
+
+        $course->load(['categories', 'instructors']);
 
         return new CourseResource($course);
     }

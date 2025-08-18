@@ -21,6 +21,8 @@ class CourseUpdateRequest extends FormRequest
             'requirements' => 'nullable|string|max:255',
             'category_ids' => 'sometimes|array',
             'category_ids.*' => 'exists:categories,id',
+            'instructor_ids' => 'sometimes|array',
+            'instructor_ids.*' => 'exists:users,id',
             'level' => ['sometimes', 'required', Rule::in(['beginner', 'adv', 'interm'])],
             'lang' => 'sometimes|required|string|max:50',
             'price' => 'nullable|integer|min:0',

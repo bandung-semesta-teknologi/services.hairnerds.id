@@ -48,6 +48,8 @@ describe('course crud api', function () {
                         'verified_at',
                         'faqs',
                         'sections',
+                        'instructors',
+                        'reviews',
                         'created_at',
                         'updated_at',
                     ]
@@ -89,6 +91,7 @@ describe('course crud api', function () {
             'description' => 'Full description of the test course',
             'requirements' => 'Basic PHP knowledge',
             'category_ids' => [$this->categories->first()->id, $this->categories->last()->id],
+            'instructor_ids' => [User::factory()->create()->id],
             'level' => 'interm',
             'lang' => 'english',
             'price' => 99,
@@ -99,7 +102,8 @@ describe('course crud api', function () {
             ->assertCreated()
             ->assertJsonPath('data.title', 'Test Course')
             ->assertJsonPath('data.slug', 'test-course')
-            ->assertJsonCount(2, 'data.categories');
+            ->assertJsonCount(2, 'data.categories')
+            ->assertJsonCount(1, 'data.instructors');
 
         $this->assertDatabaseHas('courses', [
             'title' => 'Test Course',
@@ -115,6 +119,7 @@ describe('course crud api', function () {
         $courseData = [
             'title' => 'Course with Image',
             'category_ids' => [$this->categories->first()->id],
+            'instructor_ids' => [User::factory()->create()->id],
             'level' => 'beginner',
             'lang' => 'english',
             'thumbnail' => $file
