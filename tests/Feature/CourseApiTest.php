@@ -24,7 +24,8 @@ describe('course crud api', function () {
         $this->categories = Category::factory()->count(3)->create();
     });
 
-    it('user can get all courses with pagination', function () {
+    it('admin can get all courses with pagination', function () {
+        actingAs(User::factory()->create(['role' => 'admin']));
         Course::factory()->count(10)->create()->each(function ($course) {
             $course->categories()->attach($this->categories->random(2)->pluck('id'));
         });
@@ -59,7 +60,8 @@ describe('course crud api', function () {
             ]);
     });
 
-    it('user can filter courses by category', function () {
+    it('admin can filter courses by category', function () {
+        actingAs(User::factory()->create(['role' => 'admin']));
         $category1 = $this->categories->first();
         $category2 = $this->categories->last();
 
@@ -74,7 +76,8 @@ describe('course crud api', function () {
             ->assertJsonCount(3, 'data');
     });
 
-    it('user can search courses by title', function () {
+    it('admin can search courses by title', function () {
+        actingAs(User::factory()->create(['role' => 'admin']));
         Course::factory()->create(['title' => 'Laravel Advanced Course'])->categories()->attach($this->categories->first()->id);
         Course::factory()->create(['title' => 'Vue.js Basics'])->categories()->attach($this->categories->first()->id);
 
@@ -84,7 +87,8 @@ describe('course crud api', function () {
             ->assertJsonPath('data.0.title', 'Laravel Advanced Course');
     });
 
-    it('user can create course', function () {
+    it('instructor can create course', function () {
+        actingAs(User::factory()->create(['role' => 'instructor']));
         $courseData = [
             'title' => 'Test Course',
             'short_description' => 'This is a test course',
@@ -111,7 +115,8 @@ describe('course crud api', function () {
         ]);
     });
 
-    it('user can create course with thumbnail', function () {
+    it('instructor can create course with thumbnail', function () {
+        actingAs(User::factory()->create(['role' => 'instructor']));
         Storage::fake('public');
 
         $file = UploadedFile::fake()->image('thumbnail.jpg');
@@ -136,12 +141,14 @@ describe('course crud api', function () {
     });
 
     it('validates required fields when creating course', function () {
+        actingAs(User::factory()->create(['role' => 'instructor']));
         postJson('/api/courses', [])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['title', 'category_ids', 'level', 'lang']);
     });
 
-    it('user can get single course with relationships', function () {
+    it('admin can get single course with relationships', function () {
+        actingAs(User::factory()->create(['role' => 'admin']));
         $course = Course::factory()->hasFaqs(3)->hasSections(5)->create();
         $course->categories()->attach($this->categories->take(2)->pluck('id'));
 
@@ -154,11 +161,13 @@ describe('course crud api', function () {
     });
 
     it('returns 404 when course not found', function () {
+        actingAs(User::factory()->create(['role' => 'admin']));
         getJson('/api/courses/99999')
             ->assertNotFound();
     });
 
-    it('user can update course', function () {
+    it('instructor can update course', function () {
+        actingAs(User::factory()->create(['role' => 'instructor']));
         $course = Course::factory()->create();
         $course->categories()->attach($this->categories->first()->id);
 
@@ -182,7 +191,8 @@ describe('course crud api', function () {
         ]);
     });
 
-    it('user can update course categories', function () {
+    it('instructor can update course categories', function () {
+        actingAs(User::factory()->create(['role' => 'instructor']));
         $course = Course::factory()->create();
         $course->categories()->attach($this->categories->first()->id);
 
@@ -197,7 +207,8 @@ describe('course crud api', function () {
         expect($course->fresh()->categories()->count())->toBe(2);
     });
 
-    it('user can update course with new thumbnail', function () {
+    it('instructor can update course with new thumbnail', function () {
+        actingAs(User::factory()->create(['role' => 'instructor']));
         Storage::fake('public');
 
         $course = Course::factory()->create();
@@ -220,7 +231,8 @@ describe('course crud api', function () {
         Storage::disk('public')->assertExists($thumbnailPath);
     });
 
-    it('user can delete course', function () {
+    it('instructor can delete course', function () {
+        actingAs(User::factory()->create(['role' => 'instructor']));
         $course = Course::factory()->create();
         $course->categories()->attach($this->categories->first()->id);
 
@@ -232,11 +244,13 @@ describe('course crud api', function () {
     });
 
     it('returns 404 when deleting non-existent course', function () {
+        actingAs(User::factory()->create(['role' => 'instructor']));
         deleteJson('/api/courses/99999')
             ->assertNotFound();
     });
 
-    it('user can set custom per_page for pagination', function () {
+    it('admin can set custom per_page for pagination', function () {
+        actingAs(User::factory()->create(['role' => 'admin']));
         Course::factory()->count(10)->create()->each(function ($course) {
             $course->categories()->attach($this->categories->random()->id);
         });
@@ -247,6 +261,7 @@ describe('course crud api', function () {
     });
 
     it('orders courses by latest first', function () {
+        actingAs(User::factory()->create(['role' => 'admin']));
         $older = Course::factory()->create(['created_at' => now()->subDay()]);
         $newer = Course::factory()->create(['created_at' => now()]);
 

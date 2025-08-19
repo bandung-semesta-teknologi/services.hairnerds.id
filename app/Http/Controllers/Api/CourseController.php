@@ -12,6 +12,12 @@ use Illuminate\Support\Facades\Log;
 
 class CourseController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('role:admin')->only(['index', 'show']);
+        $this->middleware('role:instructor')->only(['store', 'update', 'destroy']);
+    }
+
     public function index(Request $request)
     {
         $courses = Course::query()

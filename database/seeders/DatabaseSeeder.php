@@ -54,6 +54,27 @@ class DatabaseSeeder extends Seeder
             'verified_at' => now(),
         ]);
 
+        $instructor2 = User::create([
+            'name' => 'Instructor 2',
+            'email' => 'instructor2@mail.com',
+            'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+            'role' => 'instructor',
+        ]);
+
+        UserProfile::create([
+            'user_id' => $instructor2->id,
+            'address' => '789 Instructor Road, Surabaya',
+            'date_of_birth' => '1988-08-20',
+        ]);
+
+        UserCredential::create([
+            'user_id' => $instructor2->id,
+            'type' => 'email',
+            'identifier' => $instructor2->email,
+            'verified_at' => now(),
+        ]);
+
         User::factory(5)->create()->each(function ($user) {
             UserProfile::factory()->for($user)->create();
             UserCredential::factory()->for($user)->emailCredential($user->email)->create();

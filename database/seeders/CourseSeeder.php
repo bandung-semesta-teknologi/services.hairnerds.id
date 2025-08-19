@@ -12,14 +12,17 @@ class CourseSeeder extends Seeder
     public function run(): void
     {
         $categories = Category::all();
-        $users = User::all();
+        $users = User::where('role', 'instructor')->get();
 
         if ($categories->isEmpty()) {
             $categories = Category::factory()->count(5)->create();
         }
 
         if ($users->isEmpty()) {
-            $users = User::factory()->count(10)->create();
+            $users = collect([
+                User::factory()->create(['role' => 'instructor']),
+                User::factory()->create(['role' => 'instructor']),
+            ]);
         }
 
         Course::factory()
@@ -30,7 +33,7 @@ class CourseSeeder extends Seeder
                 $randomCategories = $categories->random(rand(1, 3));
                 $course->categories()->attach($randomCategories->pluck('id'));
 
-                $randomInstructors = $users->random(rand(1, 2));
+                $randomInstructors = $users->random(min(2, $users->count()));
                 $course->instructors()->attach($randomInstructors->pluck('id'));
             });
     }
