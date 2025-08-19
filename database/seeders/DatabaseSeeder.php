@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@mail.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
+            'role' => 'admin',
         ]);
 
         UserProfile::create([
@@ -29,6 +30,27 @@ class DatabaseSeeder extends Seeder
             'user_id' => $admin->id,
             'type' => 'email',
             'identifier' => $admin->email,
+            'verified_at' => now(),
+        ]);
+
+        $instructor = User::create([
+            'name' => 'Instructor',
+            'email' => 'instructor@mail.com',
+            'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+            'role' => 'instructor',
+        ]);
+
+        UserProfile::create([
+            'user_id' => $instructor->id,
+            'address' => '456 Instructor Avenue, Bandung',
+            'date_of_birth' => '1985-05-15',
+        ]);
+
+        UserCredential::create([
+            'user_id' => $instructor->id,
+            'type' => 'email',
+            'identifier' => $instructor->email,
             'verified_at' => now(),
         ]);
 
