@@ -16,6 +16,10 @@ class AnswerBank extends Model
         'is_true' => 'boolean',
     ];
 
+    protected $attributes = [
+        'is_true' => false,
+    ];
+
     public function question()
     {
         return $this->belongsTo(Question::class);

@@ -12,6 +12,10 @@ class Question extends Model
 
     protected $guarded = ['id'];
 
+    protected $attributes = [
+        'score' => 0,
+    ];
+
     public function quiz()
     {
         return $this->belongsTo(Quiz::class);
