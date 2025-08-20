@@ -14,15 +14,17 @@ class CourseController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:admin,instructor')->except(['index', 'show']);;
+        $this->middleware('role:admin,instructor')->except(['index', 'show']);
     }
 
     public function index(Request $request)
     {
         $courses = Course::query()
             ->with(['categories', 'faqs', 'sections', 'instructors', 'reviews'])
+            ->when(!$this->isAdminOrInstructor($request), fn($q) => $q->published())
             ->when($request->category_id, fn($q) => $q->whereHas('categories', fn($q) => $q->where('categories.id', $request->category_id)))
             ->when($request->level, fn($q) => $q->where('level', $request->level))
+            ->when($request->status && $this->isAdminOrInstructor($request), fn($q) => $q->where('status', $request->status))
             ->when($request->search, fn($q) => $q->where('title', 'like', '%' . $request->search . '%'))
             ->latest()
             ->paginate($request->per_page ?? 15);
@@ -69,8 +71,15 @@ class CourseController extends Controller
         }
     }
 
-    public function show(Course $course)
+    public function show(Request $request, Course $course)
     {
+        if (!$this->isAdminOrInstructor($request) && $course->status !== 'published') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Course not found'
+            ], 404);
+        }
+
         $course->load(['categories', 'faqs', 'sections', 'instructors', 'reviews']);
 
         return new CourseResource($course);
@@ -132,5 +141,11 @@ class CourseController extends Controller
                 'message' => 'Failed to delete course'
             ], 500);
         }
+    }
+
+    private function isAdminOrInstructor(Request $request): bool
+    {
+        $user = $request->user();
+        return $user && in_array($user->role, ['admin', 'instructor']);
     }
 }

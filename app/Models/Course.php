@@ -17,6 +17,10 @@ class Course extends Model
         'verified_at' => 'datetime',
     ];
 
+    protected $attributes = [
+        'status' => 'draft',
+    ];
+
     protected static function boot()
     {
         parent::boot();
@@ -62,5 +66,25 @@ class Course extends Model
     public function reviews()
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function scopePublished($query)
+    {
+        return $query->where('status', 'published');
+    }
+
+    public function scopeDraft($query)
+    {
+        return $query->where('status', 'draft');
+    }
+
+    public function scopeNotPublished($query)
+    {
+        return $query->where('status', 'notpublished');
+    }
+
+    public function scopeTakedown($query)
+    {
+        return $query->where('status', 'takedown');
     }
 }

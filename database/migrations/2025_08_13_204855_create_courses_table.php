@@ -17,8 +17,9 @@ return new class extends Migration
             $table->longText('description')->nullable();
             $table->string('requirements')->nullable();
             $table->string('lang');
-            $table->enum('level', ['beginner', 'adv', 'interm'])->default('beginner');
+            $table->enum('level', ['beginner', 'intermediate', 'advanced'])->default('beginner');
             $table->integer('price')->default(0);
+            $table->enum('status', ['draft', 'notpublished', 'published', 'takedown'])->default('draft');
             $table->datetime('verified_at')->nullable();
             $table->timestamps();
             $table->softDeletes();

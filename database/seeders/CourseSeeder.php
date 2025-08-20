@@ -12,29 +12,46 @@ class CourseSeeder extends Seeder
     public function run(): void
     {
         $categories = Category::all();
-        $users = User::where('role', 'instructor')->get();
+        $instructors = User::where('role', 'instructor')->get();
 
         if ($categories->isEmpty()) {
             $categories = Category::factory()->count(5)->create();
         }
 
-        if ($users->isEmpty()) {
-            $users = collect([
-                User::factory()->create(['role' => 'instructor']),
-                User::factory()->create(['role' => 'instructor']),
-            ]);
+        if ($instructors->isEmpty()) {
+            $instructors = User::factory()->instructor()->count(3)->create();
         }
 
-        Course::factory()
-            ->count(10)
-            ->verified()
-            ->create()
-            ->each(function ($course) use ($categories, $users) {
-                $randomCategories = $categories->random(rand(1, 3));
-                $course->categories()->attach($randomCategories->pluck('id'));
+        $courses = collect();
 
-                $randomInstructors = $users->random(min(2, $users->count()));
-                $course->instructors()->attach($randomInstructors->pluck('id'));
-            });
+        $courses = $courses->merge(
+            Course::factory()->count(6)->published()->verified()->create()->each(function ($course) use ($categories, $instructors) {
+                $course->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
+                $course->instructors()->attach($instructors->random(rand(1, 2))->pluck('id'));
+            })
+        );
+
+        $courses = $courses->merge(
+            Course::factory()->count(1)->notpublished()->verified()->create()->each(function ($course) use ($categories, $instructors) {
+                $course->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
+                $course->instructors()->attach($instructors->random(rand(1, 2))->pluck('id'));
+            })
+        );
+
+        $courses = $courses->merge(
+            Course::factory()->count(2)->draft()->create([
+                'verified_at' => null
+            ])->each(function ($course) use ($categories, $instructors) {
+                $course->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
+                $course->instructors()->attach($instructors->random(rand(1, 2))->pluck('id'));
+            })
+        );
+
+        $courses = $courses->merge(
+            Course::factory()->count(1)->takedown()->verified()->create()->each(function ($course) use ($categories, $instructors) {
+                $course->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
+                $course->instructors()->attach($instructors->random(rand(1, 2))->pluck('id'));
+            })
+        );
     }
 }

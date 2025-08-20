@@ -22,13 +22,20 @@ describe('course crud api', function () {
         $this->categories = Category::factory()->count(3)->create();
     });
 
-    it('anyone can get all courses with pagination', function () {
-        Course::factory()->count(10)->create()->each(function ($course) {
+    it('public can only see published courses', function () {
+        Course::factory()->count(3)->published()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->random(2)->pluck('id'));
+        });
+        Course::factory()->count(2)->draft()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->random(2)->pluck('id'));
+        });
+        Course::factory()->count(1)->takedown()->create()->each(function ($course) {
             $course->categories()->attach($this->categories->random(2)->pluck('id'));
         });
 
         getJson('/api/courses')
             ->assertOk()
+            ->assertJsonCount(3, 'data')
             ->assertJsonStructure([
                 'data' => [
                     '*' => [
@@ -42,6 +49,7 @@ describe('course crud api', function () {
                         'level',
                         'lang',
                         'price',
+                        'status',
                         'thumbnail',
                         'verified_at',
                         'faqs',
@@ -57,12 +65,13 @@ describe('course crud api', function () {
             ]);
     });
 
-    it('anyone can filter courses by category', function () {
+    it('public can filter published courses by category', function () {
         $category1 = $this->categories->first();
         $category2 = $this->categories->last();
 
-        $courses1 = Course::factory()->count(3)->create();
-        $courses2 = Course::factory()->count(2)->create();
+        $courses1 = Course::factory()->count(3)->published()->create();
+        $courses2 = Course::factory()->count(2)->published()->create();
+        Course::factory()->count(2)->draft()->create();
 
         $courses1->each(fn($course) => $course->categories()->attach($category1->id));
         $courses2->each(fn($course) => $course->categories()->attach($category2->id));
@@ -72,9 +81,10 @@ describe('course crud api', function () {
             ->assertJsonCount(3, 'data');
     });
 
-    it('anyone can search courses by title', function () {
-        Course::factory()->create(['title' => 'Laravel Advanced Course'])->categories()->attach($this->categories->first()->id);
-        Course::factory()->create(['title' => 'Vue.js Basics'])->categories()->attach($this->categories->first()->id);
+    it('public can search published courses by title', function () {
+        Course::factory()->published()->create(['title' => 'Laravel Advanced Course'])->categories()->attach($this->categories->first()->id);
+        Course::factory()->published()->create(['title' => 'Vue.js Basics'])->categories()->attach($this->categories->first()->id);
+        Course::factory()->draft()->create(['title' => 'Laravel Draft Course'])->categories()->attach($this->categories->first()->id);
 
         getJson('/api/courses?search=Laravel')
             ->assertOk()
@@ -82,15 +92,122 @@ describe('course crud api', function () {
             ->assertJsonPath('data.0.title', 'Laravel Advanced Course');
     });
 
-    it('anyone can filter courses by level', function () {
-        Course::factory()->create(['level' => 'beginner'])->categories()->attach($this->categories->first()->id);
-        Course::factory()->create(['level' => 'adv'])->categories()->attach($this->categories->first()->id);
-        Course::factory()->create(['level' => 'interm'])->categories()->attach($this->categories->first()->id);
+    it('public can filter published courses by level', function () {
+        Course::factory()->published()->create(['level' => 'beginner'])->categories()->attach($this->categories->first()->id);
+        Course::factory()->published()->create(['level' => 'advanced'])->categories()->attach($this->categories->first()->id);
+        Course::factory()->published()->create(['level' => 'intermediate'])->categories()->attach($this->categories->first()->id);
+        Course::factory()->draft()->create(['level' => 'beginner'])->categories()->attach($this->categories->first()->id);
 
         getJson('/api/courses?level=beginner')
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.level', 'beginner');
+    });
+
+    it('public can get published course details', function () {
+        $course = Course::factory()->published()->create();
+        $course->categories()->attach($this->categories->take(2)->pluck('id'));
+
+        getJson("/api/courses/{$course->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $course->id)
+            ->assertJsonPath('data.status', 'published')
+            ->assertJsonCount(2, 'data.categories');
+    });
+
+    it('public cannot see draft course details', function () {
+        $draftCourse = Course::factory()->draft()->create();
+        $draftCourse->categories()->attach($this->categories->first()->id);
+
+        getJson("/api/courses/{$draftCourse->id}")
+            ->assertNotFound();
+    });
+
+    it('public cannot see takedown course details', function () {
+        $takedownCourse = Course::factory()->takedown()->create();
+        $takedownCourse->categories()->attach($this->categories->first()->id);
+
+        getJson("/api/courses/{$takedownCourse->id}")
+            ->assertNotFound();
+    });
+
+    it('returns 404 when course not found', function () {
+        getJson('/api/courses/99999')
+            ->assertNotFound();
+    });
+
+    it('admin can see all courses regardless of status', function () {
+        actingAs(User::factory()->admin()->create());
+
+        Course::factory()->count(2)->published()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+        Course::factory()->count(2)->draft()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+        Course::factory()->count(1)->takedown()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+
+        getJson('/api/courses')
+            ->assertOk()
+            ->assertJsonCount(5, 'data');
+    });
+
+    it('admin can filter courses by status', function () {
+        actingAs(User::factory()->admin()->create());
+
+        Course::factory()->count(2)->published()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+        Course::factory()->count(3)->draft()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+
+        getJson('/api/courses?status=draft')
+            ->assertOk()
+            ->assertJsonCount(3, 'data');
+
+        getJson('/api/courses?status=published')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+    });
+
+    it('admin can see draft course details', function () {
+        actingAs(User::factory()->admin()->create());
+
+        $draftCourse = Course::factory()->draft()->create();
+        $draftCourse->categories()->attach($this->categories->first()->id);
+
+        getJson("/api/courses/{$draftCourse->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'draft');
+    });
+
+    it('instructor can see all courses regardless of status', function () {
+        actingAs(User::factory()->instructor()->create());
+
+        Course::factory()->count(2)->published()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+        Course::factory()->count(2)->draft()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+
+        getJson('/api/courses')
+            ->assertOk()
+            ->assertJsonCount(4, 'data');
+    });
+
+    it('instructor can see draft course details', function () {
+        actingAs(User::factory()->instructor()->create());
+
+        $draftCourse = Course::factory()->draft()->create();
+        $draftCourse->categories()->attach($this->categories->first()->id);
+
+        getJson("/api/courses/{$draftCourse->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'draft');
     });
 
     it('student cannot create course', function () {
@@ -117,9 +234,10 @@ describe('course crud api', function () {
             'requirements' => 'Basic PHP knowledge',
             'category_ids' => [$this->categories->first()->id, $this->categories->last()->id],
             'instructor_ids' => [User::factory()->instructor()->create()->id],
-            'level' => 'interm',
+            'level' => 'intermediate',
             'lang' => 'english',
             'price' => 99,
+            'status' => 'published',
             'verified_at' => now()->toDateString()
         ];
 
@@ -127,12 +245,14 @@ describe('course crud api', function () {
             ->assertCreated()
             ->assertJsonPath('data.title', 'Test Course')
             ->assertJsonPath('data.slug', 'test-course')
+            ->assertJsonPath('data.status', 'published')
             ->assertJsonCount(2, 'data.categories')
             ->assertJsonCount(1, 'data.instructors');
 
         $this->assertDatabaseHas('courses', [
             'title' => 'Test Course',
-            'slug' => 'test-course'
+            'slug' => 'test-course',
+            'status' => 'published'
         ]);
     });
 
@@ -151,7 +271,23 @@ describe('course crud api', function () {
         postJson('/api/courses', $courseData)
             ->assertCreated()
             ->assertJsonPath('data.title', 'Instructor Course')
-            ->assertJsonPath('data.slug', 'instructor-course');
+            ->assertJsonPath('data.slug', 'instructor-course')
+            ->assertJsonPath('data.status', 'draft');
+    });
+
+    it('course defaults to draft status when not specified', function () {
+        actingAs(User::factory()->instructor()->create());
+
+        $courseData = [
+            'title' => 'Default Status Course',
+            'category_ids' => [$this->categories->first()->id],
+            'level' => 'beginner',
+            'lang' => 'english'
+        ];
+
+        postJson('/api/courses', $courseData)
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'draft');
     });
 
     it('instructor can create course with thumbnail', function () {
@@ -186,25 +322,26 @@ describe('course crud api', function () {
             ->assertJsonValidationErrors(['title', 'category_ids', 'level', 'lang']);
     });
 
-    it('anyone can get single course with relationships', function () {
-        $course = Course::factory()->create();
-        $course->categories()->attach($this->categories->take(2)->pluck('id'));
+    it('validates status enum when creating course', function () {
+        actingAs(User::factory()->instructor()->create());
 
-        getJson("/api/courses/{$course->id}")
-            ->assertOk()
-            ->assertJsonPath('data.id', $course->id)
-            ->assertJsonCount(2, 'data.categories');
-    });
+        $courseData = [
+            'title' => 'Test Course',
+            'category_ids' => [$this->categories->first()->id],
+            'level' => 'beginner',
+            'lang' => 'english',
+            'status' => 'invalid_status'
+        ];
 
-    it('returns 404 when course not found', function () {
-        getJson('/api/courses/99999')
-            ->assertNotFound();
+        postJson('/api/courses', $courseData)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['status']);
     });
 
     it('student cannot update course', function () {
         actingAs($this->user);
 
-        $course = Course::factory()->create();
+        $course = Course::factory()->published()->create();
 
         putJson("/api/courses/{$course->id}", ['title' => 'Updated Title'])
             ->assertForbidden();
@@ -213,50 +350,55 @@ describe('course crud api', function () {
     it('admin can update course', function () {
         actingAs(User::factory()->admin()->create());
 
-        $course = Course::factory()->create();
+        $course = Course::factory()->draft()->create();
         $course->categories()->attach($this->categories->first()->id);
 
         $updateData = [
             'title' => 'Updated Course Title',
             'short_description' => 'Updated description',
             'description' => 'Updated full description',
-            'price' => 149
+            'price' => 149,
+            'status' => 'published'
         ];
 
         putJson("/api/courses/{$course->id}", $updateData)
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated Course Title')
             ->assertJsonPath('data.slug', 'updated-course-title')
-            ->assertJsonPath('data.price', 149);
+            ->assertJsonPath('data.price', 149)
+            ->assertJsonPath('data.status', 'published');
 
         $this->assertDatabaseHas('courses', [
             'id' => $course->id,
             'title' => 'Updated Course Title',
-            'slug' => 'updated-course-title'
+            'slug' => 'updated-course-title',
+            'status' => 'published'
         ]);
     });
 
     it('instructor can update course', function () {
         actingAs(User::factory()->instructor()->create());
 
-        $course = Course::factory()->create();
+        $course = Course::factory()->draft()->create();
         $course->categories()->attach($this->categories->first()->id);
 
         $updateData = [
             'title' => 'Instructor Updated Course',
-            'price' => 199
+            'price' => 199,
+            'status' => 'published'
         ];
 
         putJson("/api/courses/{$course->id}", $updateData)
             ->assertOk()
             ->assertJsonPath('data.title', 'Instructor Updated Course')
-            ->assertJsonPath('data.price', 199);
+            ->assertJsonPath('data.price', 199)
+            ->assertJsonPath('data.status', 'published');
     });
 
     it('admin can update course categories', function () {
         actingAs(User::factory()->admin()->create());
 
-        $course = Course::factory()->create();
+        $course = Course::factory()->published()->create();
         $course->categories()->attach($this->categories->first()->id);
 
         $updateData = [
@@ -274,7 +416,7 @@ describe('course crud api', function () {
         actingAs(User::factory()->instructor()->create());
         Storage::fake('public');
 
-        $course = Course::factory()->create();
+        $course = Course::factory()->draft()->create();
         $course->categories()->attach($this->categories->first()->id);
 
         $file = UploadedFile::fake()->image('new-thumbnail.jpg');
@@ -294,10 +436,20 @@ describe('course crud api', function () {
         Storage::disk('public')->assertExists($thumbnailPath);
     });
 
+    it('validates status enum when updating course', function () {
+        actingAs(User::factory()->instructor()->create());
+
+        $course = Course::factory()->draft()->create();
+
+        putJson("/api/courses/{$course->id}", ['status' => 'invalid_status'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['status']);
+    });
+
     it('student cannot delete course', function () {
         actingAs($this->user);
 
-        $course = Course::factory()->create();
+        $course = Course::factory()->published()->create();
 
         deleteJson("/api/courses/{$course->id}")
             ->assertForbidden();
@@ -306,7 +458,7 @@ describe('course crud api', function () {
     it('admin can delete course', function () {
         actingAs(User::factory()->admin()->create());
 
-        $course = Course::factory()->create();
+        $course = Course::factory()->published()->create();
         $course->categories()->attach($this->categories->first()->id);
 
         deleteJson("/api/courses/{$course->id}")
@@ -319,7 +471,7 @@ describe('course crud api', function () {
     it('instructor can delete course', function () {
         actingAs(User::factory()->instructor()->create());
 
-        $course = Course::factory()->create();
+        $course = Course::factory()->draft()->create();
         $course->categories()->attach($this->categories->first()->id);
 
         deleteJson("/api/courses/{$course->id}")
@@ -336,8 +488,8 @@ describe('course crud api', function () {
             ->assertNotFound();
     });
 
-    it('anyone can set custom per_page for pagination', function () {
-        Course::factory()->count(10)->create()->each(function ($course) {
+    it('public can set custom per_page for pagination', function () {
+        Course::factory()->count(10)->published()->create()->each(function ($course) {
             $course->categories()->attach($this->categories->random()->id);
         });
 
@@ -347,8 +499,8 @@ describe('course crud api', function () {
     });
 
     it('orders courses by latest first', function () {
-        $older = Course::factory()->create(['created_at' => now()->subDay()]);
-        $newer = Course::factory()->create(['created_at' => now()]);
+        $older = Course::factory()->published()->create(['created_at' => now()->subDay()]);
+        $newer = Course::factory()->published()->create(['created_at' => now()]);
 
         $older->categories()->attach($this->categories->first()->id);
         $newer->categories()->attach($this->categories->first()->id);
@@ -360,7 +512,7 @@ describe('course crud api', function () {
     });
 
     it('loads all required relationships on index', function () {
-        $course = Course::factory()->create();
+        $course = Course::factory()->published()->create();
         $course->categories()->attach($this->categories->first()->id);
 
         getJson('/api/courses')
@@ -379,7 +531,7 @@ describe('course crud api', function () {
     });
 
     it('loads all required relationships on show', function () {
-        $course = Course::factory()->create();
+        $course = Course::factory()->published()->create();
         $course->categories()->attach($this->categories->first()->id);
 
         getJson("/api/courses/{$course->id}")
@@ -391,6 +543,20 @@ describe('course crud api', function () {
                     'sections',
                     'instructors',
                     'reviews'
+                ]
+            ]);
+    });
+
+    it('includes status field in response', function () {
+        $course = Course::factory()->published()->create();
+        $course->categories()->attach($this->categories->first()->id);
+
+        getJson("/api/courses/{$course->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'published')
+            ->assertJsonStructure([
+                'data' => [
+                    'status'
                 ]
             ]);
     });
