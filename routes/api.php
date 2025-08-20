@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AnswerBankController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CourseController;
@@ -33,5 +34,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('lessons', LessonController::class);
     Route::apiResource('quizzes', QuizController::class);
     Route::apiResource('questions', QuestionController::class);
+    Route::apiResource('answer-banks', AnswerBankController::class);
     Route::apiResource('reviews', ReviewController::class);
 });

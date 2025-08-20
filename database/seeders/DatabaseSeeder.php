@@ -88,6 +88,9 @@ class DatabaseSeeder extends Seeder
             SectionSeeder::class,
             LessonSeeder::class,
             ReviewSeeder::class,
+            QuizSeeder::class,
+            QuestionSeeder::class,
+            AnswerBankSeeder::class,
         ]);
     }
 }

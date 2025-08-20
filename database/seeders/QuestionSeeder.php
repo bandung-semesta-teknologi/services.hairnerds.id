@@ -21,7 +21,7 @@ class QuestionSeeder extends Seeder
             $types = ['single_choice', 'multiple_choice', 'fill_blank'];
 
             for ($i = 0; $i < $questionCount; $i++) {
-                $selectedType = $this->faker->randomElement($types);
+                $selectedType = $this->faker()->randomElement($types);
 
                 Question::factory()->create([
                     'quiz_id' => $quiz->id,
