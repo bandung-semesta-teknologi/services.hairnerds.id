@@ -14,8 +14,7 @@ class CourseController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:admin')->only(['index', 'show']);
-        $this->middleware('role:instructor')->only(['store', 'update', 'destroy']);
+        $this->middleware('role:admin,instructor')->except(['index', 'show']);;
     }
 
     public function index(Request $request)
