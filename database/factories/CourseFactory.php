@@ -32,7 +32,7 @@ class CourseFactory extends Factory
             'level' => $this->faker->randomElement(['beginner', 'intermediate', 'advanced']),
             'lang' => $this->faker->randomElement(['english', 'indonesian', 'spanish']),
             'price' => $this->faker->numberBetween(0, 9999999),
-            'status' => $this->faker->randomElement(['draft', 'notpublished', 'published', 'takedown']),
+            'status' => $this->faker->randomElement(['draft', 'rejected', 'notpublished', 'published', 'takedown']),
             'thumbnail' => $this->faker->optional(0.7)->imageUrl(640, 480, 'education'),
             'verified_at' => null,
         ];
@@ -91,6 +91,13 @@ class CourseFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'level' => 'advanced',
+        ]);
+    }
+
+    public function rejected()
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'rejected',
         ]);
     }
 }

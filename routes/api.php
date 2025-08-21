@@ -31,9 +31,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/email/verification-notification', [AuthController::class, 'resendEmail'])->name('verification.send');
 
     Route::apiResource('categories', CategoryController::class);
+
     Route::post('/courses', [CourseController::class, 'store']);
     Route::put('/courses/{course}', [CourseController::class, 'update']);
     Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
+    Route::post('/courses/{course}/verify', [CourseController::class, 'verify']);
+    Route::post('/courses/{course}/reject', [CourseController::class, 'reject']);
+
     Route::apiResource('courses-faqs', CourseFaqController::class);
     Route::apiResource('sections', SectionController::class);
     Route::apiResource('lessons', LessonController::class);

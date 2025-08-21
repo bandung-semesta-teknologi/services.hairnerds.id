@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('lang');
             $table->enum('level', ['beginner', 'intermediate', 'advanced'])->default('beginner');
             $table->integer('price')->default(0);
-            $table->enum('status', ['draft', 'notpublished', 'published', 'takedown'])->default('draft');
+            $table->enum('status', ['draft', 'rejected', 'notpublished', 'published', 'takedown'])->default('draft');
             $table->datetime('verified_at')->nullable();
             $table->timestamps();
             $table->softDeletes();

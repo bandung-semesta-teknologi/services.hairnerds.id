@@ -87,4 +87,9 @@ class Course extends Model
     {
         return $query->where('status', 'takedown');
     }
+
+    public function scopeRejected($query)
+    {
+        return $query->where('status', 'rejected');
+    }
 }

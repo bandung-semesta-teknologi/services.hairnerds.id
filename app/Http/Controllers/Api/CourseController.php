@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CourseStoreRequest;
 use App\Http\Requests\CourseUpdateRequest;
+use App\Http\Requests\CourseVerificationRequest;
 use App\Http\Resources\CourseResource;
 use App\Models\Course;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ class CourseController extends Controller
     public function __construct()
     {
         $this->middleware('role:admin,instructor')->except(['index', 'show']);
+        $this->middleware('role:admin')->only(['verify', 'reject']);
     }
 
     public function index(Request $request)
@@ -97,6 +99,11 @@ class CourseController extends Controller
                 $data['thumbnail'] = $request->file('thumbnail')->store('courses/thumbnails', 'public');
             }
 
+            if ($course->status === 'rejected' && !isset($data['status'])) {
+                $data['status'] = 'draft';
+                $data['verified_at'] = null;
+            }
+
             $course->update($data);
 
             if ($categoryIds !== null) {
@@ -120,6 +127,70 @@ class CourseController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to update course'
+            ], 500);
+        }
+    }
+
+    public function verify(CourseVerificationRequest $request, Course $course)
+    {
+        try {
+            if ($course->status !== 'draft') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Only draft courses can be verified'
+                ], 422);
+            }
+
+            $course->update([
+                'status' => $request->status,
+                'verified_at' => now(),
+            ]);
+
+            $course->load(['categories', 'instructors']);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Course verified successfully',
+                'data' => new CourseResource($course)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error verifying course: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to verify course'
+            ], 500);
+        }
+    }
+
+    public function reject(Request $request, Course $course)
+    {
+        try {
+            if ($course->status !== 'draft') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Only draft courses can be rejected'
+                ], 422);
+            }
+
+            $course->update([
+                'status' => 'rejected',
+                'verified_at' => now(),
+            ]);
+
+            $course->load(['categories', 'instructors']);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Course rejected successfully',
+                'data' => new CourseResource($course)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error rejecting course: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to reject course'
             ], 500);
         }
     }

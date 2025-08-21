@@ -560,4 +560,154 @@ describe('course crud api', function () {
                 ]
             ]);
     });
+
+    it('admin can verify draft course to published', function () {
+        actingAs(User::factory()->admin()->create());
+
+        $draftCourse = Course::factory()->draft()->create(['verified_at' => null]);
+
+        postJson("/api/courses/{$draftCourse->id}/verify", [
+            'status' => 'published',
+            'notes' => 'Course looks good'
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'published')
+            ->assertJsonPath('message', 'Course verified successfully');
+
+        $this->assertDatabaseHas('courses', [
+            'id' => $draftCourse->id,
+            'status' => 'published'
+        ]);
+
+        expect($draftCourse->fresh()->verified_at)->not()->toBeNull();
+    });
+
+    it('admin can verify draft course to notpublished', function () {
+        actingAs(User::factory()->admin()->create());
+
+        $draftCourse = Course::factory()->draft()->create(['verified_at' => null]);
+
+        postJson("/api/courses/{$draftCourse->id}/verify", [
+            'status' => 'notpublished'
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'notpublished');
+    });
+
+    it('admin can reject draft course', function () {
+        actingAs(User::factory()->admin()->create());
+
+        $draftCourse = Course::factory()->draft()->create(['verified_at' => null]);
+
+        postJson("/api/courses/{$draftCourse->id}/reject")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'rejected')
+            ->assertJsonPath('message', 'Course rejected successfully');
+
+        $this->assertDatabaseHas('courses', [
+            'id' => $draftCourse->id,
+            'status' => 'rejected'
+        ]);
+
+        expect($draftCourse->fresh()->verified_at)->not()->toBeNull();
+    });
+
+    it('instructor cannot verify course', function () {
+        actingAs(User::factory()->instructor()->create());
+
+        $draftCourse = Course::factory()->draft()->create();
+
+        postJson("/api/courses/{$draftCourse->id}/verify", [
+            'status' => 'published'
+        ])
+            ->assertForbidden();
+    });
+
+    it('instructor cannot reject course', function () {
+        actingAs(User::factory()->instructor()->create());
+
+        $draftCourse = Course::factory()->draft()->create();
+
+        postJson("/api/courses/{$draftCourse->id}/reject")
+            ->assertForbidden();
+    });
+
+    it('cannot verify non-draft course', function () {
+        actingAs(User::factory()->admin()->create());
+
+        $publishedCourse = Course::factory()->published()->create();
+
+        postJson("/api/courses/{$publishedCourse->id}/verify", [
+            'status' => 'published'
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Only draft courses can be verified');
+    });
+
+    it('cannot reject non-draft course', function () {
+        actingAs(User::factory()->admin()->create());
+
+        $publishedCourse = Course::factory()->published()->create();
+
+        postJson("/api/courses/{$publishedCourse->id}/reject")
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Only draft courses can be rejected');
+    });
+
+    it('instructor editing rejected course resets to draft', function () {
+        actingAs(User::factory()->instructor()->create());
+
+        $rejectedCourse = Course::factory()->rejected()->verified()->create();
+
+        putJson("/api/courses/{$rejectedCourse->id}", [
+            'title' => 'Updated Rejected Course'
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'draft')
+            ->assertJsonPath('data.title', 'Updated Rejected Course');
+
+        $fresh = $rejectedCourse->fresh();
+        expect($fresh->status)->toBe('draft');
+        expect($fresh->verified_at)->toBeNull();
+    });
+
+    it('validates verification request', function () {
+        actingAs(User::factory()->admin()->create());
+
+        $draftCourse = Course::factory()->draft()->create();
+
+        postJson("/api/courses/{$draftCourse->id}/verify", [
+            'status' => 'invalid_status'
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['status']);
+    });
+
+    it('public cannot see rejected courses', function () {
+        Course::factory()->count(2)->published()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+        Course::factory()->count(1)->rejected()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+
+        getJson('/api/courses')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+    });
+
+    it('admin can see rejected courses', function () {
+        actingAs(User::factory()->admin()->create());
+
+        Course::factory()->count(1)->published()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+        Course::factory()->count(1)->rejected()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+
+        getJson('/api/courses')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+    });
 });
