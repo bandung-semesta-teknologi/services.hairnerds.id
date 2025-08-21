@@ -70,6 +70,16 @@ class Course extends Model
         return $this->hasMany(Review::class);
     }
 
+    public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class);
+    }
+
+    public function progress()
+    {
+        return $this->hasMany(Progress::class);
+    }
+
     public function scopePublished($query)
     {
         return $query->where('status', 'published');
