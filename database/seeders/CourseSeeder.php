@@ -32,6 +32,13 @@ class CourseSeeder extends Seeder
         );
 
         $courses = $courses->merge(
+            Course::factory()->count(2)->published()->verified()->highlight()->create()->each(function ($course) use ($categories, $instructors) {
+                $course->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
+                $course->instructors()->attach($instructors->random(rand(1, 2))->pluck('id'));
+            })
+        );
+
+        $courses = $courses->merge(
             Course::factory()->count(1)->notpublished()->verified()->create()->each(function ($course) use ($categories, $instructors) {
                 $course->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
                 $course->instructors()->attach($instructors->random(rand(1, 2))->pluck('id'));

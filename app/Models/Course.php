@@ -15,10 +15,12 @@ class Course extends Model
 
     protected $casts = [
         'verified_at' => 'datetime',
+        'is_highlight' => 'boolean',
     ];
 
     protected $attributes = [
         'status' => 'draft',
+        'is_highlight' => false,
     ];
 
     protected static function boot()
@@ -91,5 +93,10 @@ class Course extends Model
     public function scopeRejected($query)
     {
         return $query->where('status', 'rejected');
+    }
+
+    public function scopeHighlight($query)
+    {
+        return $query->where('is_highlight', true);
     }
 }

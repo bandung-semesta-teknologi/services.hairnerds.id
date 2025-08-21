@@ -26,6 +26,7 @@ class CourseController extends Controller
             ->when(!$this->isAdminOrInstructor($request), fn($q) => $q->published())
             ->when($request->category_id, fn($q) => $q->whereHas('categories', fn($q) => $q->where('categories.id', $request->category_id)))
             ->when($request->level, fn($q) => $q->where('level', $request->level))
+            ->when($request->is_highlight !== null, fn($q) => $q->where('is_highlight', $request->boolean('is_highlight')))
             ->when($request->status && $this->isAdminOrInstructor($request), fn($q) => $q->where('status', $request->status))
             ->when($request->search, fn($q) => $q->where('title', 'like', '%' . $request->search . '%'))
             ->latest()

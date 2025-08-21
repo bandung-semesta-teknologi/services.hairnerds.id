@@ -21,6 +21,7 @@ class CourseResource extends JsonResource
             'level' => $this->level,
             'lang' => $this->lang,
             'price' => $this->price,
+            'is_highlight' => $this->is_highlight,
             'status' => $this->status,
             'thumbnail' => $this->thumbnail,
             'verified_at' => $this->verified_at,

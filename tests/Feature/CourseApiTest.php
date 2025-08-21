@@ -49,6 +49,7 @@ describe('course crud api', function () {
                         'level',
                         'lang',
                         'price',
+                        'is_highlight',
                         'status',
                         'thumbnail',
                         'verified_at',
@@ -102,6 +103,21 @@ describe('course crud api', function () {
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.level', 'beginner');
+    });
+
+    it('public can filter published courses by highlight status', function () {
+        Course::factory()->published()->highlight()->create()->categories()->attach($this->categories->first()->id);
+        Course::factory()->published()->highlight()->create()->categories()->attach($this->categories->first()->id);
+        Course::factory()->published()->notHighlight()->create()->categories()->attach($this->categories->first()->id);
+        Course::factory()->draft()->highlight()->create()->categories()->attach($this->categories->first()->id);
+
+        getJson('/api/courses?is_highlight=1')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+
+        getJson('/api/courses?is_highlight=0')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
     });
 
     it('public can get published course details', function () {
@@ -173,6 +189,28 @@ describe('course crud api', function () {
             ->assertJsonCount(2, 'data');
     });
 
+    it('admin can filter courses by highlight status', function () {
+        actingAs(User::factory()->admin()->create());
+
+        Course::factory()->count(2)->published()->highlight()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+        Course::factory()->count(1)->draft()->highlight()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+        Course::factory()->count(2)->published()->notHighlight()->create()->each(function ($course) {
+            $course->categories()->attach($this->categories->first()->id);
+        });
+
+        getJson('/api/courses?is_highlight=1')
+            ->assertOk()
+            ->assertJsonCount(3, 'data');
+
+        getJson('/api/courses?is_highlight=0')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+    });
+
     it('admin can see draft course details', function () {
         actingAs(User::factory()->admin()->create());
 
@@ -237,6 +275,7 @@ describe('course crud api', function () {
             'level' => 'intermediate',
             'lang' => 'english',
             'price' => 99,
+            'is_highlight' => true,
             'status' => 'published',
             'verified_at' => now()->toDateString()
         ];
@@ -245,6 +284,7 @@ describe('course crud api', function () {
             ->assertCreated()
             ->assertJsonPath('data.title', 'Test Course')
             ->assertJsonPath('data.slug', 'test-course')
+            ->assertJsonPath('data.is_highlight', true)
             ->assertJsonPath('data.status', 'published')
             ->assertJsonCount(2, 'data.categories')
             ->assertJsonCount(1, 'data.instructors');
@@ -252,6 +292,7 @@ describe('course crud api', function () {
         $this->assertDatabaseHas('courses', [
             'title' => 'Test Course',
             'slug' => 'test-course',
+            'is_highlight' => true,
             'status' => 'published'
         ]);
     });
@@ -272,6 +313,7 @@ describe('course crud api', function () {
             ->assertCreated()
             ->assertJsonPath('data.title', 'Instructor Course')
             ->assertJsonPath('data.slug', 'instructor-course')
+            ->assertJsonPath('data.is_highlight', false)
             ->assertJsonPath('data.status', 'draft');
     });
 
@@ -288,6 +330,21 @@ describe('course crud api', function () {
         postJson('/api/courses', $courseData)
             ->assertCreated()
             ->assertJsonPath('data.status', 'draft');
+    });
+
+    it('course defaults to not highlighted when not specified', function () {
+        actingAs(User::factory()->instructor()->create());
+
+        $courseData = [
+            'title' => 'Default Highlight Course',
+            'category_ids' => [$this->categories->first()->id],
+            'level' => 'beginner',
+            'lang' => 'english'
+        ];
+
+        postJson('/api/courses', $courseData)
+            ->assertCreated()
+            ->assertJsonPath('data.is_highlight', false);
     });
 
     it('instructor can create course with thumbnail', function () {
@@ -338,6 +395,22 @@ describe('course crud api', function () {
             ->assertJsonValidationErrors(['status']);
     });
 
+    it('validates is_highlight field when creating course', function () {
+        actingAs(User::factory()->instructor()->create());
+
+        $courseData = [
+            'title' => 'Test Course',
+            'category_ids' => [$this->categories->first()->id],
+            'level' => 'beginner',
+            'lang' => 'english',
+            'is_highlight' => 'invalid_boolean'
+        ];
+
+        postJson('/api/courses', $courseData)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['is_highlight']);
+    });
+
     it('student cannot update course', function () {
         actingAs($this->user);
 
@@ -358,6 +431,7 @@ describe('course crud api', function () {
             'short_description' => 'Updated description',
             'description' => 'Updated full description',
             'price' => 149,
+            'is_highlight' => true,
             'status' => 'published'
         ];
 
@@ -366,12 +440,14 @@ describe('course crud api', function () {
             ->assertJsonPath('data.title', 'Updated Course Title')
             ->assertJsonPath('data.slug', 'updated-course-title')
             ->assertJsonPath('data.price', 149)
+            ->assertJsonPath('data.is_highlight', true)
             ->assertJsonPath('data.status', 'published');
 
         $this->assertDatabaseHas('courses', [
             'id' => $course->id,
             'title' => 'Updated Course Title',
             'slug' => 'updated-course-title',
+            'is_highlight' => true,
             'status' => 'published'
         ]);
     });
@@ -385,6 +461,7 @@ describe('course crud api', function () {
         $updateData = [
             'title' => 'Instructor Updated Course',
             'price' => 199,
+            'is_highlight' => true,
             'status' => 'published'
         ];
 
@@ -392,6 +469,7 @@ describe('course crud api', function () {
             ->assertOk()
             ->assertJsonPath('data.title', 'Instructor Updated Course')
             ->assertJsonPath('data.price', 199)
+            ->assertJsonPath('data.is_highlight', true)
             ->assertJsonPath('data.status', 'published');
     });
 
@@ -444,6 +522,16 @@ describe('course crud api', function () {
         putJson("/api/courses/{$course->id}", ['status' => 'invalid_status'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['status']);
+    });
+
+    it('validates is_highlight field when updating course', function () {
+        actingAs(User::factory()->instructor()->create());
+
+        $course = Course::factory()->draft()->create();
+
+        putJson("/api/courses/{$course->id}", ['is_highlight' => 'invalid_boolean'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['is_highlight']);
     });
 
     it('student cannot delete course', function () {
@@ -557,6 +645,20 @@ describe('course crud api', function () {
             ->assertJsonStructure([
                 'data' => [
                     'status'
+                ]
+            ]);
+    });
+
+    it('includes is_highlight field in response', function () {
+        $course = Course::factory()->published()->highlight()->create();
+        $course->categories()->attach($this->categories->first()->id);
+
+        getJson("/api/courses/{$course->id}")
+            ->assertOk()
+            ->assertJsonPath('data.is_highlight', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'is_highlight'
                 ]
             ]);
     });
