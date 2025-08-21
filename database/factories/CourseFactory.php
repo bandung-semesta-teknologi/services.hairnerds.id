@@ -25,7 +25,7 @@ class CourseFactory extends Factory
         ];
 
         return [
-            'title' => $this->faker->unique()->randomElement($titles),
+            'title' => $this->faker->randomElement($titles),
             'short_description' => $this->faker->paragraph(2),
             'description' => $this->faker->paragraphs(3, true),
             'requirements' => implode(', ', $this->faker->words(3)),

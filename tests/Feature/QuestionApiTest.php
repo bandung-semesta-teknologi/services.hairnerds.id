@@ -196,6 +196,253 @@ describe('question crud api', function () {
             ->assertJsonValidationErrors(['quiz_id']);
     });
 
+    it('can create question with answers in bulk', function () {
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'multiple_choice',
+            'question' => 'Which are basic barbering tools?',
+            'score' => 15,
+            'answers' => [
+                ['answer' => 'Scissors', 'is_true' => true],
+                ['answer' => 'Comb', 'is_true' => true],
+                ['answer' => 'Phone', 'is_true' => false],
+                ['answer' => 'Computer', 'is_true' => false]
+            ]
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertCreated()
+            ->assertJsonPath('data.type', 'multiple_choice')
+            ->assertJsonPath('data.question', 'Which are basic barbering tools?')
+            ->assertJsonPath('data.score', 15)
+            ->assertJsonCount(4, 'data.answer_banks');
+
+        $this->assertDatabaseHas('questions', [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'multiple_choice',
+            'question' => 'Which are basic barbering tools?'
+        ]);
+
+        $this->assertDatabaseHas('answer_banks', [
+            'answer' => 'Scissors',
+            'is_true' => true
+        ]);
+
+        $this->assertDatabaseHas('answer_banks', [
+            'answer' => 'Phone',
+            'is_true' => false
+        ]);
+    });
+
+    it('can create single choice question with answers', function () {
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'single_choice',
+            'question' => 'What is the most important barbering tool?',
+            'score' => 10,
+            'answers' => [
+                ['answer' => 'Scissors', 'is_true' => true],
+                ['answer' => 'Comb', 'is_true' => false],
+                ['answer' => 'Razor', 'is_true' => false],
+                ['answer' => 'Clippers', 'is_true' => false]
+            ]
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertCreated()
+            ->assertJsonPath('data.type', 'single_choice')
+            ->assertJsonCount(4, 'data.answer_banks');
+    });
+
+    it('can create fill blank question with single answer', function () {
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'fill_blank',
+            'question' => 'The proper disinfection time is _____ minutes.',
+            'score' => 5,
+            'answers' => [
+                ['answer' => '10', 'is_true' => true]
+            ]
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertCreated()
+            ->assertJsonPath('data.type', 'fill_blank')
+            ->assertJsonCount(1, 'data.answer_banks')
+            ->assertJsonPath('data.answer_banks.0.answer', '10')
+            ->assertJsonPath('data.answer_banks.0.is_true', true);
+    });
+
+    it('validates answers array structure when provided', function () {
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'single_choice',
+            'question' => 'Test question',
+            'answers' => [
+                ['answer' => 'Valid answer'],
+                ['is_true' => true]
+            ]
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['answers.0.is_true', 'answers.1.answer']);
+    });
+
+    it('validates answer text is required when answers provided', function () {
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'single_choice',
+            'question' => 'Test question',
+            'answers' => [
+                ['answer' => '', 'is_true' => true]
+            ]
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['answers.0.answer']);
+    });
+
+    it('validates is_true is required when answers provided', function () {
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'single_choice',
+            'question' => 'Test question',
+            'answers' => [
+                ['answer' => 'Test answer']
+            ]
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['answers.0.is_true']);
+    });
+
+    it('validates answers array is not empty when provided', function () {
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'single_choice',
+            'question' => 'Test question',
+            'answers' => []
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['answers']);
+    });
+
+    it('validates answer text length', function () {
+        $longAnswer = str_repeat('a', 256);
+
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'single_choice',
+            'question' => 'Test question',
+            'answers' => [
+                ['answer' => $longAnswer, 'is_true' => true]
+            ]
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['answers.0.answer']);
+    });
+
+    it('can create question without answers (backward compatibility)', function () {
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'single_choice',
+            'question' => 'Test question without answers',
+            'score' => 10
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertCreated()
+            ->assertJsonPath('data.question', 'Test question without answers')
+            ->assertJsonCount(0, 'data.answer_banks');
+
+        $this->assertDatabaseHas('questions', [
+            'quiz_id' => $this->quiz->id,
+            'question' => 'Test question without answers'
+        ]);
+    });
+
+    it('creates question and answers atomically', function () {
+        $questionData = [
+            'quiz_id' => 99999,
+            'type' => 'single_choice',
+            'question' => 'Test question',
+            'answers' => [
+                ['answer' => 'Test answer', 'is_true' => true]
+            ]
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertUnprocessable();
+
+        $this->assertDatabaseMissing('questions', [
+            'question' => 'Test question'
+        ]);
+
+        $this->assertDatabaseMissing('answer_banks', [
+            'answer' => 'Test answer'
+        ]);
+    });
+
+    it('can handle multiple correct answers for multiple choice', function () {
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'multiple_choice',
+            'question' => 'Which are programming languages?',
+            'answers' => [
+                ['answer' => 'PHP', 'is_true' => true],
+                ['answer' => 'JavaScript', 'is_true' => true],
+                ['answer' => 'HTML', 'is_true' => false],
+                ['answer' => 'CSS', 'is_true' => false]
+            ]
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertCreated()
+            ->assertJsonCount(4, 'data.answer_banks');
+
+        $question = Question::latest()->first();
+
+        expect($question->answerBanks()->where('is_true', true)->count())->toBe(2);
+        expect($question->answerBanks()->where('is_true', false)->count())->toBe(2);
+    });
+
+    it('validates is_true as boolean type', function () {
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'single_choice',
+            'question' => 'Test question',
+            'answers' => [
+                ['answer' => 'Test answer', 'is_true' => 'not_boolean']
+            ]
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['answers.0.is_true']);
+    });
+
+    it('accepts boolean values as string for is_true', function () {
+        $questionData = [
+            'quiz_id' => $this->quiz->id,
+            'type' => 'single_choice',
+            'question' => 'Test question',
+            'answers' => [
+                ['answer' => 'Test answer', 'is_true' => '1']
+            ]
+        ];
+
+        postJson('/api/questions', $questionData)
+            ->assertCreated()
+            ->assertJsonPath('data.answer_banks.0.is_true', true);
+    });
+
     it('can get single question with relationships', function () {
         $question = Question::factory()->create(['quiz_id' => $this->quiz->id]);
 
