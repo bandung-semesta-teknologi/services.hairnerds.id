@@ -29,11 +29,12 @@ class CourseFactory extends Factory
             'short_description' => $this->faker->paragraph(2),
             'description' => $this->faker->paragraphs(3, true),
             'requirements' => implode(', ', $this->faker->words(3)),
-            'level' => $this->faker->randomElement(['beginner', 'adv', 'interm']),
+            'level' => $this->faker->randomElement(['beginner', 'intermediate', 'advanced']),
             'lang' => $this->faker->randomElement(['english', 'indonesian', 'spanish']),
-            'price' => $this->faker->numberBetween(0, 199),
+            'price' => $this->faker->numberBetween(0, 9999999),
+            'status' => $this->faker->randomElement(['draft', 'rejected', 'notpublished', 'published', 'takedown']),
             'thumbnail' => $this->faker->optional(0.7)->imageUrl(640, 480, 'education'),
-            'verified_at' => $this->faker->optional(0.7)->dateTimeBetween('-1 month', 'now'),
+            'verified_at' => null,
         ];
     }
 
@@ -41,6 +42,34 @@ class CourseFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'verified_at' => now(),
+        ]);
+    }
+
+    public function published()
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'published',
+        ]);
+    }
+
+    public function draft()
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'draft',
+        ]);
+    }
+
+    public function notpublished()
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'notpublished',
+        ]);
+    }
+
+    public function takedown()
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'takedown',
         ]);
     }
 
@@ -54,14 +83,21 @@ class CourseFactory extends Factory
     public function intermediate()
     {
         return $this->state(fn (array $attributes) => [
-            'level' => 'interm',
+            'level' => 'intermediate',
         ]);
     }
 
     public function advanced()
     {
         return $this->state(fn (array $attributes) => [
-            'level' => 'adv',
+            'level' => 'advanced',
+        ]);
+    }
+
+    public function rejected()
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'rejected',
         ]);
     }
 }

@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@mail.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
+            'role' => 'admin',
         ]);
 
         UserProfile::create([
@@ -29,6 +30,48 @@ class DatabaseSeeder extends Seeder
             'user_id' => $admin->id,
             'type' => 'email',
             'identifier' => $admin->email,
+            'verified_at' => now(),
+        ]);
+
+        $instructor = User::create([
+            'name' => 'Instructor',
+            'email' => 'instructor@mail.com',
+            'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+            'role' => 'instructor',
+        ]);
+
+        UserProfile::create([
+            'user_id' => $instructor->id,
+            'address' => '456 Instructor Avenue, Bandung',
+            'date_of_birth' => '1985-05-15',
+        ]);
+
+        UserCredential::create([
+            'user_id' => $instructor->id,
+            'type' => 'email',
+            'identifier' => $instructor->email,
+            'verified_at' => now(),
+        ]);
+
+        $instructor2 = User::create([
+            'name' => 'Instructor 2',
+            'email' => 'instructor2@mail.com',
+            'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+            'role' => 'instructor',
+        ]);
+
+        UserProfile::create([
+            'user_id' => $instructor2->id,
+            'address' => '789 Instructor Road, Surabaya',
+            'date_of_birth' => '1988-08-20',
+        ]);
+
+        UserCredential::create([
+            'user_id' => $instructor2->id,
+            'type' => 'email',
+            'identifier' => $instructor2->email,
             'verified_at' => now(),
         ]);
 
@@ -45,6 +88,9 @@ class DatabaseSeeder extends Seeder
             SectionSeeder::class,
             LessonSeeder::class,
             ReviewSeeder::class,
+            QuizSeeder::class,
+            QuestionSeeder::class,
+            AnswerBankSeeder::class,
         ]);
     }
 }

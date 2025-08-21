@@ -19,9 +19,10 @@ class UserResource extends JsonResource
 
         return [
             'name' => $this->name,
+            'role' => $this->role,
             'address' => optional($profile)->address,
             'avatar' => optional($profile)->avatar,
-            'date_of_birth' => optional($profile)->address,
+            'date_of_birth' => optional($profile)->date_of_birth,
             'credentials' => $credentials,
             'is_fully_verified' => (bool) collect($credentials->resolve())->every(fn($c) => $c['is_verified']),
         ];

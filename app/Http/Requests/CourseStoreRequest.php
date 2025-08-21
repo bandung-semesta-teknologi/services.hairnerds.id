@@ -23,9 +23,10 @@ class CourseStoreRequest extends FormRequest
             'category_ids.*' => 'exists:categories,id',
             'instructor_ids' => 'nullable|array',
             'instructor_ids.*' => 'exists:users,id',
-            'level' => ['required', Rule::in(['beginner', 'adv', 'interm'])],
+            'level' => ['required', Rule::in(['beginner', 'intermediate', 'advanced'])],
             'lang' => 'required|string|max:50',
             'price' => 'nullable|integer|min:0',
+            'status' => ['nullable', Rule::in(['draft', 'rejected', 'notpublished', 'published', 'takedown'])],
             'thumbnail' => 'nullable|image|max:2048',
             'verified_at' => 'nullable|date',
         ];

@@ -23,9 +23,10 @@ class CourseUpdateRequest extends FormRequest
             'category_ids.*' => 'exists:categories,id',
             'instructor_ids' => 'sometimes|array',
             'instructor_ids.*' => 'exists:users,id',
-            'level' => ['sometimes', 'required', Rule::in(['beginner', 'adv', 'interm'])],
+            'level' => ['sometimes', 'required', Rule::in(['beginner', 'intermediate', 'advanced'])],
             'lang' => 'sometimes|required|string|max:50',
             'price' => 'nullable|integer|min:0',
+            'status' => ['sometimes', Rule::in(['draft', 'rejected', 'notpublished', 'published', 'takedown'])],
             'thumbnail' => 'nullable|image|max:2048',
             'verified_at' => 'nullable|date',
         ];
