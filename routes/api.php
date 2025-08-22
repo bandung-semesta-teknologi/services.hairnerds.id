@@ -23,6 +23,15 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('
 Route::get('/courses', [CourseController::class, 'index']);
 Route::get('/courses/{course}', [CourseController::class, 'show']);
 
+Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/categories/{category}', [CategoryController::class, 'show']);
+
+Route::get('/courses-faqs', [CourseFaqController::class, 'index']);
+Route::get('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'show']);
+
+Route::get('/sections', [SectionController::class, 'index']);
+Route::get('/sections/{section}', [SectionController::class, 'show']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
@@ -33,14 +42,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
     Route::post('/email/verification-notification', [AuthController::class, 'resendEmail'])->name('verification.send');
 
-    Route::apiResource('categories', CategoryController::class);
+    Route::post('/categories', [CategoryController::class, 'store']);
+    Route::put('/categories/{category}', [CategoryController::class, 'update']);
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+
     Route::post('/courses', [CourseController::class, 'store']);
     Route::put('/courses/{course}', [CourseController::class, 'update']);
     Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
     Route::post('/courses/{course}/verify', [CourseController::class, 'verify']);
     Route::post('/courses/{course}/reject', [CourseController::class, 'reject']);
-    Route::apiResource('courses-faqs', CourseFaqController::class);
-    Route::apiResource('sections', SectionController::class);
+
+    Route::post('/courses-faqs', [CourseFaqController::class, 'store']);
+    Route::put('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'update']);
+    Route::delete('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'destroy']);
+
+    Route::post('/sections', [SectionController::class, 'store']);
+    Route::put('/sections/{section}', [SectionController::class, 'update']);
+    Route::delete('/sections/{section}', [SectionController::class, 'destroy']);
 
     Route::apiResource('lessons', LessonController::class);
     Route::apiResource('quizzes', QuizController::class);
