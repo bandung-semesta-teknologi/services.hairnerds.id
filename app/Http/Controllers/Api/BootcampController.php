@@ -22,8 +22,9 @@ class BootcampController extends Controller
     public function index(Request $request)
     {
         $bootcamps = Bootcamp::query()
-            ->with('user')
+            ->with(['user', 'categories'])
             ->when(!$this->isAdminOrInstructor($request), fn($q) => $q->published())
+            ->when($request->category_id, fn($q) => $q->whereHas('categories', fn($q) => $q->where('categories.id', $request->category_id)))
             ->when($request->status && $this->isAdminOrInstructor($request), fn($q) => $q->where('status', $request->status))
             ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
             ->when($request->location, fn($q) => $q->where('location', 'like', '%' . $request->location . '%'))
@@ -45,6 +46,8 @@ class BootcampController extends Controller
     {
         try {
             $data = $request->validated();
+            $categoryIds = $data['category_ids'] ?? [];
+            unset($data['category_ids']);
 
             if (!isset($data['user_id'])) {
                 $data['user_id'] = $request->user()->id;
@@ -55,7 +58,12 @@ class BootcampController extends Controller
             }
 
             $bootcamp = Bootcamp::create($data);
-            $bootcamp->load('user');
+
+            if (!empty($categoryIds)) {
+                $bootcamp->categories()->attach($categoryIds);
+            }
+
+            $bootcamp->load(['user', 'categories']);
 
             return response()->json([
                 'status' => 'success',
@@ -81,7 +89,7 @@ class BootcampController extends Controller
             ], 404);
         }
 
-        $bootcamp->load('user');
+        $bootcamp->load(['user', 'categories']);
 
         return new BootcampResource($bootcamp);
     }
@@ -90,6 +98,8 @@ class BootcampController extends Controller
     {
         try {
             $data = $request->validated();
+            $categoryIds = $data['category_ids'] ?? null;
+            unset($data['category_ids']);
 
             if ($bootcamp->status === 'rejected' && !isset($data['status'])) {
                 $data['status'] = 'draft';
@@ -97,7 +107,12 @@ class BootcampController extends Controller
             }
 
             $bootcamp->update($data);
-            $bootcamp->load('user');
+
+            if ($categoryIds !== null) {
+                $bootcamp->categories()->sync($categoryIds);
+            }
+
+            $bootcamp->load(['user', 'categories']);
 
             return response()->json([
                 'status' => 'success',
@@ -129,7 +144,7 @@ class BootcampController extends Controller
                 'verified_at' => now(),
             ]);
 
-            $bootcamp->load('user');
+            $bootcamp->load(['user', 'categories']);
 
             return response()->json([
                 'status' => 'success',
@@ -161,7 +176,7 @@ class BootcampController extends Controller
                 'verified_at' => now(),
             ]);
 
-            $bootcamp->load('user');
+            $bootcamp->load(['user', 'categories']);
 
             return response()->json([
                 'status' => 'success',

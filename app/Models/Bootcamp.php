@@ -31,6 +31,11 @@ class Bootcamp extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class, 'bootcamp_categories');
+    }
+
     public function scopePublished($query)
     {
         return $query->where('status', 'publish');

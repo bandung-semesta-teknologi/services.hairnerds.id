@@ -10,10 +10,11 @@ class AnswerBankSeeder extends Seeder
 {
     public function run(): void
     {
-        $questions = Question::take(20)->get();
+        $questions = Question::all();
 
         if ($questions->isEmpty()) {
-            $questions = Question::factory()->count(10)->create();
+            $this->command->warn('No questions found. Skipping AnswerBank seeding.');
+            return;
         }
 
         foreach ($questions as $question) {
@@ -27,7 +28,7 @@ class AnswerBankSeeder extends Seeder
             for ($i = 0; $i < $answerCount; $i++) {
                 $isCorrect = match($question->type) {
                     'single_choice' => $i === 0,
-                    'multiple_choice' => $this->faker()->boolean(40),
+                    'multiple_choice' => fake()->boolean(40),
                     'fill_blank' => true,
                     default => $i === 0
                 };
@@ -45,10 +46,5 @@ class AnswerBankSeeder extends Seeder
                 }
             }
         }
-    }
-
-    private function faker()
-    {
-        return \Faker\Factory::create();
     }
 }

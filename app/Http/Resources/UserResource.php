@@ -14,6 +14,10 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        if (!$this->resource) {
+            return [];
+        }
+
         $profile = $this->whenLoaded('userProfile');
         $credentials = CredentialResource::collection($this->whenLoaded('userCredentials'));
 

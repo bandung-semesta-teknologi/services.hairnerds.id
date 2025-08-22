@@ -10,18 +10,15 @@ class SectionSeeder extends Seeder
 {
     public function run(): void
     {
-        $courses = Course::whereNotNull('verified_at')->take(5)->get();
+        $courses = Course::whereNotNull('verified_at')->get();
 
         if ($courses->isEmpty()) {
-            $courses = Course::factory()->count(3)->verified()->create();
-            $courses->each(function ($course) {
-                $categories = \App\Models\Category::inRandomOrder()->take(2)->get();
-                $course->categories()->attach($categories->pluck('id'));
-            });
+            $this->command->warn('No verified courses found. Skipping Section seeding.');
+            return;
         }
 
         foreach ($courses as $course) {
-            $sectionCount = rand(3, 7);
+            $sectionCount = rand(3, 6);
 
             for ($i = 1; $i <= $sectionCount; $i++) {
                 Section::factory()->create([

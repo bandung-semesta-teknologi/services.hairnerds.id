@@ -11,29 +11,34 @@ class EnrollmentSeeder extends Seeder
 {
     public function run(): void
     {
-        $users = User::where('role', 'student')->take(10)->get();
-        $courses = Course::published()->take(8)->get();
+        $users = User::where('role', 'student')->get();
+        $courses = Course::published()->get();
 
         if ($users->isEmpty()) {
-            $users = User::factory()->count(10)->create(['role' => 'student']);
+            $this->command->warn('No student users found. Skipping Enrollment seeding.');
+            return;
         }
 
         if ($courses->isEmpty()) {
-            $courses = Course::factory()->published()->verified()->count(5)->create();
+            $this->command->warn('No published courses found. Skipping Enrollment seeding.');
+            return;
         }
 
         foreach ($users as $user) {
-            $enrolledCourses = $courses->random(rand(2, 4));
+            $enrolledCourses = $courses->random(min(rand(1, 3), $courses->count()));
 
             foreach ($enrolledCourses as $course) {
-                Enrollment::factory()->create([
-                    'user_id' => $user->id,
-                    'course_id' => $course->id,
-                ]);
+                if (!Enrollment::where('user_id', $user->id)->where('course_id', $course->id)->exists()) {
+                    $enrollment = Enrollment::factory()->create([
+                        'user_id' => $user->id,
+                        'course_id' => $course->id,
+                    ]);
+
+                    if (fake()->boolean(30)) {
+                        $enrollment->update(['finished_at' => fake()->dateTimeBetween('-1 month', 'now')]);
+                    }
+                }
             }
         }
-
-        Enrollment::factory()->finished()->count(10)->create();
-        Enrollment::factory()->active()->count(15)->create();
     }
 }

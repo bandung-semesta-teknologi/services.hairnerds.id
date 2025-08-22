@@ -24,6 +24,8 @@ class BootcampUpdateRequest extends FormRequest
             'seat_blocked' => 'nullable|integer|min:0',
             'description' => 'nullable|string',
             'short_description' => 'nullable|string|max:500',
+            'category_ids' => 'sometimes|array',
+            'category_ids.*' => 'exists:categories,id',
             'status' => ['sometimes', Rule::in(['draft', 'publish', 'unpublish', 'rejected'])],
             'price' => 'nullable|integer|min:0',
             'location' => 'sometimes|required|string|max:255',

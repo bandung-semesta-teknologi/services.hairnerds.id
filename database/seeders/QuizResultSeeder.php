@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Lesson;
 use App\Models\Quiz;
 use App\Models\QuizResult;
 use App\Models\User;
@@ -12,23 +11,24 @@ class QuizResultSeeder extends Seeder
 {
     public function run(): void
     {
-        $users = User::where('role', 'student')->take(10)->get();
-        $quizzes = Quiz::with('lesson')->take(15)->get();
+        $users = User::where('role', 'student')->get();
+        $quizzes = Quiz::with('lesson')->get();
 
         if ($users->isEmpty()) {
-            $users = User::factory()->count(8)->create(['role' => 'student']);
+            $this->command->warn('No student users found. Skipping QuizResult seeding.');
+            return;
         }
 
         if ($quizzes->isEmpty()) {
-            $quizzes = Quiz::factory()->count(10)->create();
-            $quizzes->load('lesson');
+            $this->command->warn('No quizzes found. Skipping QuizResult seeding.');
+            return;
         }
 
         foreach ($users as $user) {
-            $userQuizzes = $quizzes->random(rand(3, 8));
+            $userQuizzes = $quizzes->random(min(rand(2, 5), $quizzes->count()));
 
             foreach ($userQuizzes as $quiz) {
-                $totalQuestions = $quiz->questions()->count() ?: rand(5, 15);
+                $totalQuestions = $quiz->questions()->count() ?: rand(5, 10);
                 $answered = rand(1, $totalQuestions);
                 $correctAnswers = rand(0, $answered);
                 $pointsPerQuestion = $quiz->total_marks ?
@@ -41,12 +41,9 @@ class QuizResultSeeder extends Seeder
                     'answered' => $answered,
                     'correct_answers' => $correctAnswers,
                     'total_obtained_marks' => $correctAnswers * $pointsPerQuestion,
+                    'is_submitted' => fake()->boolean(80),
                 ]);
             }
         }
-
-        QuizResult::factory()->submitted()->count(15)->create();
-        QuizResult::factory()->inProgress()->count(8)->create();
-        QuizResult::factory()->passed()->count(12)->create();
     }
 }

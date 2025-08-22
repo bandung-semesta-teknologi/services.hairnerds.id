@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Enrollment;
-use App\Models\Lesson;
 use App\Models\Progress;
 use Illuminate\Database\Seeder;
 
@@ -11,20 +10,18 @@ class ProgressSeeder extends Seeder
 {
     public function run(): void
     {
-        $enrollments = Enrollment::with(['course.lessons'])->take(20)->get();
+        $enrollments = Enrollment::with(['course.lessons'])->get();
 
         if ($enrollments->isEmpty()) {
-            $enrollments = Enrollment::factory()->count(10)->create();
-            $enrollments->load(['course.lessons']);
+            $this->command->warn('No enrollments found. Skipping Progress seeding.');
+            return;
         }
 
         foreach ($enrollments as $enrollment) {
             $lessons = $enrollment->course->lessons;
 
             if ($lessons->isEmpty()) {
-                $lessons = Lesson::factory()->count(5)->create([
-                    'course_id' => $enrollment->course_id,
-                ]);
+                continue;
             }
 
             foreach ($lessons as $lesson) {
@@ -41,8 +38,5 @@ class ProgressSeeder extends Seeder
                 ]);
             }
         }
-
-        Progress::factory()->completed()->count(20)->create();
-        Progress::factory()->incomplete()->count(15)->create();
     }
 }

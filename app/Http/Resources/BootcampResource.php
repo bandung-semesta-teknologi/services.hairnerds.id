@@ -22,6 +22,7 @@ class BootcampResource extends JsonResource
             'seat_taken' => $this->seat - $this->seat_available - $this->seat_blocked,
             'description' => $this->description,
             'short_description' => $this->short_description,
+            'categories' => CategoryResource::collection($this->whenLoaded('categories')),
             'status' => $this->status,
             'price' => $this->price,
             'location' => $this->location,

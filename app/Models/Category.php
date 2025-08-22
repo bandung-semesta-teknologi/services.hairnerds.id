@@ -16,4 +16,9 @@ class Category extends Model
     {
         return $this->belongsToMany(Course::class, 'course_categories');
     }
+
+    public function bootcamps()
+    {
+        return $this->belongsToMany(Bootcamp::class, 'bootcamp_categories');
+    }
 }
