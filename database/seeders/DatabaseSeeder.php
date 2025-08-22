@@ -94,6 +94,7 @@ class DatabaseSeeder extends Seeder
             EnrollmentSeeder::class,
             ProgressSeeder::class,
             QuizResultSeeder::class,
+            BootcampSeeder::class,
         ]);
     }
 }

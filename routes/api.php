@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AnswerBankController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BootcampController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\CourseFaqController;
@@ -32,6 +33,9 @@ Route::get('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'show']);
 Route::get('/sections', [SectionController::class, 'index']);
 Route::get('/sections/{section}', [SectionController::class, 'show']);
 
+Route::get('/bootcamps', [BootcampController::class, 'index']);
+Route::get('/bootcamps/{bootcamp}', [BootcampController::class, 'show']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
@@ -51,6 +55,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
     Route::post('/courses/{course}/verify', [CourseController::class, 'verify']);
     Route::post('/courses/{course}/reject', [CourseController::class, 'reject']);
+
+    Route::post('/bootcamps', [BootcampController::class, 'store']);
+    Route::put('/bootcamps/{bootcamp}', [BootcampController::class, 'update']);
+    Route::delete('/bootcamps/{bootcamp}', [BootcampController::class, 'destroy']);
+    Route::post('/bootcamps/{bootcamp}/verify', [BootcampController::class, 'verify']);
+    Route::post('/bootcamps/{bootcamp}/reject', [BootcampController::class, 'reject']);
 
     Route::post('/courses-faqs', [CourseFaqController::class, 'store']);
     Route::put('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'update']);

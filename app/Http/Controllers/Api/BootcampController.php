@@ -1,0 +1,205 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\BootcampStoreRequest;
+use App\Http\Requests\BootcampUpdateRequest;
+use App\Http\Requests\BootcampVerificationRequest;
+use App\Http\Resources\BootcampResource;
+use App\Models\Bootcamp;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+class BootcampController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware('role:admin,instructor')->except(['index', 'show']);
+        $this->middleware('role:admin')->only(['verify', 'reject']);
+    }
+
+    public function index(Request $request)
+    {
+        $bootcamps = Bootcamp::query()
+            ->with('user')
+            ->when(!$this->isAdminOrInstructor($request), fn($q) => $q->published())
+            ->when($request->status && $this->isAdminOrInstructor($request), fn($q) => $q->where('status', $request->status))
+            ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
+            ->when($request->location, fn($q) => $q->where('location', 'like', '%' . $request->location . '%'))
+            ->when($request->available !== null, function($q) use ($request) {
+                return $request->boolean('available')
+                    ? $q->where('seat_available', '>', 0)
+                    : $q->where('seat_available', '=', 0);
+            })
+            ->when($request->search, fn($q) => $q->where('title', 'like', '%' . $request->search . '%'))
+            ->when($request->price_min, fn($q) => $q->where('price', '>=', $request->price_min))
+            ->when($request->price_max, fn($q) => $q->where('price', '<=', $request->price_max))
+            ->latest()
+            ->paginate($request->per_page ?? 15);
+
+        return BootcampResource::collection($bootcamps);
+    }
+
+    public function store(BootcampStoreRequest $request)
+    {
+        try {
+            $data = $request->validated();
+
+            if (!isset($data['user_id'])) {
+                $data['user_id'] = $request->user()->id;
+            }
+
+            if (!isset($data['seat_available'])) {
+                $data['seat_available'] = $data['seat'];
+            }
+
+            $bootcamp = Bootcamp::create($data);
+            $bootcamp->load('user');
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Bootcamp created successfully',
+                'data' => new BootcampResource($bootcamp)
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating bootcamp: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create bootcamp'
+            ], 500);
+        }
+    }
+
+    public function show(Request $request, Bootcamp $bootcamp)
+    {
+        if (!$this->isAdminOrInstructor($request) && $bootcamp->status !== 'publish') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bootcamp not found'
+            ], 404);
+        }
+
+        $bootcamp->load('user');
+
+        return new BootcampResource($bootcamp);
+    }
+
+    public function update(BootcampUpdateRequest $request, Bootcamp $bootcamp)
+    {
+        try {
+            $data = $request->validated();
+
+            if ($bootcamp->status === 'rejected' && !isset($data['status'])) {
+                $data['status'] = 'draft';
+                $data['verified_at'] = null;
+            }
+
+            $bootcamp->update($data);
+            $bootcamp->load('user');
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Bootcamp updated successfully',
+                'data' => new BootcampResource($bootcamp)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating bootcamp: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update bootcamp'
+            ], 500);
+        }
+    }
+
+    public function verify(BootcampVerificationRequest $request, Bootcamp $bootcamp)
+    {
+        try {
+            if ($bootcamp->status !== 'draft') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Only draft bootcamps can be verified'
+                ], 422);
+            }
+
+            $bootcamp->update([
+                'status' => $request->status,
+                'verified_at' => now(),
+            ]);
+
+            $bootcamp->load('user');
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Bootcamp verified successfully',
+                'data' => new BootcampResource($bootcamp)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error verifying bootcamp: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to verify bootcamp'
+            ], 500);
+        }
+    }
+
+    public function reject(Request $request, Bootcamp $bootcamp)
+    {
+        try {
+            if ($bootcamp->status !== 'draft') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Only draft bootcamps can be rejected'
+                ], 422);
+            }
+
+            $bootcamp->update([
+                'status' => 'rejected',
+                'verified_at' => now(),
+            ]);
+
+            $bootcamp->load('user');
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Bootcamp rejected successfully',
+                'data' => new BootcampResource($bootcamp)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error rejecting bootcamp: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to reject bootcamp'
+            ], 500);
+        }
+    }
+
+    public function destroy(Bootcamp $bootcamp)
+    {
+        try {
+            $bootcamp->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Bootcamp deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error deleting bootcamp: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete bootcamp'
+            ], 500);
+        }
+    }
+
+    private function isAdminOrInstructor(Request $request): bool
+    {
+        $user = $request->user();
+        return $user && in_array($user->role, ['admin', 'instructor']);
+    }
+}
