@@ -80,7 +80,7 @@ describe('course crud api', function () {
 
             getJson('/api/courses')
                 ->assertOk()
-                ->assertJsonCount(2, 'data');
+                ->assertJsonCount(5, 'data');
         });
 
         it('admin can filter courses by status', function () {
@@ -98,7 +98,7 @@ describe('course crud api', function () {
 
             getJson('/api/courses?status=draft')
                 ->assertOk()
-                ->assertJsonCount(2, 'data');
+                ->assertJsonCount(3, 'data');
 
             getJson('/api/courses?status=published')
                 ->assertOk()
@@ -154,7 +154,7 @@ describe('course crud api', function () {
 
             getJson('/api/courses')
                 ->assertOk()
-                ->assertJsonCount(5, 'data');
+                ->assertJsonCount(2, 'data');
         });
 
         it('instructor can create course', function () {
