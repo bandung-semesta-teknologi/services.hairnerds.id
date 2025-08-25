@@ -9,25 +9,28 @@ use App\Http\Requests\CourseVerificationRequest;
 use App\Http\Resources\CourseResource;
 use App\Models\Course;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 
 class CourseController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('role:admin,instructor')->except(['index', 'show']);
-        $this->middleware('role:admin')->only(['verify', 'reject']);
-    }
-
     public function index(Request $request)
     {
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('viewAny', Course::class);
+
         $courses = Course::query()
             ->with(['categories', 'faqs', 'sections', 'instructors', 'reviews'])
-            ->when(!$this->isAdminOrInstructor($request), fn($q) => $q->published())
+            ->when(!$user || $user->role === 'student', fn($q) => $q->published())
+            ->when($user && $user->role === 'admin', fn($q) => $q)
+            ->when($user && $user->role === 'instructor', function($q) use ($user) {
+                return $q->whereHas('instructors', fn($q) => $q->where('users.id', $user->id));
+            })
             ->when($request->category_id, fn($q) => $q->whereHas('categories', fn($q) => $q->where('categories.id', $request->category_id)))
             ->when($request->level, fn($q) => $q->where('level', $request->level))
             ->when($request->is_highlight !== null, fn($q) => $q->where('is_highlight', $request->boolean('is_highlight')))
-            ->when($request->status && $this->isAdminOrInstructor($request), fn($q) => $q->where('status', $request->status))
+            ->when($request->status && $user && $user->role === 'admin', fn($q) => $q->where('status', $request->status))
             ->when($request->search, fn($q) => $q->where('title', 'like', '%' . $request->search . '%'))
             ->latest()
             ->paginate($request->per_page ?? 15);
@@ -37,6 +40,8 @@ class CourseController extends Controller
 
     public function store(CourseStoreRequest $request)
     {
+        $this->authorize('create', Course::class);
+
         try {
             $data = $request->validated();
             $categoryIds = $data['category_ids'] ?? [];
@@ -76,12 +81,9 @@ class CourseController extends Controller
 
     public function show(Request $request, Course $course)
     {
-        if (!$this->isAdminOrInstructor($request) && $course->status !== 'published') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Course not found'
-            ], 404);
-        }
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('view', $course);
 
         $course->load(['categories', 'faqs', 'sections', 'instructors', 'reviews']);
 
@@ -90,6 +92,8 @@ class CourseController extends Controller
 
     public function update(CourseUpdateRequest $request, Course $course)
     {
+        $this->authorize('update', $course);
+
         try {
             $data = $request->validated();
             $categoryIds = $data['category_ids'] ?? null;
@@ -134,6 +138,8 @@ class CourseController extends Controller
 
     public function verify(CourseVerificationRequest $request, Course $course)
     {
+        $this->authorize('verify', $course);
+
         try {
             if ($course->status !== 'draft') {
                 return response()->json([
@@ -166,6 +172,8 @@ class CourseController extends Controller
 
     public function reject(Request $request, Course $course)
     {
+        $this->authorize('reject', $course);
+
         try {
             if ($course->status !== 'draft') {
                 return response()->json([
@@ -198,6 +206,8 @@ class CourseController extends Controller
 
     public function destroy(Course $course)
     {
+        $this->authorize('delete', $course);
+
         try {
             $course->delete();
 
@@ -215,9 +225,13 @@ class CourseController extends Controller
         }
     }
 
-    private function isAdminOrInstructor(Request $request): bool
+    private function resolveOptionalUser(Request $request)
     {
-        $user = $request->user();
-        return $user && in_array($user->role, ['admin', 'instructor']);
+        if ($token = $request->bearerToken()) {
+            $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            return $accessToken?->tokenable;
+        }
+
+        return null;
     }
 }
