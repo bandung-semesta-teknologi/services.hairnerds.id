@@ -26,6 +26,16 @@ class Lesson extends Model
         return $this->belongsTo(Course::class);
     }
 
+    public function progress()
+    {
+        return $this->hasMany(Progress::class);
+    }
+
+    public function quizResults()
+    {
+        return $this->hasMany(QuizResult::class);
+    }
+
     public function scopeOrdered($query)
     {
         return $query->orderBy('sequence');

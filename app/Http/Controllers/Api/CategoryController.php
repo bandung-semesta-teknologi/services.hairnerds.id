@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\Log;
 
 class CategoryController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('role:admin,instructor')->except(['index', 'show']);
+    }
+
     public function index(Request $request)
     {
         $categories = Category::paginate($request->per_page ?? 5);
@@ -88,5 +93,11 @@ class CategoryController extends Controller
                 'message' => 'Failed to delete category'
             ], 500);
         }
+    }
+
+    private function isAdminOrInstructor(Request $request): bool
+    {
+        $user = $request->user();
+        return $user && in_array($user->role, ['admin', 'instructor']);
     }
 }

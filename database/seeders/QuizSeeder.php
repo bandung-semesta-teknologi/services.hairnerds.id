@@ -11,23 +11,21 @@ class QuizSeeder extends Seeder
 {
     public function run(): void
     {
-        $sections = Section::with(['course', 'lessons'])->take(10)->get();
+        $sections = Section::with(['course', 'lessons'])->get();
 
         if ($sections->isEmpty()) {
-            $sections = Section::factory()->count(5)->create();
+            $this->command->warn('No sections found. Skipping Quiz seeding.');
+            return;
         }
 
         foreach ($sections as $section) {
             $lessons = $section->lessons;
 
             if ($lessons->isEmpty()) {
-                $lessons = Lesson::factory()->count(3)->create([
-                    'section_id' => $section->id,
-                    'course_id' => $section->course_id,
-                ]);
+                continue;
             }
 
-            $quizCount = rand(1, 3);
+            $quizCount = rand(1, 2);
 
             for ($i = 0; $i < $quizCount; $i++) {
                 $randomLesson = $lessons->random();

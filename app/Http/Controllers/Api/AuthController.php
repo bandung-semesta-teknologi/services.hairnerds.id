@@ -153,7 +153,15 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        return response()->json(new UserResource($request->user), 200);
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'User not authenticated'], 401);
+        }
+
+        $user->load(['userProfile', 'userCredentials']);
+
+        return response()->json(new UserResource($user), 200);
     }
 
     public function updateUser(AuthUpdateRequest $request)

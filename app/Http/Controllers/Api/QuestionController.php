@@ -8,6 +8,7 @@ use App\Http\Requests\QuestionUpdateRequest;
 use App\Http\Resources\QuestionResource;
 use App\Models\Question;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class QuestionController extends Controller
@@ -28,14 +29,32 @@ class QuestionController extends Controller
     public function store(QuestionStoreRequest $request)
     {
         try {
-            $question = Question::create($request->validated());
-            $question->load(['quiz', 'answerBanks']);
+            return DB::transaction(function () use ($request) {
+                $questionData = $request->only(['quiz_id', 'type', 'question', 'score']);
+                $question = Question::create($questionData);
 
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Question created successfully',
-                'data' => new QuestionResource($question)
-            ], 201);
+                if ($request->has('answers')) {
+                    $answersData = collect($request->answers)->map(function ($answer) use ($question) {
+                        return [
+                            'question_id' => $question->id,
+                            'answer' => $answer['answer'],
+                            'is_true' => $answer['is_true'],
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    });
+
+                    $question->answerBanks()->insert($answersData->toArray());
+                }
+
+                $question->load(['quiz', 'answerBanks']);
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Question created successfully',
+                    'data' => new QuestionResource($question)
+                ], 201);
+            });
         } catch (\Exception $e) {
             Log::error('Error creating question: ' . $e->getMessage());
 

@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\Log;
 
 class SectionController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('role:admin,instructor')->except(['index', 'show']);
+    }
+
     public function index(Request $request)
     {
         $sections = Section::query()
@@ -89,5 +94,11 @@ class SectionController extends Controller
                 'message' => 'Failed to delete section'
             ], 500);
         }
+    }
+
+    private function isAdminOrInstructor(Request $request): bool
+    {
+        $user = $request->user();
+        return $user && in_array($user->role, ['admin', 'instructor']);
     }
 }

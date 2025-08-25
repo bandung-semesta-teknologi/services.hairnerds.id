@@ -26,6 +26,7 @@ class CourseStoreRequest extends FormRequest
             'level' => ['required', Rule::in(['beginner', 'intermediate', 'advanced'])],
             'lang' => 'required|string|max:50',
             'price' => 'nullable|integer|min:0',
+            'is_highlight' => 'nullable|boolean',
             'status' => ['nullable', Rule::in(['draft', 'rejected', 'notpublished', 'published', 'takedown'])],
             'thumbnail' => 'nullable|image|max:2048',
             'verified_at' => 'nullable|date',

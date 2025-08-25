@@ -10,14 +10,15 @@ class LessonSeeder extends Seeder
 {
     public function run(): void
     {
-        $sections = Section::with('course')->take(10)->get();
+        $sections = Section::with('course')->get();
 
         if ($sections->isEmpty()) {
-            $sections = Section::factory()->count(5)->create();
+            $this->command->warn('No sections found. Skipping Lesson seeding.');
+            return;
         }
 
         foreach ($sections as $section) {
-            $lessonCount = rand(3, 8);
+            $lessonCount = rand(3, 6);
 
             for ($i = 1; $i <= $lessonCount; $i++) {
                 Lesson::factory()->create([

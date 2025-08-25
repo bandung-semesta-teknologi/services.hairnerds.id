@@ -10,18 +10,19 @@ class QuestionSeeder extends Seeder
 {
     public function run(): void
     {
-        $quizzes = Quiz::take(10)->get();
+        $quizzes = Quiz::all();
 
         if ($quizzes->isEmpty()) {
-            $quizzes = Quiz::factory()->count(5)->create();
+            $this->command->warn('No quizzes found. Skipping Question seeding.');
+            return;
         }
 
         foreach ($quizzes as $quiz) {
-            $questionCount = rand(5, 15);
+            $questionCount = rand(5, 10);
             $types = ['single_choice', 'multiple_choice', 'fill_blank'];
 
             for ($i = 0; $i < $questionCount; $i++) {
-                $selectedType = $this->faker()->randomElement($types);
+                $selectedType = fake()->randomElement($types);
 
                 Question::factory()->create([
                     'quiz_id' => $quiz->id,
@@ -29,10 +30,5 @@ class QuestionSeeder extends Seeder
                 ]);
             }
         }
-    }
-
-    private function faker()
-    {
-        return \Faker\Factory::create();
     }
 }
