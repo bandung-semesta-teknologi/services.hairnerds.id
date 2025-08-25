@@ -227,6 +227,10 @@ class CourseController extends Controller
 
     private function resolveOptionalUser(Request $request)
     {
+        if ($user = $request->user()) {
+            return $user;
+        }
+
         if ($token = $request->bearerToken()) {
             $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
             return $accessToken?->tokenable;

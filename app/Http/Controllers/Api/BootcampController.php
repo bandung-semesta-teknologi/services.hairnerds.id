@@ -13,19 +13,20 @@ use Illuminate\Support\Facades\Log;
 
 class BootcampController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('role:admin,instructor')->except(['index', 'show']);
-        $this->middleware('role:admin')->only(['verify', 'reject']);
-    }
-
     public function index(Request $request)
     {
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('viewAny', Bootcamp::class);
+
         $bootcamps = Bootcamp::query()
             ->with(['user', 'categories'])
-            ->when(!$this->isAdminOrInstructor($request), fn($q) => $q->published())
+            ->when($user && $user->role === 'instructor', function($q) use ($user) {
+                return $q->where('user_id', $user->id);
+            })
+            ->when(!$user || $user->role === 'student', fn($q) => $q->published())
             ->when($request->category_id, fn($q) => $q->whereHas('categories', fn($q) => $q->where('categories.id', $request->category_id)))
-            ->when($request->status && $this->isAdminOrInstructor($request), fn($q) => $q->where('status', $request->status))
+            ->when($request->status && $user && $user->role === 'admin', fn($q) => $q->where('status', $request->status))
             ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
             ->when($request->location, fn($q) => $q->where('location', 'like', '%' . $request->location . '%'))
             ->when($request->available !== null, function($q) use ($request) {
@@ -44,6 +45,8 @@ class BootcampController extends Controller
 
     public function store(BootcampStoreRequest $request)
     {
+        $this->authorize('create', Bootcamp::class);
+
         try {
             $data = $request->validated();
             $categoryIds = $data['category_ids'] ?? [];
@@ -82,12 +85,9 @@ class BootcampController extends Controller
 
     public function show(Request $request, Bootcamp $bootcamp)
     {
-        if (!$this->isAdminOrInstructor($request) && $bootcamp->status !== 'publish') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Bootcamp not found'
-            ], 404);
-        }
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('view', $bootcamp);
 
         $bootcamp->load(['user', 'categories']);
 
@@ -96,6 +96,8 @@ class BootcampController extends Controller
 
     public function update(BootcampUpdateRequest $request, Bootcamp $bootcamp)
     {
+        $this->authorize('update', $bootcamp);
+
         try {
             $data = $request->validated();
             $categoryIds = $data['category_ids'] ?? null;
@@ -131,6 +133,8 @@ class BootcampController extends Controller
 
     public function verify(BootcampVerificationRequest $request, Bootcamp $bootcamp)
     {
+        $this->authorize('verify', $bootcamp);
+
         try {
             if ($bootcamp->status !== 'draft') {
                 return response()->json([
@@ -163,6 +167,8 @@ class BootcampController extends Controller
 
     public function reject(Request $request, Bootcamp $bootcamp)
     {
+        $this->authorize('reject', $bootcamp);
+
         try {
             if ($bootcamp->status !== 'draft') {
                 return response()->json([
@@ -195,6 +201,8 @@ class BootcampController extends Controller
 
     public function destroy(Bootcamp $bootcamp)
     {
+        $this->authorize('delete', $bootcamp);
+
         try {
             $bootcamp->delete();
 
@@ -212,9 +220,17 @@ class BootcampController extends Controller
         }
     }
 
-    private function isAdminOrInstructor(Request $request): bool
+    private function resolveOptionalUser(Request $request)
     {
-        $user = $request->user();
-        return $user && in_array($user->role, ['admin', 'instructor']);
+        if ($user = $request->user()) {
+            return $user;
+        }
+
+        if ($token = $request->bearerToken()) {
+            $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            return $accessToken?->tokenable;
+        }
+
+        return null;
     }
 }
