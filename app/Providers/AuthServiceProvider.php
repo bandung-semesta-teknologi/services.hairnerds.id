@@ -7,6 +7,7 @@ use App\Models\Bootcamp;
 use App\Models\Category;
 use App\Models\Course;
 use App\Models\CourseFaq;
+use App\Models\Enrollment;
 use App\Models\Lesson;
 use App\Models\Question;
 use App\Models\Quiz;
@@ -17,6 +18,7 @@ use App\Policies\BootcampPolicy;
 use App\Policies\CategoryPolicy;
 use App\Policies\CourseFaqPolicy;
 use App\Policies\CoursePolicy;
+use App\Policies\EnrollmentPolicy;
 use App\Policies\LessonPolicy;
 use App\Policies\QuestionPolicy;
 use App\Policies\QuizPolicy;
@@ -37,6 +39,7 @@ class AuthServiceProvider extends ServiceProvider
         Quiz::class => QuizPolicy::class,
         Question::class => QuestionPolicy::class,
         AnswerBank::class => AnswerBankPolicy::class,
+        Enrollment::class => EnrollmentPolicy::class,
     ];
 
     public function boot(): void
