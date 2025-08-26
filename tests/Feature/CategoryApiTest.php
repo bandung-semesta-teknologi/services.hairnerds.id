@@ -81,6 +81,8 @@ describe('category crud api', function () {
 
             postJson('/api/categories', $categoryData)
                 ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Category created successfully')
                 ->assertJsonPath('data.name', 'Web Development');
 
             $this->assertDatabaseHas('categories', [
@@ -101,6 +103,8 @@ describe('category crud api', function () {
                 'name' => 'Updated Name'
             ])
                 ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Category updated successfully')
                 ->assertJsonPath('data.name', 'Updated Name');
 
             $this->assertDatabaseHas('categories', [
@@ -114,7 +118,8 @@ describe('category crud api', function () {
 
             deleteJson("/api/categories/{$category->id}")
                 ->assertOk()
-                ->assertJson(['message' => 'Category deleted successfully']);
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Category deleted successfully');
 
             $this->assertSoftDeleted('categories', ['id' => $category->id]);
         });
@@ -126,7 +131,8 @@ describe('category crud api', function () {
 
             deleteJson("/api/categories/{$category->id}")
                 ->assertUnprocessable()
-                ->assertJson(['message' => 'Cannot delete category with existing courses']);
+                ->assertJsonPath('status', 'error')
+                ->assertJsonPath('message', 'Cannot delete category with existing courses');
 
             $this->assertDatabaseHas('categories', [
                 'id' => $category->id,
@@ -152,6 +158,8 @@ describe('category crud api', function () {
 
             postJson('/api/categories', $categoryData)
                 ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Category created successfully')
                 ->assertJsonPath('data.name', 'Mobile Development');
 
             $this->assertDatabaseHas('categories', [
@@ -166,6 +174,8 @@ describe('category crud api', function () {
                 'name' => 'Instructor Updated'
             ])
                 ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Category updated successfully')
                 ->assertJsonPath('data.name', 'Instructor Updated');
         });
 
@@ -174,15 +184,44 @@ describe('category crud api', function () {
 
             deleteJson("/api/categories/{$category->id}")
                 ->assertOk()
-                ->assertJson(['message' => 'Category deleted successfully']);
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Category deleted successfully');
 
             $this->assertSoftDeleted('categories', ['id' => $category->id]);
         });
     });
 
-    describe('student access (forbidden)', function () {
+    describe('student access', function () {
         beforeEach(function () {
             actingAs($this->student);
+        });
+
+        it('student can view all categories', function () {
+            Category::factory()->count(5)->create();
+
+            getJson('/api/categories')
+                ->assertOk()
+                ->assertJsonStructure([
+                    'data' => [
+                        '*' => [
+                            'id',
+                            'name',
+                            'created_at',
+                            'updated_at',
+                        ]
+                    ],
+                    'links',
+                    'meta'
+                ]);
+        });
+
+        it('student can view single category', function () {
+            $category = Category::factory()->create();
+
+            getJson("/api/categories/{$category->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $category->id)
+                ->assertJsonPath('data.name', $category->name);
         });
 
         it('student cannot create category', function () {
@@ -209,7 +248,35 @@ describe('category crud api', function () {
         });
     });
 
-    describe('unauthenticated access (forbidden)', function () {
+    describe('unauthenticated access', function () {
+        it('unauthenticated user can view all categories', function () {
+            Category::factory()->count(3)->create();
+
+            getJson('/api/categories')
+                ->assertOk()
+                ->assertJsonStructure([
+                    'data' => [
+                        '*' => [
+                            'id',
+                            'name',
+                            'created_at',
+                            'updated_at',
+                        ]
+                    ],
+                    'links',
+                    'meta'
+                ]);
+        });
+
+        it('unauthenticated user can view single category', function () {
+            $category = Category::factory()->create();
+
+            getJson("/api/categories/{$category->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $category->id)
+                ->assertJsonPath('data.name', $category->name);
+        });
+
         it('unauthenticated user cannot create category', function () {
             postJson('/api/categories', [
                 'name' => 'Unauthorized Category'

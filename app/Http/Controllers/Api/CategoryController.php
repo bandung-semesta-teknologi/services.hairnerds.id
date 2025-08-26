@@ -12,13 +12,10 @@ use Illuminate\Support\Facades\Log;
 
 class CategoryController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('role:admin,instructor')->except(['index', 'show']);
-    }
-
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Category::class);
+
         $categories = Category::paginate($request->per_page ?? 5);
 
         return CategoryResource::collection($categories);
@@ -26,6 +23,8 @@ class CategoryController extends Controller
 
     public function store(CategoryStoreRequest $request)
     {
+        $this->authorize('create', Category::class);
+
         try {
             $category = Category::create($request->validated());
 
@@ -46,11 +45,15 @@ class CategoryController extends Controller
 
     public function show(Category $category)
     {
+        $this->authorize('view', $category);
+
         return new CategoryResource($category);
     }
 
     public function update(CategoryUpdateRequest $request, Category $category)
     {
+        $this->authorize('update', $category);
+
         try {
             $category->update($request->validated());
 
@@ -71,6 +74,8 @@ class CategoryController extends Controller
 
     public function destroy(Category $category)
     {
+        $this->authorize('delete', $category);
+
         try {
             if ($category->courses()->exists()) {
                 return response()->json([
@@ -93,11 +98,5 @@ class CategoryController extends Controller
                 'message' => 'Failed to delete category'
             ], 500);
         }
-    }
-
-    private function isAdminOrInstructor(Request $request): bool
-    {
-        $user = $request->user();
-        return $user && in_array($user->role, ['admin', 'instructor']);
     }
 }
