@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Course;
 use App\Models\CourseFaq;
 use App\Models\Lesson;
+use App\Models\Quiz;
 use App\Models\Review;
 use App\Models\Section;
 use App\Policies\BootcampPolicy;
@@ -14,6 +15,7 @@ use App\Policies\CategoryPolicy;
 use App\Policies\CourseFaqPolicy;
 use App\Policies\CoursePolicy;
 use App\Policies\LessonPolicy;
+use App\Policies\QuizPolicy;
 use App\Policies\ReviewPolicy;
 use App\Policies\SectionPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
@@ -28,6 +30,7 @@ class AuthServiceProvider extends ServiceProvider
         CourseFaq::class => CourseFaqPolicy::class,
         Review::class => ReviewPolicy::class,
         Lesson::class => LessonPolicy::class,
+        Quiz::class => QuizPolicy::class,
     ];
 
     public function boot(): void

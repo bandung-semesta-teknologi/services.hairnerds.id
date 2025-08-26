@@ -14,8 +14,22 @@ class QuizController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Quiz::class);
+
+        $user = $request->user();
+
         $quizzes = Quiz::query()
             ->with(['section', 'lesson', 'course', 'questions'])
+            ->when($user->role === 'student', function($q) use ($user) {
+                return $q->whereHas('course', function($q) {
+                    $q->where('status', 'published');
+                })->whereHas('course.enrollments', function($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            })
+            ->when($user->role === 'instructor', function($q) use ($user) {
+                return $q->whereHas('course.instructors', fn($q) => $q->where('users.id', $user->id));
+            })
             ->when($request->section_id, fn($q) => $q->where('section_id', $request->section_id))
             ->when($request->lesson_id, fn($q) => $q->where('lesson_id', $request->lesson_id))
             ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
@@ -28,6 +42,8 @@ class QuizController extends Controller
 
     public function store(QuizStoreRequest $request)
     {
+        $this->authorize('create', Quiz::class);
+
         try {
             $quiz = Quiz::create($request->validated());
             $quiz->load(['section', 'lesson', 'course']);
@@ -49,6 +65,8 @@ class QuizController extends Controller
 
     public function show(Quiz $quiz)
     {
+        $this->authorize('view', $quiz);
+
         $quiz->load(['section', 'lesson', 'course', 'questions']);
 
         return new QuizResource($quiz);
@@ -56,6 +74,8 @@ class QuizController extends Controller
 
     public function update(QuizUpdateRequest $request, Quiz $quiz)
     {
+        $this->authorize('update', $quiz);
+
         try {
             $quiz->update($request->validated());
             $quiz->load(['section', 'lesson', 'course']);
@@ -77,6 +97,8 @@ class QuizController extends Controller
 
     public function destroy(Quiz $quiz)
     {
+        $this->authorize('delete', $quiz);
+
         try {
             $quiz->delete();
 
