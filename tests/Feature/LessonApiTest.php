@@ -60,13 +60,13 @@ describe('lesson crud api', function () {
         ]);
     });
 
-    describe('unauthenticated access (forbidden)', function () {
-        it('unauthenticated user cannot view lessons', function () {
+    describe('guest access (forbidden)', function () {
+        it('guest user cannot view lessons', function () {
             getJson('/api/lessons')
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot view single lesson', function () {
+        it('guest user cannot view single lesson', function () {
             $lesson = Lesson::factory()->create([
                 'section_id' => $this->publishedSection->id,
                 'course_id' => $this->publishedCourse->id
@@ -76,7 +76,7 @@ describe('lesson crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot create lesson', function () {
+        it('guest user cannot create lesson', function () {
             postJson('/api/lessons', [
                 'section_id' => $this->publishedSection->id,
                 'course_id' => $this->publishedCourse->id,
@@ -88,7 +88,7 @@ describe('lesson crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot update lesson', function () {
+        it('guest user cannot update lesson', function () {
             $lesson = Lesson::factory()->create([
                 'section_id' => $this->publishedSection->id,
                 'course_id' => $this->publishedCourse->id
@@ -100,7 +100,7 @@ describe('lesson crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot delete lesson', function () {
+        it('guest user cannot delete lesson', function () {
             $lesson = Lesson::factory()->create([
                 'section_id' => $this->publishedSection->id,
                 'course_id' => $this->publishedCourse->id

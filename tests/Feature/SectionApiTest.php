@@ -355,8 +355,8 @@ describe('section crud api', function () {
         });
     });
 
-    describe('unauthenticated access', function () {
-        it('unauthenticated user cannot create section', function () {
+    describe('guest access', function () {
+        it('guest user cannot create section', function () {
             postJson('/api/sections', [
                 'course_id' => $this->publishedCourse->id,
                 'sequence' => 1,
@@ -365,7 +365,7 @@ describe('section crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot update section', function () {
+        it('guest user cannot update section', function () {
             $section = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
 
             putJson("/api/sections/{$section->id}", [
@@ -374,7 +374,7 @@ describe('section crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot delete section', function () {
+        it('guest user cannot delete section', function () {
             $section = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
 
             deleteJson("/api/sections/{$section->id}")

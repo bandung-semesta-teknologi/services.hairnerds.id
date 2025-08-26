@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Course;
 use App\Models\CourseFaq;
 use App\Models\Lesson;
+use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\Review;
 use App\Models\Section;
@@ -17,6 +18,7 @@ use App\Policies\CategoryPolicy;
 use App\Policies\CourseFaqPolicy;
 use App\Policies\CoursePolicy;
 use App\Policies\LessonPolicy;
+use App\Policies\QuestionPolicy;
 use App\Policies\QuizPolicy;
 use App\Policies\ReviewPolicy;
 use App\Policies\SectionPolicy;
@@ -25,7 +27,6 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
 class AuthServiceProvider extends ServiceProvider
 {
     protected $policies = [
-        AnswerBank::class => AnswerBankPolicy::class,
         Course::class => CoursePolicy::class,
         Bootcamp::class => BootcampPolicy::class,
         Section::class => SectionPolicy::class,
@@ -34,6 +35,8 @@ class AuthServiceProvider extends ServiceProvider
         Review::class => ReviewPolicy::class,
         Lesson::class => LessonPolicy::class,
         Quiz::class => QuizPolicy::class,
+        Question::class => QuestionPolicy::class,
+        AnswerBank::class => AnswerBankPolicy::class,
     ];
 
     public function boot(): void

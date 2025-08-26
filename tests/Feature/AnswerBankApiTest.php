@@ -77,13 +77,13 @@ describe('answer bank crud api', function () {
         ]);
     });
 
-    describe('unauthenticated access (forbidden)', function () {
-        it('unauthenticated user cannot view answer banks', function () {
+    describe('guest access (forbidden)', function () {
+        it('guest user cannot view answer banks', function () {
             getJson('/api/answer-banks')
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot create answer bank', function () {
+        it('guest user cannot create answer bank', function () {
             postJson('/api/answer-banks', [
                 'question_id' => $this->publishedQuestion->id,
                 'answer' => 'Test answer',

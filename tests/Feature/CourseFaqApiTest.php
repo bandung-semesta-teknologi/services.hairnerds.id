@@ -349,8 +349,8 @@ describe('course faq crud api', function () {
         });
     });
 
-    describe('unauthenticated access', function () {
-        it('unauthenticated user can view faqs from published courses', function () {
+    describe('guest access', function () {
+        it('guest user can view faqs from published courses', function () {
             CourseFaq::factory()->count(3)->create(['course_id' => $this->publishedCourse->id]);
             CourseFaq::factory()->count(2)->create(['course_id' => $this->draftCourse->id]);
 
@@ -359,7 +359,7 @@ describe('course faq crud api', function () {
                 ->assertJsonCount(3, 'data');
         });
 
-        it('unauthenticated user can view single faq from published course', function () {
+        it('guest user can view single faq from published course', function () {
             $faq = CourseFaq::factory()->create(['course_id' => $this->publishedCourse->id]);
 
             getJson("/api/courses-faqs/{$faq->id}")
@@ -367,14 +367,14 @@ describe('course faq crud api', function () {
                 ->assertJsonPath('data.id', $faq->id);
         });
 
-        it('unauthenticated user cannot view faq from draft course', function () {
+        it('guest user cannot view faq from draft course', function () {
             $faq = CourseFaq::factory()->create(['course_id' => $this->draftCourse->id]);
 
             getJson("/api/courses-faqs/{$faq->id}")
                 ->assertForbidden();
         });
 
-        it('unauthenticated user cannot create faq', function () {
+        it('guest user cannot create faq', function () {
             postJson('/api/courses-faqs', [
                 'course_id' => $this->publishedCourse->id,
                 'question' => 'Unauthorized question?',
@@ -383,7 +383,7 @@ describe('course faq crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot update faq', function () {
+        it('guest user cannot update faq', function () {
             $faq = CourseFaq::factory()->create(['course_id' => $this->publishedCourse->id]);
 
             putJson("/api/courses-faqs/{$faq->id}", [
@@ -392,7 +392,7 @@ describe('course faq crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot delete faq', function () {
+        it('guest user cannot delete faq', function () {
             $faq = CourseFaq::factory()->create(['course_id' => $this->publishedCourse->id]);
 
             deleteJson("/api/courses-faqs/{$faq->id}")

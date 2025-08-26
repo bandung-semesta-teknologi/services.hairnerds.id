@@ -248,8 +248,8 @@ describe('category crud api', function () {
         });
     });
 
-    describe('unauthenticated access', function () {
-        it('unauthenticated user can view all categories', function () {
+    describe('guest access', function () {
+        it('guest user can view all categories', function () {
             Category::factory()->count(3)->create();
 
             getJson('/api/categories')
@@ -268,7 +268,7 @@ describe('category crud api', function () {
                 ]);
         });
 
-        it('unauthenticated user can view single category', function () {
+        it('guest user can view single category', function () {
             $category = Category::factory()->create();
 
             getJson("/api/categories/{$category->id}")
@@ -277,14 +277,14 @@ describe('category crud api', function () {
                 ->assertJsonPath('data.name', $category->name);
         });
 
-        it('unauthenticated user cannot create category', function () {
+        it('guest user cannot create category', function () {
             postJson('/api/categories', [
                 'name' => 'Unauthorized Category'
             ])
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot update category', function () {
+        it('guest user cannot update category', function () {
             $category = Category::factory()->create();
 
             putJson("/api/categories/{$category->id}", [
@@ -293,7 +293,7 @@ describe('category crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot delete category', function () {
+        it('guest user cannot delete category', function () {
             $category = Category::factory()->create();
 
             deleteJson("/api/categories/{$category->id}")

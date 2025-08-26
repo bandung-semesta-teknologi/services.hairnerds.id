@@ -74,13 +74,13 @@ describe('quiz crud api', function () {
         ]);
     });
 
-    describe('unauthenticated access (forbidden)', function () {
-        it('unauthenticated user cannot view quizzes', function () {
+    describe('guest access (forbidden)', function () {
+        it('guest user cannot view quizzes', function () {
             getJson('/api/quizzes')
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot view single quiz', function () {
+        it('guest user cannot view single quiz', function () {
             $quiz = Quiz::factory()->create([
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
@@ -91,7 +91,7 @@ describe('quiz crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot create quiz', function () {
+        it('guest user cannot create quiz', function () {
             postJson('/api/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
@@ -103,7 +103,7 @@ describe('quiz crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot update quiz', function () {
+        it('guest user cannot update quiz', function () {
             $quiz = Quiz::factory()->create([
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
@@ -116,7 +116,7 @@ describe('quiz crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot delete quiz', function () {
+        it('guest user cannot delete quiz', function () {
             $quiz = Quiz::factory()->create([
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,

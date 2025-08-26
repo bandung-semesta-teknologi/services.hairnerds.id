@@ -414,8 +414,8 @@ describe('review crud api', function () {
         });
     });
 
-    describe('unauthenticated access', function () {
-        it('unauthenticated user can view visible reviews from published courses', function () {
+    describe('guest access', function () {
+        it('guest user can view visible reviews from published courses', function () {
             Review::factory()->count(3)->visible()->create(['course_id' => $this->publishedCourse->id]);
             Review::factory()->count(2)->hidden()->create(['course_id' => $this->publishedCourse->id]);
             Review::factory()->count(2)->visible()->create(['course_id' => $this->draftCourse->id]);
@@ -425,7 +425,7 @@ describe('review crud api', function () {
                 ->assertJsonCount(3, 'data');
         });
 
-        it('unauthenticated user can view single visible review from published course', function () {
+        it('guest user can view single visible review from published course', function () {
             $review = Review::factory()->visible()->create(['course_id' => $this->publishedCourse->id]);
 
             getJson("/api/reviews/{$review->id}")
@@ -433,14 +433,14 @@ describe('review crud api', function () {
                 ->assertJsonPath('data.id', $review->id);
         });
 
-        it('unauthenticated user cannot view hidden review', function () {
+        it('guest user cannot view hidden review', function () {
             $review = Review::factory()->hidden()->create(['course_id' => $this->publishedCourse->id]);
 
             getJson("/api/reviews/{$review->id}")
                 ->assertForbidden();
         });
 
-        it('unauthenticated user cannot create review', function () {
+        it('guest user cannot create review', function () {
             postJson('/api/reviews', [
                 'course_id' => $this->publishedCourse->id,
                 'user_id' => $this->student->id,
@@ -450,7 +450,7 @@ describe('review crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot update review', function () {
+        it('guest user cannot update review', function () {
             $review = Review::factory()->visible()->create(['course_id' => $this->publishedCourse->id]);
 
             putJson("/api/reviews/{$review->id}", [
@@ -459,7 +459,7 @@ describe('review crud api', function () {
                 ->assertUnauthorized();
         });
 
-        it('unauthenticated user cannot delete review', function () {
+        it('guest user cannot delete review', function () {
             $review = Review::factory()->visible()->create(['course_id' => $this->publishedCourse->id]);
 
             deleteJson("/api/reviews/{$review->id}")
