@@ -55,7 +55,7 @@ describe('review crud api', function () {
         ]);
     });
 
-    describe('public access', function () {
+    describe('guest access', function () {
         it('anyone can get all visible reviews from published courses without auth', function () {
             Review::factory()->count(3)->visible()->create(['course_id' => $this->publishedCourse->id]);
             Review::factory()->count(2)->hidden()->create(['course_id' => $this->publishedCourse->id]);

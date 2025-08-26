@@ -26,7 +26,7 @@ describe('category crud api', function () {
             ->create(['role' => 'student']);
     });
 
-    describe('public access', function () {
+    describe('guest access', function () {
         it('anyone can get all categories with pagination without auth', function () {
             Category::factory()->count(8)->create();
 

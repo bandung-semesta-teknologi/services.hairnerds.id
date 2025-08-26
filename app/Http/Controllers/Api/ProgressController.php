@@ -14,8 +14,18 @@ class ProgressController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Progress::class);
+
+        $user = $request->user();
+
         $progress = Progress::query()
             ->with(['enrollment', 'user', 'course', 'lesson'])
+            ->when($user->role === 'student', function($q) use ($user) {
+                return $q->where('user_id', $user->id);
+            })
+            ->when($user->role === 'instructor', function($q) use ($user) {
+                return $q->whereHas('course.instructors', fn($q) => $q->where('users.id', $user->id));
+            })
             ->when($request->enrollment_id, fn($q) => $q->where('enrollment_id', $request->enrollment_id))
             ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
             ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
@@ -30,8 +40,27 @@ class ProgressController extends Controller
 
     public function store(ProgressStoreRequest $request)
     {
+        $this->authorize('create', Progress::class);
+
         try {
-            $progress = Progress::create($request->validated());
+            $validated = $request->validated();
+
+            $user = $request->user();
+            if ($user && $user->role === 'instructor') {
+                $isInstructorOfCourse = \App\Models\Course::query()
+                    ->whereKey($validated['course_id'])
+                    ->whereHas('instructors', fn($q) => $q->where('users.id', $user->id))
+                    ->exists();
+
+                if (!$isInstructorOfCourse) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'You are not allowed to create progress for this course',
+                    ], 403);
+                }
+            }
+
+            $progress = Progress::create($validated);
             $progress->load(['enrollment', 'user', 'course', 'lesson']);
 
             return response()->json([
@@ -51,6 +80,8 @@ class ProgressController extends Controller
 
     public function show(Progress $progress)
     {
+        $this->authorize('view', $progress);
+
         $progress->load(['enrollment', 'user', 'course', 'lesson']);
 
         return new ProgressResource($progress);
@@ -58,6 +89,8 @@ class ProgressController extends Controller
 
     public function update(ProgressUpdateRequest $request, Progress $progress)
     {
+        $this->authorize('update', $progress);
+
         try {
             $progress->update($request->validated());
             $progress->load(['enrollment', 'user', 'course', 'lesson']);
@@ -79,6 +112,8 @@ class ProgressController extends Controller
 
     public function destroy(Progress $progress)
     {
+        $this->authorize('delete', $progress);
+
         try {
             $progress->delete();
 
@@ -98,6 +133,8 @@ class ProgressController extends Controller
 
     public function complete(Progress $progress)
     {
+        $this->authorize('complete', $progress);
+
         try {
             $progress->update(['is_completed' => true]);
             $progress->load(['enrollment', 'user', 'course', 'lesson']);

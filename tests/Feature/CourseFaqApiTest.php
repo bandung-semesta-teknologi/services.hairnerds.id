@@ -45,7 +45,7 @@ describe('course faq crud api', function () {
         $this->otherCourse->instructors()->attach($this->otherInstructor->id);
     });
 
-    describe('public access', function () {
+    describe('guest access', function () {
         it('anyone can get all faqs from published courses only without auth', function () {
             CourseFaq::factory()->count(3)->create(['course_id' => $this->publishedCourse->id]);
             CourseFaq::factory()->count(2)->create(['course_id' => $this->draftCourse->id]);

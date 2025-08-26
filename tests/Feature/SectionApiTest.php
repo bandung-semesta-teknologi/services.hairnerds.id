@@ -44,7 +44,7 @@ describe('section crud api', function () {
         $this->otherInstructorCourse->instructors()->attach($this->otherInstructor->id);
     });
 
-    describe('public access', function () {
+    describe('guest access', function () {
         it('anyone can get sections from published courses without auth', function () {
             Section::factory()->count(3)->create(['course_id' => $this->publishedCourse->id]);
             Section::factory()->count(2)->create(['course_id' => $this->draftCourse->id]);

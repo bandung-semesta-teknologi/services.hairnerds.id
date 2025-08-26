@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\CourseFaq;
 use App\Models\Enrollment;
 use App\Models\Lesson;
+use App\Models\Progress;
 use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\Review;
@@ -20,6 +21,7 @@ use App\Policies\CourseFaqPolicy;
 use App\Policies\CoursePolicy;
 use App\Policies\EnrollmentPolicy;
 use App\Policies\LessonPolicy;
+use App\Policies\ProgressPolicy;
 use App\Policies\QuestionPolicy;
 use App\Policies\QuizPolicy;
 use App\Policies\ReviewPolicy;
@@ -40,6 +42,7 @@ class AuthServiceProvider extends ServiceProvider
         Question::class => QuestionPolicy::class,
         AnswerBank::class => AnswerBankPolicy::class,
         Enrollment::class => EnrollmentPolicy::class,
+        Progress::class => ProgressPolicy::class,
     ];
 
     public function boot(): void

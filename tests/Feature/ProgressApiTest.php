@@ -17,455 +17,456 @@ use function Pest\Laravel\putJson;
 
 describe('progress crud api', function () {
     beforeEach(function () {
-        $this->user = User::factory()
+        $this->admin = User::factory()
             ->has(UserCredential::factory()->emailCredential())
-            ->create();
+            ->create(['role' => 'admin']);
 
-        actingAs($this->user);
+        $this->instructor = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'instructor']);
+
+        $this->otherInstructor = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'instructor']);
+
+        $this->student = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'student']);
+
+        $this->otherStudent = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'student']);
 
         $this->categories = Category::factory()->count(2)->create();
-        $this->course = Course::factory()->published()->verified()->create();
-        $this->course->categories()->attach($this->categories->first()->id);
 
-        $this->section = Section::factory()->create(['course_id' => $this->course->id]);
-        $this->lesson = Lesson::factory()->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
+        $this->publishedCourse = Course::factory()->published()->create();
+        $this->publishedCourse->categories()->attach($this->categories->first()->id);
+        $this->publishedCourse->instructors()->attach($this->instructor->id);
+
+        $this->draftCourse = Course::factory()->draft()->create();
+        $this->draftCourse->categories()->attach($this->categories->last()->id);
+        $this->draftCourse->instructors()->attach($this->instructor->id);
+
+        $this->otherCourse = Course::factory()->published()->create();
+        $this->otherCourse->categories()->attach($this->categories->first()->id);
+        $this->otherCourse->instructors()->attach($this->otherInstructor->id);
+
+        $this->publishedSection = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
+        $this->draftSection = Section::factory()->create(['course_id' => $this->draftCourse->id]);
+        $this->otherSection = Section::factory()->create(['course_id' => $this->otherCourse->id]);
+
+        $this->publishedLesson = Lesson::factory()->create([
+            'section_id' => $this->publishedSection->id,
+            'course_id' => $this->publishedCourse->id
+        ]);
+        $this->draftLesson = Lesson::factory()->create([
+            'section_id' => $this->draftSection->id,
+            'course_id' => $this->draftCourse->id
+        ]);
+        $this->otherLesson = Lesson::factory()->create([
+            'section_id' => $this->otherSection->id,
+            'course_id' => $this->otherCourse->id
         ]);
 
-        $this->student = User::factory()->create(['role' => 'student']);
         $this->enrollment = Enrollment::factory()->create([
             'user_id' => $this->student->id,
-            'course_id' => $this->course->id
+            'course_id' => $this->publishedCourse->id
+        ]);
+        $this->otherEnrollment = Enrollment::factory()->create([
+            'user_id' => $this->otherStudent->id,
+            'course_id' => $this->otherCourse->id
+        ]);
+
+        $this->progress = Progress::factory()->create([
+            'enrollment_id' => $this->enrollment->id,
+            'user_id' => $this->student->id,
+            'course_id' => $this->publishedCourse->id,
+            'lesson_id' => $this->publishedLesson->id
         ]);
     });
 
-    it('user can get all progress with pagination', function () {
-        $lessons = Lesson::factory()->count(8)->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
+    describe('guest access (forbidden)', function () {
+        it('guest user cannot view progress', function () {
+            getJson('/api/progress')
+                ->assertUnauthorized();
+        });
 
-        foreach ($lessons as $lesson) {
-            Progress::factory()->create([
+        it('guest user cannot view single progress', function () {
+            getJson("/api/progress/{$this->progress->id}")
+                ->assertUnauthorized();
+        });
+
+        it('guest user cannot create progress', function () {
+            postJson('/api/progress', [
                 'enrollment_id' => $this->enrollment->id,
                 'user_id' => $this->student->id,
-                'course_id' => $this->course->id,
-                'lesson_id' => $lesson->id
-            ]);
-        }
+                'course_id' => $this->publishedCourse->id,
+                'lesson_id' => $this->publishedLesson->id
+            ])
+                ->assertUnauthorized();
+        });
 
-        getJson('/api/progress')
-            ->assertOk()
-            ->assertJsonStructure([
-                'data' => [
-                    '*' => [
-                        'id',
-                        'enrollment_id',
+        it('guest user cannot update progress', function () {
+            putJson("/api/progress/{$this->progress->id}", [
+                'is_completed' => true
+            ])
+                ->assertUnauthorized();
+        });
+
+        it('guest user cannot delete progress', function () {
+            deleteJson("/api/progress/{$this->progress->id}")
+                ->assertUnauthorized();
+        });
+
+        it('guest user cannot complete progress', function () {
+            postJson("/api/progress/{$this->progress->id}/complete")
+                ->assertUnauthorized();
+        });
+    });
+
+    describe('admin access', function () {
+        beforeEach(function () {
+            actingAs($this->admin);
+        });
+
+        it('admin can see all progress from all courses', function () {
+            Progress::factory()->count(3)->create([
+                'enrollment_id' => $this->enrollment->id,
+                'user_id' => $this->student->id,
+                'course_id' => $this->publishedCourse->id,
+                'lesson_id' => $this->publishedLesson->id
+            ]);
+            Progress::factory()->count(2)->create([
+                'enrollment_id' => $this->otherEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id,
+                'lesson_id' => $this->otherLesson->id
+            ]);
+
+            getJson('/api/progress')
+                ->assertOk()
+                ->assertJsonCount(6, 'data')
+                ->assertJsonStructure([
+                    'data' => [
+                        '*' => [
+                            'id',
+                            'enrollment_id',
+                            'enrollment',
+                            'user_id',
+                            'user',
+                            'course_id',
+                            'course',
+                            'lesson_id',
+                            'lesson',
+                            'is_completed',
+                            'score',
+                            'created_at',
+                            'updated_at',
+                        ]
+                    ],
+                    'links',
+                    'meta'
+                ]);
+        });
+
+        it('admin can create progress for any enrollment', function () {
+            $progressData = [
+                'enrollment_id' => $this->otherEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id,
+                'lesson_id' => $this->otherLesson->id,
+                'is_completed' => false
+            ];
+
+            postJson('/api/progress', $progressData)
+                ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Progress created successfully')
+                ->assertJsonPath('data.user_id', $this->otherStudent->id)
+                ->assertJsonPath('data.course_id', $this->otherCourse->id)
+                ->assertJsonPath('data.is_completed', false);
+
+            $this->assertDatabaseHas('progress', [
+                'enrollment_id' => $this->otherEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id,
+                'lesson_id' => $this->otherLesson->id
+            ]);
+        });
+
+        it('admin can update any progress', function () {
+            $updateData = [
+                'is_completed' => true,
+                'score' => 85
+            ];
+
+            putJson("/api/progress/{$this->progress->id}", $updateData)
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Progress updated successfully')
+                ->assertJsonPath('data.is_completed', true)
+                ->assertJsonPath('data.score', 85);
+
+            $this->assertDatabaseHas('progress', [
+                'id' => $this->progress->id,
+                'is_completed' => true,
+                'score' => 85
+            ]);
+        });
+
+        it('admin can delete any progress', function () {
+            deleteJson("/api/progress/{$this->progress->id}")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Progress deleted successfully');
+
+            $this->assertSoftDeleted('progress', ['id' => $this->progress->id]);
+        });
+
+        it('admin can complete any progress', function () {
+            postJson("/api/progress/{$this->progress->id}/complete")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Progress marked as completed')
+                ->assertJsonPath('data.is_completed', true);
+
+            $this->assertDatabaseHas('progress', [
+                'id' => $this->progress->id,
+                'is_completed' => true
+            ]);
+        });
+
+        it('admin can view any progress', function () {
+            getJson("/api/progress/{$this->progress->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $this->progress->id)
+                ->assertJsonStructure([
+                    'data' => [
                         'enrollment',
-                        'user_id',
                         'user',
-                        'course_id',
                         'course',
-                        'lesson_id',
-                        'lesson',
-                        'is_completed',
-                        'score',
-                        'created_at',
-                        'updated_at',
+                        'lesson'
                     ]
-                ],
-                'links',
-                'meta'
-            ]);
+                ]);
+        });
     });
 
-    it('user can filter progress by enrollment', function () {
-        $user2 = User::factory()->create(['role' => 'student']);
-        $enrollment2 = Enrollment::factory()->create([
-            'user_id' => $user2->id,
-            'course_id' => $this->course->id
-        ]);
-        $lesson2 = Lesson::factory()->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
-        $lesson3 = Lesson::factory()->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
+    describe('instructor access', function () {
+        beforeEach(function () {
+            actingAs($this->instructor);
+        });
 
-        Progress::factory()->count(3)->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ]);
-        Progress::factory()->create([
-            'enrollment_id' => $enrollment2->id,
-            'user_id' => $user2->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $lesson2->id
-        ]);
-        Progress::factory()->create([
-            'enrollment_id' => $enrollment2->id,
-            'user_id' => $user2->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $lesson3->id
-        ]);
-
-        getJson("/api/progress?enrollment_id={$this->enrollment->id}")
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
-    });
-
-    it('user can filter progress by user', function () {
-        $user2 = User::factory()->create(['role' => 'student']);
-        $course2 = Course::factory()->published()->verified()->create();
-        $section2 = Section::factory()->create(['course_id' => $course2->id]);
-        $lesson2 = Lesson::factory()->create([
-            'section_id' => $section2->id,
-            'course_id' => $course2->id
-        ]);
-        $enrollment2 = Enrollment::factory()->create([
-            'user_id' => $user2->id,
-            'course_id' => $course2->id
-        ]);
-
-        $lessons = Lesson::factory()->count(3)->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
-
-        foreach ($lessons as $lesson) {
-            Progress::factory()->create([
+        it('instructor can see progress only from their own courses', function () {
+            Progress::factory()->count(3)->create([
                 'enrollment_id' => $this->enrollment->id,
                 'user_id' => $this->student->id,
-                'course_id' => $this->course->id,
-                'lesson_id' => $lesson->id
+                'course_id' => $this->publishedCourse->id,
+                'lesson_id' => $this->publishedLesson->id
             ]);
-        }
+            Progress::factory()->count(2)->create([
+                'enrollment_id' => $this->otherEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id,
+                'lesson_id' => $this->otherLesson->id
+            ]);
 
-        Progress::factory()->create([
-            'enrollment_id' => $enrollment2->id,
-            'user_id' => $user2->id,
-            'course_id' => $course2->id,
-            'lesson_id' => $lesson2->id
-        ]);
-        Progress::factory()->create([
-            'enrollment_id' => $enrollment2->id,
-            'user_id' => $user2->id,
-            'course_id' => $course2->id,
-            'lesson_id' => $this->lesson->id
-        ]);
+            getJson('/api/progress')
+                ->assertOk()
+                ->assertJsonCount(4, 'data');
+        });
 
-        getJson("/api/progress?user_id={$this->student->id}")
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
+        it('instructor can create progress for their own course', function () {
+            $newEnrollment = Enrollment::factory()->create([
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+
+            $progressData = [
+                'enrollment_id' => $newEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->publishedCourse->id,
+                'lesson_id' => $this->publishedLesson->id
+            ];
+
+            postJson('/api/progress', $progressData)
+                ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Progress created successfully')
+                ->assertJsonPath('data.user_id', $this->otherStudent->id);
+        });
+
+        it('instructor can update progress from their own course', function () {
+            putJson("/api/progress/{$this->progress->id}", [
+                'is_completed' => true,
+                'score' => 90
+            ])
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Progress updated successfully')
+                ->assertJsonPath('data.is_completed', true);
+        });
+
+        it('instructor can delete progress from their own course', function () {
+            deleteJson("/api/progress/{$this->progress->id}")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Progress deleted successfully');
+
+            $this->assertSoftDeleted('progress', ['id' => $this->progress->id]);
+        });
+
+        it('instructor can complete progress from their own course', function () {
+            postJson("/api/progress/{$this->progress->id}/complete")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Progress marked as completed')
+                ->assertJsonPath('data.is_completed', true);
+        });
+
+        it('instructor can view progress from their own course', function () {
+            getJson("/api/progress/{$this->progress->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $this->progress->id);
+        });
+
+        it('instructor cannot create progress for other instructor course', function () {
+            $progressData = [
+                'enrollment_id' => $this->otherEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id,
+                'lesson_id' => $this->otherLesson->id
+            ];
+
+            postJson('/api/progress', $progressData)
+                ->assertForbidden();
+        });
+
+        it('instructor cannot update progress from other instructor course', function () {
+            $otherProgress = Progress::factory()->create([
+                'enrollment_id' => $this->otherEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id,
+                'lesson_id' => $this->otherLesson->id
+            ]);
+
+            putJson("/api/progress/{$otherProgress->id}", [
+                'is_completed' => true
+            ])
+                ->assertForbidden();
+        });
+
+        it('instructor cannot delete progress from other instructor course', function () {
+            $otherProgress = Progress::factory()->create([
+                'enrollment_id' => $this->otherEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id,
+                'lesson_id' => $this->otherLesson->id
+            ]);
+
+            deleteJson("/api/progress/{$otherProgress->id}")
+                ->assertForbidden();
+        });
+
+        it('instructor cannot view progress from other instructor course', function () {
+            $otherProgress = Progress::factory()->create([
+                'enrollment_id' => $this->otherEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id,
+                'lesson_id' => $this->otherLesson->id
+            ]);
+
+            getJson("/api/progress/{$otherProgress->id}")
+                ->assertForbidden();
+        });
     });
 
-    it('user can filter progress by course', function () {
-        $course2 = Course::factory()->published()->verified()->create();
-        $section2 = Section::factory()->create(['course_id' => $course2->id]);
-        $lesson2 = Lesson::factory()->create([
-            'section_id' => $section2->id,
-            'course_id' => $course2->id
-        ]);
-        $enrollment2 = Enrollment::factory()->create([
-            'user_id' => $this->student->id,
-            'course_id' => $course2->id
-        ]);
+    describe('student access', function () {
+        beforeEach(function () {
+            actingAs($this->student);
+        });
 
-        Progress::factory()->count(3)->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ]);
-        Progress::factory()->count(2)->create([
-            'enrollment_id' => $enrollment2->id,
-            'user_id' => $this->student->id,
-            'course_id' => $course2->id,
-            'lesson_id' => $lesson2->id
-        ]);
+        it('student can view their own progress only', function () {
+            Progress::factory()->count(2)->create([
+                'enrollment_id' => $this->enrollment->id,
+                'user_id' => $this->student->id,
+                'course_id' => $this->publishedCourse->id,
+                'lesson_id' => $this->publishedLesson->id
+            ]);
+            Progress::factory()->count(3)->create([
+                'enrollment_id' => $this->otherEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id,
+                'lesson_id' => $this->otherLesson->id
+            ]);
 
-        getJson("/api/progress?course_id={$this->course->id}")
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
-    });
+            getJson('/api/progress')
+                ->assertOk()
+                ->assertJsonCount(3, 'data');
+        });
 
-    it('user can filter progress by lesson', function () {
-        $lesson2 = Lesson::factory()->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
+        it('student can complete their own progress', function () {
+            postJson("/api/progress/{$this->progress->id}/complete")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Progress marked as completed')
+                ->assertJsonPath('data.is_completed', true);
 
-        Progress::factory()->count(3)->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ]);
-        Progress::factory()->count(2)->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $lesson2->id
-        ]);
+            $this->assertDatabaseHas('progress', [
+                'id' => $this->progress->id,
+                'is_completed' => true
+            ]);
+        });
 
-        getJson("/api/progress?lesson_id={$this->lesson->id}")
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
-    });
+        it('student can view their own progress', function () {
+            getJson("/api/progress/{$this->progress->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $this->progress->id);
+        });
 
-    it('user can filter progress by status', function () {
-        Progress::factory()->completed()->count(2)->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ]);
-        Progress::factory()->incomplete()->count(3)->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ]);
+        it('student cannot create progress', function () {
+            postJson('/api/progress', [
+                'enrollment_id' => $this->enrollment->id,
+                'user_id' => $this->student->id,
+                'course_id' => $this->publishedCourse->id,
+                'lesson_id' => $this->publishedLesson->id
+            ])
+                ->assertForbidden();
+        });
 
-        getJson('/api/progress?status=completed')
-            ->assertOk()
-            ->assertJsonCount(2, 'data');
+        it('student cannot update progress', function () {
+            putJson("/api/progress/{$this->progress->id}", [
+                'is_completed' => true
+            ])
+                ->assertForbidden();
+        });
 
-        getJson('/api/progress?status=incomplete')
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
-    });
+        it('student cannot delete progress', function () {
+            deleteJson("/api/progress/{$this->progress->id}")
+                ->assertForbidden();
+        });
 
-    it('progress are ordered by latest first', function () {
-        $older = Progress::factory()->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id,
-            'created_at' => now()->subDay()
-        ]);
+        it('student cannot view other student progress', function () {
+            $otherProgress = Progress::factory()->create([
+                'enrollment_id' => $this->otherEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id,
+                'lesson_id' => $this->otherLesson->id
+            ]);
 
-        $newer = Progress::factory()->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id,
-            'created_at' => now()
-        ]);
+            getJson("/api/progress/{$otherProgress->id}")
+                ->assertForbidden();
+        });
 
-        getJson('/api/progress')
-            ->assertOk()
-            ->assertJsonPath('data.0.id', $newer->id)
-            ->assertJsonPath('data.1.id', $older->id);
-    });
+        it('student cannot complete other student progress', function () {
+            $otherProgress = Progress::factory()->create([
+                'enrollment_id' => $this->otherEnrollment->id,
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id,
+                'lesson_id' => $this->otherLesson->id
+            ]);
 
-    it('user can create new progress', function () {
-        $progressData = [
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id,
-            'is_completed' => false,
-            'score' => null
-        ];
-
-        postJson('/api/progress', $progressData)
-            ->assertCreated()
-            ->assertJsonPath('data.enrollment_id', $this->enrollment->id)
-            ->assertJsonPath('data.user_id', $this->student->id)
-            ->assertJsonPath('data.course_id', $this->course->id)
-            ->assertJsonPath('data.lesson_id', $this->lesson->id)
-            ->assertJsonPath('data.is_completed', false);
-
-        $this->assertDatabaseHas('progress', [
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ]);
-    });
-
-    it('validates required fields when creating progress', function () {
-        postJson('/api/progress', [])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['enrollment_id', 'user_id', 'course_id', 'lesson_id']);
-    });
-
-    it('validates foreign key relationships when creating progress', function () {
-        $progressData = [
-            'enrollment_id' => 99999,
-            'user_id' => 99999,
-            'course_id' => 99999,
-            'lesson_id' => 99999
-        ];
-
-        postJson('/api/progress', $progressData)
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['enrollment_id', 'user_id', 'course_id', 'lesson_id']);
-    });
-
-    it('user can get single progress with relationships', function () {
-        $progress = Progress::factory()->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ]);
-
-        getJson("/api/progress/{$progress->id}")
-            ->assertOk()
-            ->assertJsonPath('data.id', $progress->id)
-            ->assertJsonPath('data.enrollment.id', $this->enrollment->id)
-            ->assertJsonPath('data.user.name', $this->student->name)
-            ->assertJsonPath('data.course.id', $this->course->id)
-            ->assertJsonPath('data.lesson.id', $this->lesson->id);
-    });
-
-    it('returns 404 when progress not found', function () {
-        getJson('/api/progress/99999')
-            ->assertNotFound();
-    });
-
-    it('user can update progress', function () {
-        $progress = Progress::factory()->incomplete()->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ]);
-
-        $updateData = [
-            'is_completed' => true,
-            'score' => 85
-        ];
-
-        putJson("/api/progress/{$progress->id}", $updateData)
-            ->assertOk()
-            ->assertJsonPath('data.is_completed', true)
-            ->assertJsonPath('data.score', 85);
-
-        $this->assertDatabaseHas('progress', [
-            'id' => $progress->id,
-            'is_completed' => true,
-            'score' => 85
-        ]);
-    });
-
-    it('user can partially update progress', function () {
-        $progress = Progress::factory()->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id,
-            'score' => 70
-        ]);
-
-        putJson("/api/progress/{$progress->id}", ['score' => 95])
-            ->assertOk()
-            ->assertJsonPath('data.score', 95);
-    });
-
-    it('user can delete progress', function () {
-        $progress = Progress::factory()->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ]);
-
-        deleteJson("/api/progress/{$progress->id}")
-            ->assertOk()
-            ->assertJson(['message' => 'Progress deleted successfully']);
-
-        $this->assertSoftDeleted('progress', ['id' => $progress->id]);
-    });
-
-    it('returns 404 when deleting non-existent progress', function () {
-        deleteJson('/api/progress/99999')
-            ->assertNotFound();
-    });
-
-    it('user can complete progress', function () {
-        $progress = Progress::factory()->incomplete()->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ]);
-
-        postJson("/api/progress/{$progress->id}/complete")
-            ->assertOk()
-            ->assertJsonPath('data.is_completed', true)
-            ->assertJsonPath('message', 'Progress marked as completed');
-
-        $this->assertDatabaseHas('progress', [
-            'id' => $progress->id,
-            'is_completed' => true
-        ]);
-    });
-
-    it('user can set custom per_page for pagination', function () {
-        Progress::factory()->count(10)->create([
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ]);
-
-        getJson('/api/progress?per_page=4')
-            ->assertOk()
-            ->assertJsonCount(4, 'data');
-    });
-
-    it('validates score is not negative', function () {
-        postJson('/api/progress', [
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id,
-            'score' => -5
-        ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['score']);
-    });
-
-    it('validates is_completed as boolean', function () {
-        postJson('/api/progress', [
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id,
-            'is_completed' => 'not_boolean'
-        ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['is_completed']);
-    });
-
-    it('accepts boolean values as string for is_completed', function () {
-        postJson('/api/progress', [
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id,
-            'is_completed' => '1'
-        ])
-            ->assertCreated()
-            ->assertJsonPath('data.is_completed', true);
-    });
-
-    it('defaults is_completed to false when not provided', function () {
-        postJson('/api/progress', [
-            'enrollment_id' => $this->enrollment->id,
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'lesson_id' => $this->lesson->id
-        ])
-            ->assertCreated()
-            ->assertJsonPath('data.is_completed', false);
+            postJson("/api/progress/{$otherProgress->id}/complete")
+                ->assertForbidden();
+        });
     });
 });
