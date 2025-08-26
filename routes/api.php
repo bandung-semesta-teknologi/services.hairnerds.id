@@ -36,6 +36,9 @@ Route::get('/sections/{section}', [SectionController::class, 'show']);
 Route::get('/bootcamps', [BootcampController::class, 'index']);
 Route::get('/bootcamps/{bootcamp}', [BootcampController::class, 'show']);
 
+Route::get('/reviews', [ReviewController::class, 'index']);
+Route::get('/reviews/{review}', [ReviewController::class, 'show']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
@@ -74,7 +77,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('quizzes', QuizController::class);
     Route::apiResource('questions', QuestionController::class);
     Route::apiResource('answer-banks', AnswerBankController::class);
-    Route::apiResource('reviews', ReviewController::class);
+
+    Route::post('/reviews', [ReviewController::class, 'store']);
+    Route::put('/reviews/{review}', [ReviewController::class, 'update']);
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
 
     Route::apiResource('enrollments', EnrollmentController::class);
     Route::post('/enrollments/{enrollment}/finish', [EnrollmentController::class, 'finish']);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ReviewStoreRequest;
 use App\Http\Requests\ReviewUpdateRequest;
 use App\Http\Resources\ReviewResource;
+use App\Models\Course;
 use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -14,8 +15,19 @@ class ReviewController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('viewAny', Review::class);
+
         $reviews = Review::query()
             ->with(['course', 'user'])
+            ->when(!$user || $user->role === 'student', function($q) {
+                return $q->whereHas('course', fn($q) => $q->where('status', 'published'))
+                         ->where('is_visible', true);
+            })
+            ->when($user && $user->role === 'instructor', function($q) use ($user) {
+                return $q->whereHas('course.instructors', fn($q) => $q->where('users.id', $user->id));
+            })
             ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
             ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
             ->when($request->rating, fn($q) => $q->where('rating', $request->rating))
@@ -28,8 +40,38 @@ class ReviewController extends Controller
 
     public function store(ReviewStoreRequest $request)
     {
+        $this->authorize('create', Review::class);
+
         try {
-            $review = Review::create($request->validated());
+            $data = $request->validated();
+
+            if ($request->user()->role === 'student') {
+                $course = Course::findOrFail($data['course_id']);
+
+                $isEnrolled = $request->user()->enrollments()
+                    ->where('course_id', $course->id)
+                    ->exists();
+
+                if (!$isEnrolled) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'You can only review courses you are enrolled in'
+                    ], 422);
+                }
+
+                $existingReview = Review::where('user_id', $request->user()->id)
+                    ->where('course_id', $course->id)
+                    ->exists();
+
+                if ($existingReview) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'You have already reviewed this course'
+                    ], 422);
+                }
+            }
+
+            $review = Review::create($data);
             $review->load(['course', 'user']);
 
             return response()->json([
@@ -47,8 +89,12 @@ class ReviewController extends Controller
         }
     }
 
-    public function show(Review $review)
+    public function show(Request $request, Review $review)
     {
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('view', $review);
+
         $review->load(['course', 'user']);
 
         return new ReviewResource($review);
@@ -56,6 +102,8 @@ class ReviewController extends Controller
 
     public function update(ReviewUpdateRequest $request, Review $review)
     {
+        $this->authorize('update', $review);
+
         try {
             $review->update($request->validated());
             $review->load(['course', 'user']);
@@ -77,6 +125,8 @@ class ReviewController extends Controller
 
     public function destroy(Review $review)
     {
+        $this->authorize('delete', $review);
+
         try {
             $review->delete();
 
@@ -92,5 +142,19 @@ class ReviewController extends Controller
                 'message' => 'Failed to delete review'
             ], 500);
         }
+    }
+
+    private function resolveOptionalUser(Request $request)
+    {
+        if ($user = $request->user()) {
+            return $user;
+        }
+
+        if ($token = $request->bearerToken()) {
+            $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            return $accessToken?->tokenable;
+        }
+
+        return null;
     }
 }
