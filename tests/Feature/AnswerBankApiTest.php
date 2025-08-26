@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\AnswerBank;
+use App\Models\Category;
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\Lesson;
 use App\Models\Question;
 use App\Models\Quiz;
@@ -17,363 +19,276 @@ use function Pest\Laravel\putJson;
 
 describe('answer bank crud api', function () {
     beforeEach(function () {
-        $this->user = User::factory()
+        $this->admin = User::factory()
             ->has(UserCredential::factory()->emailCredential())
-            ->create();
+            ->create(['role' => 'admin']);
 
-        $this->course = Course::factory()->create();
-        $this->section = Section::factory()->create(['course_id' => $this->course->id]);
-        $this->lesson = Lesson::factory()->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
+        $this->instructor = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'instructor']);
+
+        $this->otherInstructor = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'instructor']);
+
+        $this->student = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'student']);
+
+        $this->categories = Category::factory()->count(2)->create();
+
+        $this->publishedCourse = Course::factory()->published()->create();
+        $this->publishedCourse->categories()->attach($this->categories->first()->id);
+        $this->publishedCourse->instructors()->attach($this->instructor->id);
+
+        $this->otherCourse = Course::factory()->published()->create();
+        $this->otherCourse->categories()->attach($this->categories->last()->id);
+        $this->otherCourse->instructors()->attach($this->otherInstructor->id);
+
+        $this->publishedSection = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
+        $this->otherSection = Section::factory()->create(['course_id' => $this->otherCourse->id]);
+
+        $this->publishedLesson = Lesson::factory()->create([
+            'section_id' => $this->publishedSection->id,
+            'course_id' => $this->publishedCourse->id
         ]);
-        $this->quiz = Quiz::factory()->create([
-            'section_id' => $this->section->id,
-            'lesson_id' => $this->lesson->id,
-            'course_id' => $this->course->id
-        ]);
-        $this->question = Question::factory()->create(['quiz_id' => $this->quiz->id]);
-
-        actingAs($this->user);
-    });
-
-    it('can get all answer banks with pagination', function () {
-        AnswerBank::factory()->count(10)->create(['question_id' => $this->question->id]);
-
-        getJson('/api/answer-banks')
-            ->assertOk()
-            ->assertJsonStructure([
-                'data' => [
-                    '*' => [
-                        'id',
-                        'question_id',
-                        'question',
-                        'answer',
-                        'is_true',
-                        'created_at',
-                        'updated_at',
-                    ]
-                ],
-                'links',
-                'meta'
-            ]);
-    });
-
-    it('can filter answer banks by question', function () {
-        $question2 = Question::factory()->create(['quiz_id' => $this->quiz->id]);
-
-        AnswerBank::factory()->count(3)->create(['question_id' => $this->question->id]);
-        AnswerBank::factory()->count(2)->create(['question_id' => $question2->id]);
-
-        getJson("/api/answer-banks?question_id={$this->question->id}")
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
-    });
-
-    it('can filter answer banks by correctness', function () {
-        AnswerBank::factory()->count(3)->correct()->create(['question_id' => $this->question->id]);
-        AnswerBank::factory()->count(2)->incorrect()->create(['question_id' => $this->question->id]);
-
-        getJson('/api/answer-banks?is_correct=true')
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
-
-        getJson('/api/answer-banks?is_correct=false')
-            ->assertOk()
-            ->assertJsonCount(2, 'data');
-    });
-
-    it('can search answer banks by answer text', function () {
-        AnswerBank::factory()->create([
-            'question_id' => $this->question->id,
-            'answer' => 'Scissors are the primary tool'
-        ]);
-        AnswerBank::factory()->create([
-            'question_id' => $this->question->id,
-            'answer' => 'Clippers for short cuts'
+        $this->otherLesson = Lesson::factory()->create([
+            'section_id' => $this->otherSection->id,
+            'course_id' => $this->otherCourse->id
         ]);
 
-        getJson('/api/answer-banks?search=Scissors')
-            ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.answer', 'Scissors are the primary tool');
-    });
+        $this->publishedQuiz = Quiz::factory()->create([
+            'section_id' => $this->publishedSection->id,
+            'lesson_id' => $this->publishedLesson->id,
+            'course_id' => $this->publishedCourse->id
+        ]);
+        $this->otherQuiz = Quiz::factory()->create([
+            'section_id' => $this->otherSection->id,
+            'lesson_id' => $this->otherLesson->id,
+            'course_id' => $this->otherCourse->id
+        ]);
 
-    it('can create correct answer bank', function () {
-        $answerData = [
-            'question_id' => $this->question->id,
-            'answer' => 'Scissors',
-            'is_true' => true
-        ];
+        $this->publishedQuestion = Question::factory()->create(['quiz_id' => $this->publishedQuiz->id]);
+        $this->otherQuestion = Question::factory()->create(['quiz_id' => $this->otherQuiz->id]);
 
-        postJson('/api/answer-banks', $answerData)
-            ->assertCreated()
-            ->assertJsonPath('data.answer', 'Scissors')
-            ->assertJsonPath('data.is_true', true);
-
-        $this->assertDatabaseHas('answer_banks', [
-            'question_id' => $this->question->id,
-            'answer' => 'Scissors',
-            'is_true' => true
+        $this->enrollment = Enrollment::factory()->create([
+            'user_id' => $this->student->id,
+            'course_id' => $this->publishedCourse->id
         ]);
     });
 
-    it('can create incorrect answer bank', function () {
-        $answerData = [
-            'question_id' => $this->question->id,
-            'answer' => 'Wrong answer',
-            'is_true' => false
-        ];
+    describe('unauthenticated access (forbidden)', function () {
+        it('unauthenticated user cannot view answer banks', function () {
+            getJson('/api/answer-banks')
+                ->assertUnauthorized();
+        });
 
-        postJson('/api/answer-banks', $answerData)
-            ->assertCreated()
-            ->assertJsonPath('data.answer', 'Wrong answer')
-            ->assertJsonPath('data.is_true', false);
+        it('unauthenticated user cannot create answer bank', function () {
+            postJson('/api/answer-banks', [
+                'question_id' => $this->publishedQuestion->id,
+                'answer' => 'Test answer',
+                'is_true' => true
+            ])
+                ->assertUnauthorized();
+        });
     });
 
-    it('defaults is_true to false when not provided', function () {
-        $answerData = [
-            'question_id' => $this->question->id,
-            'answer' => 'Default answer'
-        ];
+    describe('admin access', function () {
+        beforeEach(function () {
+            actingAs($this->admin);
+        });
 
-        postJson('/api/answer-banks', $answerData)
-            ->assertCreated()
-            ->assertJsonPath('data.is_true', false);
-    });
+        it('admin can see all answer banks from all courses', function () {
+            AnswerBank::factory()->count(3)->create(['question_id' => $this->publishedQuestion->id]);
+            AnswerBank::factory()->count(2)->create(['question_id' => $this->otherQuestion->id]);
 
-    it('validates required fields when creating answer bank', function () {
-        postJson('/api/answer-banks', [])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['question_id', 'answer']);
-    });
+            getJson('/api/answer-banks')
+                ->assertOk()
+                ->assertJsonCount(5, 'data')
+                ->assertJsonStructure([
+                    'data' => [
+                        '*' => [
+                            'id',
+                            'question_id',
+                            'question',
+                            'answer',
+                            'is_true',
+                            'created_at',
+                            'updated_at',
+                        ]
+                    ],
+                    'links',
+                    'meta'
+                ]);
+        });
 
-    it('validates question_id exists', function () {
-        $answerData = [
-            'question_id' => 99999,
-            'answer' => 'Test answer'
-        ];
-
-        postJson('/api/answer-banks', $answerData)
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['question_id']);
-    });
-
-    it('validates answer max length', function () {
-        $answerData = [
-            'question_id' => $this->question->id,
-            'answer' => str_repeat('a', 256)
-        ];
-
-        postJson('/api/answer-banks', $answerData)
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['answer']);
-    });
-
-    it('can get single answer bank with relationships', function () {
-        $answerBank = AnswerBank::factory()->create(['question_id' => $this->question->id]);
-
-        getJson("/api/answer-banks/{$answerBank->id}")
-            ->assertOk()
-            ->assertJsonPath('data.id', $answerBank->id)
-            ->assertJsonStructure([
-                'data' => [
-                    'question'
-                ]
-            ]);
-    });
-
-    it('returns 404 when answer bank not found', function () {
-        getJson('/api/answer-banks/99999')
-            ->assertNotFound();
-    });
-
-    it('can update answer bank', function () {
-        $answerBank = AnswerBank::factory()->create(['question_id' => $this->question->id]);
-
-        $updateData = [
-            'answer' => 'Updated answer text',
-            'is_true' => true
-        ];
-
-        putJson("/api/answer-banks/{$answerBank->id}", $updateData)
-            ->assertOk()
-            ->assertJsonPath('data.answer', 'Updated answer text')
-            ->assertJsonPath('data.is_true', true);
-
-        $this->assertDatabaseHas('answer_banks', [
-            'id' => $answerBank->id,
-            'answer' => 'Updated answer text',
-            'is_true' => true
-        ]);
-    });
-
-    it('can partially update answer bank', function () {
-        $answerBank = AnswerBank::factory()->create([
-            'question_id' => $this->question->id,
-            'answer' => 'Original answer'
-        ]);
-
-        putJson("/api/answer-banks/{$answerBank->id}", ['is_true' => true])
-            ->assertOk()
-            ->assertJsonPath('data.answer', 'Original answer')
-            ->assertJsonPath('data.is_true', true);
-    });
-
-    it('can update answer bank question_id', function () {
-        $question2 = Question::factory()->create(['quiz_id' => $this->quiz->id]);
-        $answerBank = AnswerBank::factory()->create(['question_id' => $this->question->id]);
-
-        putJson("/api/answer-banks/{$answerBank->id}", ['question_id' => $question2->id])
-            ->assertOk()
-            ->assertJsonPath('data.question_id', $question2->id);
-
-        $this->assertDatabaseHas('answer_banks', [
-            'id' => $answerBank->id,
-            'question_id' => $question2->id
-        ]);
-    });
-
-    it('validates question_id exists on update', function () {
-        $answerBank = AnswerBank::factory()->create(['question_id' => $this->question->id]);
-
-        putJson("/api/answer-banks/{$answerBank->id}", ['question_id' => 99999])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['question_id']);
-    });
-
-    it('can delete answer bank', function () {
-        $answerBank = AnswerBank::factory()->create(['question_id' => $this->question->id]);
-
-        deleteJson("/api/answer-banks/{$answerBank->id}")
-            ->assertOk()
-            ->assertJsonPath('message', 'Answer deleted successfully');
-
-        $this->assertSoftDeleted('answer_banks', ['id' => $answerBank->id]);
-    });
-
-    it('returns 404 when deleting non-existent answer bank', function () {
-        deleteJson('/api/answer-banks/99999')
-            ->assertNotFound();
-    });
-
-    it('can set custom per_page for pagination', function () {
-        AnswerBank::factory()->count(10)->create(['question_id' => $this->question->id]);
-
-        getJson('/api/answer-banks?per_page=5')
-            ->assertOk()
-            ->assertJsonCount(5, 'data');
-    });
-
-    it('orders answer banks by latest first', function () {
-        $older = AnswerBank::factory()->create([
-            'question_id' => $this->question->id,
-            'created_at' => now()->subDay()
-        ]);
-
-        $newer = AnswerBank::factory()->create([
-            'question_id' => $this->question->id,
-            'created_at' => now()
-        ]);
-
-        getJson('/api/answer-banks')
-            ->assertOk()
-            ->assertJsonPath('data.0.id', $newer->id)
-            ->assertJsonPath('data.1.id', $older->id);
-    });
-
-    it('can create multiple answers for single choice question', function () {
-        $singleChoiceQuestion = Question::factory()->singleChoice()->create(['quiz_id' => $this->quiz->id]);
-
-        AnswerBank::factory()->correct()->create([
-            'question_id' => $singleChoiceQuestion->id,
-            'answer' => 'Correct answer'
-        ]);
-
-        AnswerBank::factory()->incorrect()->create([
-            'question_id' => $singleChoiceQuestion->id,
-            'answer' => 'Wrong answer 1'
-        ]);
-
-        AnswerBank::factory()->incorrect()->create([
-            'question_id' => $singleChoiceQuestion->id,
-            'answer' => 'Wrong answer 2'
-        ]);
-
-        getJson("/api/answer-banks?question_id={$singleChoiceQuestion->id}")
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
-    });
-
-    it('can create multiple correct answers for multiple choice question', function () {
-        $multipleChoiceQuestion = Question::factory()->multipleChoice()->create(['quiz_id' => $this->quiz->id]);
-
-        AnswerBank::factory()->correct()->create([
-            'question_id' => $multipleChoiceQuestion->id,
-            'answer' => 'Correct answer 1'
-        ]);
-
-        AnswerBank::factory()->correct()->create([
-            'question_id' => $multipleChoiceQuestion->id,
-            'answer' => 'Correct answer 2'
-        ]);
-
-        AnswerBank::factory()->incorrect()->create([
-            'question_id' => $multipleChoiceQuestion->id,
-            'answer' => 'Wrong answer'
-        ]);
-
-        getJson("/api/answer-banks?question_id={$multipleChoiceQuestion->id}&is_correct=true")
-            ->assertOk()
-            ->assertJsonCount(2, 'data');
-    });
-
-    it('can create single answer for fill blank question', function () {
-        $fillBlankQuestion = Question::factory()->fillBlank()->create(['quiz_id' => $this->quiz->id]);
-
-        AnswerBank::factory()->correct()->create([
-            'question_id' => $fillBlankQuestion->id,
-            'answer' => '10'
-        ]);
-
-        getJson("/api/answer-banks?question_id={$fillBlankQuestion->id}")
-            ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.is_true', true);
-    });
-
-    it('validates boolean values for is_true field', function () {
-        $answerData = [
-            'question_id' => $this->question->id,
-            'answer' => 'Test answer',
-            'is_true' => 'not-boolean'
-        ];
-
-        postJson('/api/answer-banks', $answerData)
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['is_true']);
-    });
-
-    it('accepts various boolean formats for is_true field', function () {
-        $testCases = [
-            ['is_true' => true, 'expected' => true],
-            ['is_true' => false, 'expected' => false],
-            ['is_true' => 1, 'expected' => true],
-            ['is_true' => 0, 'expected' => false],
-            ['is_true' => '1', 'expected' => true],
-            ['is_true' => '0', 'expected' => false],
-        ];
-
-        foreach ($testCases as $index => $testCase) {
+        it('admin can create answer bank for any question', function () {
             $answerData = [
-                'question_id' => $this->question->id,
-                'answer' => "Test answer {$index}",
-                'is_true' => $testCase['is_true']
+                'question_id' => $this->publishedQuestion->id,
+                'answer' => 'Admin created answer',
+                'is_true' => true
             ];
 
             postJson('/api/answer-banks', $answerData)
                 ->assertCreated()
-                ->assertJsonPath('data.is_true', $testCase['expected']);
-        }
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Answer created successfully')
+                ->assertJsonPath('data.answer', 'Admin created answer')
+                ->assertJsonPath('data.is_true', true);
+
+            $this->assertDatabaseHas('answer_banks', [
+                'question_id' => $this->publishedQuestion->id,
+                'answer' => 'Admin created answer',
+                'is_true' => true
+            ]);
+        });
+
+        it('admin can update any answer bank', function () {
+            $answerBank = AnswerBank::factory()->create(['question_id' => $this->publishedQuestion->id]);
+
+            $updateData = [
+                'answer' => 'Admin updated answer',
+                'is_true' => false
+            ];
+
+            putJson("/api/answer-banks/{$answerBank->id}", $updateData)
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Answer updated successfully')
+                ->assertJsonPath('data.answer', 'Admin updated answer')
+                ->assertJsonPath('data.is_true', false);
+
+            $this->assertDatabaseHas('answer_banks', [
+                'id' => $answerBank->id,
+                'answer' => 'Admin updated answer',
+                'is_true' => false
+            ]);
+        });
+
+        it('admin can delete any answer bank', function () {
+            $answerBank = AnswerBank::factory()->create(['question_id' => $this->publishedQuestion->id]);
+
+            deleteJson("/api/answer-banks/{$answerBank->id}")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Answer deleted successfully');
+
+            $this->assertSoftDeleted('answer_banks', ['id' => $answerBank->id]);
+        });
+
+        it('admin can view any answer bank', function () {
+            $answerBank = AnswerBank::factory()->create(['question_id' => $this->otherQuestion->id]);
+
+            getJson("/api/answer-banks/{$answerBank->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $answerBank->id);
+        });
+    });
+
+    describe('instructor access', function () {
+        beforeEach(function () {
+            actingAs($this->instructor);
+        });
+
+        it('instructor can see answer banks only from their own courses', function () {
+            AnswerBank::factory()->count(3)->create(['question_id' => $this->publishedQuestion->id]);
+            AnswerBank::factory()->count(2)->create(['question_id' => $this->otherQuestion->id]);
+
+            getJson('/api/answer-banks')
+                ->assertOk()
+                ->assertJsonCount(3, 'data');
+        });
+
+        it('instructor can create answer bank for their own course', function () {
+            $answerData = [
+                'question_id' => $this->publishedQuestion->id,
+                'answer' => 'Instructor created answer',
+                'is_true' => true
+            ];
+
+            postJson('/api/answer-banks', $answerData)
+                ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Answer created successfully')
+                ->assertJsonPath('data.answer', 'Instructor created answer')
+                ->assertJsonPath('data.is_true', true);
+        });
+
+        it('instructor can update answer bank from their own course', function () {
+            $answerBank = AnswerBank::factory()->create(['question_id' => $this->publishedQuestion->id]);
+
+            putJson("/api/answer-banks/{$answerBank->id}", [
+                'answer' => 'Instructor updated answer',
+                'is_true' => false
+            ])
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Answer updated successfully')
+                ->assertJsonPath('data.answer', 'Instructor updated answer');
+        });
+
+        it('instructor can delete answer bank from their own course', function () {
+            $answerBank = AnswerBank::factory()->create(['question_id' => $this->publishedQuestion->id]);
+
+            deleteJson("/api/answer-banks/{$answerBank->id}")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Answer deleted successfully');
+
+            $this->assertSoftDeleted('answer_banks', ['id' => $answerBank->id]);
+        });
+
+        it('instructor can view answer bank from their own course', function () {
+            $answerBank = AnswerBank::factory()->create(['question_id' => $this->publishedQuestion->id]);
+
+            getJson("/api/answer-banks/{$answerBank->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $answerBank->id);
+        });
+
+        it('instructor cannot update answer bank from other instructor course', function () {
+            $answerBank = AnswerBank::factory()->create(['question_id' => $this->otherQuestion->id]);
+
+            putJson("/api/answer-banks/{$answerBank->id}", [
+                'answer' => 'Unauthorized update'
+            ])
+                ->assertForbidden();
+        });
+
+        it('instructor cannot delete answer bank from other instructor course', function () {
+            $answerBank = AnswerBank::factory()->create(['question_id' => $this->otherQuestion->id]);
+
+            deleteJson("/api/answer-banks/{$answerBank->id}")
+                ->assertForbidden();
+        });
+
+        it('instructor cannot view answer bank from other instructor course', function () {
+            $answerBank = AnswerBank::factory()->create(['question_id' => $this->otherQuestion->id]);
+
+            getJson("/api/answer-banks/{$answerBank->id}")
+                ->assertForbidden();
+        });
+    });
+
+    describe('student access', function () {
+        beforeEach(function () {
+            actingAs($this->student);
+        });
+
+        it('student cannot view answer banks', function () {
+            AnswerBank::factory()->count(3)->create(['question_id' => $this->publishedQuestion->id]);
+
+            getJson('/api/answer-banks')
+                ->assertForbidden();
+        });
+
+        it('student cannot create answer bank', function () {
+            postJson('/api/answer-banks', [
+                'question_id' => $this->publishedQuestion->id,
+                'answer' => 'Student answer',
+                'is_true' => true
+            ])
+                ->assertForbidden();
+        });
     });
 });

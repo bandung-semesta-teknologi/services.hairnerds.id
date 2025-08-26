@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\AnswerBank;
 use App\Models\Bootcamp;
 use App\Models\Category;
 use App\Models\Course;
@@ -10,6 +11,7 @@ use App\Models\Lesson;
 use App\Models\Quiz;
 use App\Models\Review;
 use App\Models\Section;
+use App\Policies\AnswerBankPolicy;
 use App\Policies\BootcampPolicy;
 use App\Policies\CategoryPolicy;
 use App\Policies\CourseFaqPolicy;
@@ -23,6 +25,7 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
 class AuthServiceProvider extends ServiceProvider
 {
     protected $policies = [
+        AnswerBank::class => AnswerBankPolicy::class,
         Course::class => CoursePolicy::class,
         Bootcamp::class => BootcampPolicy::class,
         Section::class => SectionPolicy::class,

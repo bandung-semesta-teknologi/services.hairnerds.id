@@ -14,8 +14,15 @@ class AnswerBankController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', AnswerBank::class);
+
+        $user = $request->user();
+
         $answerBanks = AnswerBank::query()
-            ->with('question')
+            ->with(['question.quiz.course'])
+            ->when($user->role === 'instructor', function($q) use ($user) {
+                return $q->whereHas('question.quiz.course.instructors', fn($q) => $q->where('users.id', $user->id));
+            })
             ->when($request->question_id, fn($q) => $q->where('question_id', $request->question_id))
             ->when($request->is_correct !== null, function($q) use ($request) {
                 return $request->boolean('is_correct') ? $q->correct() : $q->incorrect();
@@ -29,9 +36,11 @@ class AnswerBankController extends Controller
 
     public function store(AnswerBankStoreRequest $request)
     {
+        $this->authorize('create', AnswerBank::class);
+
         try {
             $answerBank = AnswerBank::create($request->validated());
-            $answerBank->load('question');
+            $answerBank->load(['question.quiz.course']);
 
             return response()->json([
                 'status' => 'success',
@@ -50,16 +59,20 @@ class AnswerBankController extends Controller
 
     public function show(AnswerBank $answerBank)
     {
-        $answerBank->load('question');
+        $this->authorize('view', $answerBank);
+
+        $answerBank->load(['question.quiz.course']);
 
         return new AnswerBankResource($answerBank);
     }
 
     public function update(AnswerBankUpdateRequest $request, AnswerBank $answerBank)
     {
+        $this->authorize('update', $answerBank);
+
         try {
             $answerBank->update($request->validated());
-            $answerBank->load('question');
+            $answerBank->load(['question.quiz.course']);
 
             return response()->json([
                 'status' => 'success',
@@ -78,6 +91,8 @@ class AnswerBankController extends Controller
 
     public function destroy(AnswerBank $answerBank)
     {
+        $this->authorize('delete', $answerBank);
+
         try {
             $answerBank->delete();
 
