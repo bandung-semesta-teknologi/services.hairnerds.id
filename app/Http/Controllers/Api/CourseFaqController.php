@@ -6,22 +6,26 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CourseFaqStoreRequest;
 use App\Http\Requests\CourseFaqUpdateRequest;
 use App\Http\Resources\CourseFaqResource;
-use App\Models\Course;
 use App\Models\CourseFaq;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class CourseFaqController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('role:admin,instructor')->except(['index', 'show']);
-    }
-
     public function index(Request $request)
     {
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('viewAny', CourseFaq::class);
+
         $faqs = CourseFaq::query()
             ->with('course')
+            ->when(!$user || $user->role === 'student', function($q) {
+                return $q->whereHas('course', fn($q) => $q->where('status', 'published'));
+            })
+            ->when($user && $user->role === 'instructor', function($q) use ($user) {
+                return $q->whereHas('course.instructors', fn($q) => $q->where('users.id', $user->id));
+            })
             ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
             ->paginate($request->per_page ?? 15);
 
@@ -30,6 +34,8 @@ class CourseFaqController extends Controller
 
     public function store(CourseFaqStoreRequest $request)
     {
+        $this->authorize('create', CourseFaq::class);
+
         try {
             $faq = CourseFaq::create($request->validated());
             $faq->load('course');
@@ -49,8 +55,12 @@ class CourseFaqController extends Controller
         }
     }
 
-    public function show(CourseFaq $coursesFaq)
+    public function show(Request $request, CourseFaq $coursesFaq)
     {
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('view', $coursesFaq);
+
         $coursesFaq->load('course');
 
         return new CourseFaqResource($coursesFaq);
@@ -58,6 +68,8 @@ class CourseFaqController extends Controller
 
     public function update(CourseFaqUpdateRequest $request, CourseFaq $coursesFaq)
     {
+        $this->authorize('update', $coursesFaq);
+
         try {
             $coursesFaq->update($request->validated());
             $coursesFaq->load('course');
@@ -79,6 +91,8 @@ class CourseFaqController extends Controller
 
     public function destroy(CourseFaq $coursesFaq)
     {
+        $this->authorize('delete', $coursesFaq);
+
         try {
             $coursesFaq->delete();
 
@@ -96,9 +110,17 @@ class CourseFaqController extends Controller
         }
     }
 
-    private function isAdminOrInstructor(Request $request): bool
+    private function resolveOptionalUser(Request $request)
     {
-        $user = $request->user();
-        return $user && in_array($user->role, ['admin', 'instructor']);
+        if ($user = $request->user()) {
+            return $user;
+        }
+
+        if ($token = $request->bearerToken()) {
+            $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            return $accessToken?->tokenable;
+        }
+
+        return null;
     }
 }
