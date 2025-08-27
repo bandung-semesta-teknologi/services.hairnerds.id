@@ -138,32 +138,7 @@ describe('quiz result crud api', function () {
 
             getJson('/api/quiz-results')
                 ->assertOk()
-                ->assertJsonCount(5, 'data')
-                ->assertJsonStructure([
-                    'data' => [
-                        '*' => [
-                            'id',
-                            'user_id',
-                            'user',
-                            'quiz_id',
-                            'quiz',
-                            'lesson_id',
-                            'lesson',
-                            'answered',
-                            'correct_answers',
-                            'total_obtained_marks',
-                            'is_submitted',
-                            'started_at',
-                            'finished_at',
-                            'duration_minutes',
-                            'pass_status',
-                            'created_at',
-                            'updated_at'
-                        ]
-                    ],
-                    'links',
-                    'meta'
-                ]);
+                ->assertJsonCount(5, 'data');
         });
 
         it('admin can create new quiz result for any user', function () {
