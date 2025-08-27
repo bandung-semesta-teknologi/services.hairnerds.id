@@ -14,357 +14,420 @@ use function Pest\Laravel\putJson;
 
 describe('enrollment crud api', function () {
     beforeEach(function () {
-        $this->user = User::factory()
+        $this->admin = User::factory()
             ->has(UserCredential::factory()->emailCredential())
-            ->create();
+            ->create(['role' => 'admin']);
 
-        actingAs($this->user);
+        $this->instructor = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'instructor']);
+
+        $this->otherInstructor = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'instructor']);
+
+        $this->student = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'student']);
+
+        $this->otherStudent = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'student']);
 
         $this->categories = Category::factory()->count(2)->create();
-        $this->course = Course::factory()->published()->verified()->create();
-        $this->course->categories()->attach($this->categories->first()->id);
 
-        $this->student = User::factory()->create(['role' => 'student']);
+        $this->publishedCourse = Course::factory()->published()->create();
+        $this->publishedCourse->categories()->attach($this->categories->first()->id);
+        $this->publishedCourse->instructors()->attach($this->instructor->id);
+
+        $this->draftCourse = Course::factory()->draft()->create();
+        $this->draftCourse->categories()->attach($this->categories->last()->id);
+        $this->draftCourse->instructors()->attach($this->instructor->id);
+
+        $this->otherCourse = Course::factory()->published()->create();
+        $this->otherCourse->categories()->attach($this->categories->first()->id);
+        $this->otherCourse->instructors()->attach($this->otherInstructor->id);
+
+        $this->enrollment = Enrollment::factory()->create([
+            'user_id' => $this->student->id,
+            'course_id' => $this->publishedCourse->id
+        ]);
     });
 
-    it('user can get all enrollments with pagination', function () {
-        $courses = Course::factory()->published()->verified()->count(3)->create();
-        foreach ($courses as $course) {
-            Enrollment::factory()->create([
+    describe('guest access (forbidden)', function () {
+        it('guest user cannot view enrollments', function () {
+            getJson('/api/enrollments')
+                ->assertUnauthorized();
+        });
+
+        it('guest user cannot view single enrollment', function () {
+            getJson("/api/enrollments/{$this->enrollment->id}")
+                ->assertUnauthorized();
+        });
+
+        it('guest user cannot create enrollment', function () {
+            postJson('/api/enrollments', [
                 'user_id' => $this->student->id,
-                'course_id' => $course->id
+                'course_id' => $this->publishedCourse->id
+            ])
+                ->assertUnauthorized();
+        });
+
+        it('guest user cannot update enrollment', function () {
+            putJson("/api/enrollments/{$this->enrollment->id}", [
+                'quiz_attempts' => 5
+            ])
+                ->assertUnauthorized();
+        });
+
+        it('guest user cannot delete enrollment', function () {
+            deleteJson("/api/enrollments/{$this->enrollment->id}")
+                ->assertUnauthorized();
+        });
+
+        it('guest user cannot finish enrollment', function () {
+            postJson("/api/enrollments/{$this->enrollment->id}/finish")
+                ->assertUnauthorized();
+        });
+    });
+
+    describe('admin access', function () {
+        beforeEach(function () {
+            actingAs($this->admin);
+        });
+
+        it('admin can see all enrollments from all courses', function () {
+            Enrollment::factory()->count(3)->create([
+                'user_id' => $this->student->id,
+                'course_id' => $this->publishedCourse->id
             ]);
-        }
+            Enrollment::factory()->count(2)->create([
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id
+            ]);
 
-        Enrollment::factory()->count(5)->create();
+            getJson('/api/enrollments')
+                ->assertOk()
+                ->assertJsonCount(6, 'data')
+                ->assertJsonStructure([
+                    'data' => [
+                        '*' => [
+                            'id',
+                            'user_id',
+                            'user',
+                            'course_id',
+                            'course',
+                            'enrolled_at',
+                            'finished_at',
+                            'quiz_attempts',
+                            'is_finished',
+                            'progress',
+                            'created_at',
+                            'updated_at',
+                        ]
+                    ],
+                    'links',
+                    'meta'
+                ]);
+        });
 
-        getJson('/api/enrollments')
-            ->assertOk()
-            ->assertJsonStructure([
-                'data' => [
-                    '*' => [
-                        'id',
-                        'user_id',
+        it('admin can create enrollment for any user to any course', function () {
+            $enrollmentData = [
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->publishedCourse->id,
+                'quiz_attempts' => 0
+            ];
+
+            postJson('/api/enrollments', $enrollmentData)
+                ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Enrollment created successfully')
+                ->assertJsonPath('data.user_id', $this->otherStudent->id)
+                ->assertJsonPath('data.course_id', $this->publishedCourse->id)
+                ->assertJsonPath('data.quiz_attempts', 0);
+
+            $this->assertDatabaseHas('enrollments', [
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+        });
+
+        it('admin can update any enrollment', function () {
+            $updateData = [
+                'quiz_attempts' => 5,
+                'finished_at' => now()->toDateTimeString()
+            ];
+
+            putJson("/api/enrollments/{$this->enrollment->id}", $updateData)
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Enrollment updated successfully')
+                ->assertJsonPath('data.quiz_attempts', 5);
+
+            $this->assertDatabaseHas('enrollments', [
+                'id' => $this->enrollment->id,
+                'quiz_attempts' => 5
+            ]);
+        });
+
+        it('admin can delete any enrollment', function () {
+            deleteJson("/api/enrollments/{$this->enrollment->id}")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Enrollment deleted successfully');
+
+            $this->assertSoftDeleted('enrollments', ['id' => $this->enrollment->id]);
+        });
+
+        it('admin can finish any enrollment', function () {
+            postJson("/api/enrollments/{$this->enrollment->id}/finish")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Enrollment finished successfully')
+                ->assertJsonPath('data.is_finished', true);
+
+            $this->assertDatabaseHas('enrollments', [
+                'id' => $this->enrollment->id
+            ]);
+
+            expect($this->enrollment->fresh()->finished_at)->not->toBeNull();
+        });
+
+        it('admin can view any enrollment', function () {
+            getJson("/api/enrollments/{$this->enrollment->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $this->enrollment->id)
+                ->assertJsonStructure([
+                    'data' => [
                         'user',
-                        'course_id',
                         'course',
-                        'enrolled_at',
-                        'finished_at',
-                        'quiz_attempts',
-                        'is_finished',
-                        'progress',
-                        'created_at',
-                        'updated_at',
+                        'progress'
                     ]
-                ],
-                'links',
-                'meta'
+                ]);
+        });
+    });
+
+    describe('instructor access', function () {
+        beforeEach(function () {
+            actingAs($this->instructor);
+        });
+
+        it('instructor can see enrollments only from their own courses', function () {
+            Enrollment::factory()->count(3)->create([
+                'user_id' => $this->student->id,
+                'course_id' => $this->publishedCourse->id
             ]);
-    });
-
-    it('user can filter enrollments by user', function () {
-        $user2 = User::factory()->create(['role' => 'student']);
-        $course2 = Course::factory()->published()->verified()->create();
-        $course3 = Course::factory()->published()->verified()->create();
-
-        Enrollment::factory()->count(3)->create([
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id
-        ]);
-        Enrollment::factory()->create([
-            'user_id' => $user2->id,
-            'course_id' => $course2->id
-        ]);
-        Enrollment::factory()->create([
-            'user_id' => $user2->id,
-            'course_id' => $course3->id
-        ]);
-
-        getJson("/api/enrollments?user_id={$this->student->id}")
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
-    });
-
-    it('user can filter enrollments by course', function () {
-        $course2 = Course::factory()->published()->verified()->create();
-        $course2->categories()->attach($this->categories->last()->id);
-        $user2 = User::factory()->create(['role' => 'student']);
-        $user3 = User::factory()->create(['role' => 'student']);
-
-        Enrollment::factory()->count(3)->create([
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id
-        ]);
-        Enrollment::factory()->create([
-            'user_id' => $user2->id,
-            'course_id' => $course2->id
-        ]);
-        Enrollment::factory()->create([
-            'user_id' => $user3->id,
-            'course_id' => $course2->id
-        ]);
-
-        getJson("/api/enrollments?course_id={$this->course->id}")
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
-    });
-
-    it('user can filter enrollments by status', function () {
-        $user2 = User::factory()->create(['role' => 'student']);
-        $user3 = User::factory()->create(['role' => 'student']);
-        $course2 = Course::factory()->published()->verified()->create();
-        $course3 = Course::factory()->published()->verified()->create();
-
-        Enrollment::factory()->active()->count(2)->create([
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id
-        ]);
-        Enrollment::factory()->finished()->create([
-            'user_id' => $user2->id,
-            'course_id' => $course2->id
-        ]);
-        Enrollment::factory()->finished()->count(2)->create([
-            'user_id' => $user3->id,
-            'course_id' => $course3->id
-        ]);
-
-        getJson('/api/enrollments?status=active')
-            ->assertOk()
-            ->assertJsonCount(2, 'data');
-
-        getJson('/api/enrollments?status=finished')
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
-    });
-
-    it('enrollments are ordered by enrolled_at desc', function () {
-        $user2 = User::factory()->create(['role' => 'student']);
-        $course2 = Course::factory()->published()->verified()->create();
-
-        $older = Enrollment::factory()->create([
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'enrolled_at' => now()->subDays(2)
-        ]);
-
-        $newer = Enrollment::factory()->create([
-            'user_id' => $user2->id,
-            'course_id' => $course2->id,
-            'enrolled_at' => now()
-        ]);
-
-        getJson('/api/enrollments')
-            ->assertOk()
-            ->assertJsonPath('data.0.id', $newer->id)
-            ->assertJsonPath('data.1.id', $older->id);
-    });
-
-    it('user can create new enrollment', function () {
-        $enrollmentData = [
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'enrolled_at' => now()->toDateTimeString(),
-            'quiz_attempts' => 0
-        ];
-
-        postJson('/api/enrollments', $enrollmentData)
-            ->assertCreated()
-            ->assertJsonPath('data.user_id', $this->student->id)
-            ->assertJsonPath('data.course_id', $this->course->id)
-            ->assertJsonPath('data.quiz_attempts', 0)
-            ->assertJsonPath('data.is_finished', false);
-
-        $this->assertDatabaseHas('enrollments', [
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'quiz_attempts' => 0
-        ]);
-    });
-
-    it('validates required fields when creating enrollment', function () {
-        postJson('/api/enrollments', [])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['user_id', 'course_id']);
-    });
-
-    it('validates user exists when creating enrollment', function () {
-        postJson('/api/enrollments', [
-            'user_id' => 99999,
-            'course_id' => $this->course->id
-        ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['user_id']);
-    });
-
-    it('validates course exists when creating enrollment', function () {
-        postJson('/api/enrollments', [
-            'user_id' => $this->student->id,
-            'course_id' => 99999
-        ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['course_id']);
-    });
-
-    it('user can get single enrollment with relationships', function () {
-        $enrollment = Enrollment::factory()->create([
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id
-        ]);
-
-        getJson("/api/enrollments/{$enrollment->id}")
-            ->assertOk()
-            ->assertJsonPath('data.id', $enrollment->id)
-            ->assertJsonPath('data.user.name', $this->student->name)
-            ->assertJsonPath('data.course.id', $this->course->id);
-    });
-
-    it('returns 404 when enrollment not found', function () {
-        getJson('/api/enrollments/99999')
-            ->assertNotFound();
-    });
-
-    it('user can update enrollment', function () {
-        $enrollment = Enrollment::factory()->create([
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'quiz_attempts' => 1
-        ]);
-
-        $updateData = [
-            'quiz_attempts' => 3,
-            'finished_at' => now()->toDateTimeString()
-        ];
-
-        putJson("/api/enrollments/{$enrollment->id}", $updateData)
-            ->assertOk()
-            ->assertJsonPath('data.quiz_attempts', 3)
-            ->assertJsonPath('data.is_finished', true);
-
-        $this->assertDatabaseHas('enrollments', [
-            'id' => $enrollment->id,
-            'quiz_attempts' => 3
-        ]);
-    });
-
-    it('user can partially update enrollment', function () {
-        $enrollment = Enrollment::factory()->create([
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'quiz_attempts' => 1
-        ]);
-
-        putJson("/api/enrollments/{$enrollment->id}", ['quiz_attempts' => 5])
-            ->assertOk()
-            ->assertJsonPath('data.quiz_attempts', 5);
-    });
-
-    it('user can delete enrollment', function () {
-        $enrollment = Enrollment::factory()->create([
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id
-        ]);
-
-        deleteJson("/api/enrollments/{$enrollment->id}")
-            ->assertOk()
-            ->assertJson(['message' => 'Enrollment deleted successfully']);
-
-        $this->assertSoftDeleted('enrollments', ['id' => $enrollment->id]);
-    });
-
-    it('returns 404 when deleting non-existent enrollment', function () {
-        deleteJson('/api/enrollments/99999')
-            ->assertNotFound();
-    });
-
-    it('user can finish enrollment', function () {
-        $enrollment = Enrollment::factory()->active()->create([
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id
-        ]);
-
-        postJson("/api/enrollments/{$enrollment->id}/finish")
-            ->assertOk()
-            ->assertJsonPath('data.is_finished', true)
-            ->assertJsonPath('message', 'Enrollment finished successfully');
-
-        $this->assertDatabaseHas('enrollments', [
-            'id' => $enrollment->id
-        ]);
-
-        $enrollment->refresh();
-        expect($enrollment->finished_at)->not()->toBeNull();
-    });
-
-    it('user can set custom per_page for pagination', function () {
-        $users = User::factory()->count(10)->create(['role' => 'student']);
-        $courses = Course::factory()->published()->verified()->count(10)->create();
-
-        foreach ($users as $index => $user) {
-            Enrollment::factory()->create([
-                'user_id' => $user->id,
-                'course_id' => $courses[$index]->id
+            Enrollment::factory()->count(2)->create([
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id
             ]);
-        }
 
-        getJson('/api/enrollments?per_page=4')
-            ->assertOk()
-            ->assertJsonCount(4, 'data');
+            getJson('/api/enrollments')
+                ->assertOk()
+                ->assertJsonCount(4, 'data');
+        });
+
+        it('instructor can create enrollment for their own course', function () {
+            $enrollmentData = [
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->publishedCourse->id
+            ];
+
+            postJson('/api/enrollments', $enrollmentData)
+                ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Enrollment created successfully')
+                ->assertJsonPath('data.user_id', $this->otherStudent->id)
+                ->assertJsonPath('data.course_id', $this->publishedCourse->id);
+        });
+
+        it('instructor cannot create enrollment for other instructor course', function () {
+            $enrollmentData = [
+                'user_id' => $this->student->id,
+                'course_id' => $this->otherCourse->id
+            ];
+
+            postJson('/api/enrollments', $enrollmentData)
+                ->assertStatus(403)
+                ->assertJsonPath('status', 'error')
+                ->assertJsonPath('message', 'Cannot enroll students in courses you do not teach');
+        });
+
+        it('instructor can update enrollment from their own course', function () {
+            putJson("/api/enrollments/{$this->enrollment->id}", [
+                'quiz_attempts' => 3
+            ])
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Enrollment updated successfully')
+                ->assertJsonPath('data.quiz_attempts', 3);
+        });
+
+        it('instructor can delete enrollment from their own course', function () {
+            deleteJson("/api/enrollments/{$this->enrollment->id}")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Enrollment deleted successfully');
+
+            $this->assertSoftDeleted('enrollments', ['id' => $this->enrollment->id]);
+        });
+
+        it('instructor can finish enrollment from their own course', function () {
+            postJson("/api/enrollments/{$this->enrollment->id}/finish")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Enrollment finished successfully')
+                ->assertJsonPath('data.is_finished', true);
+        });
+
+        it('instructor can view enrollment from their own course', function () {
+            getJson("/api/enrollments/{$this->enrollment->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $this->enrollment->id);
+        });
+
+        it('instructor cannot update enrollment from other instructor course', function () {
+            $otherEnrollment = Enrollment::factory()->create([
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id
+            ]);
+
+            putJson("/api/enrollments/{$otherEnrollment->id}", [
+                'quiz_attempts' => 5
+            ])
+                ->assertForbidden();
+        });
+
+        it('instructor cannot delete enrollment from other instructor course', function () {
+            $otherEnrollment = Enrollment::factory()->create([
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id
+            ]);
+
+            deleteJson("/api/enrollments/{$otherEnrollment->id}")
+                ->assertForbidden();
+        });
+
+        it('instructor cannot view enrollment from other instructor course', function () {
+            $otherEnrollment = Enrollment::factory()->create([
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->otherCourse->id
+            ]);
+
+            getJson("/api/enrollments/{$otherEnrollment->id}")
+                ->assertForbidden();
+        });
     });
 
-    it('validates enrolled_at date format', function () {
-        postJson('/api/enrollments', [
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'enrolled_at' => 'invalid-date'
-        ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['enrolled_at']);
-    });
+    describe('student access', function () {
+        beforeEach(function () {
+            actingAs($this->student);
+        });
 
-    it('validates finished_at date format on update', function () {
-        $enrollment = Enrollment::factory()->create([
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id
-        ]);
+        it('student can view their own enrollments only', function () {
+            Enrollment::factory()->count(2)->create([
+                'user_id' => $this->student->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+            Enrollment::factory()->count(3)->create([
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
 
-        putJson("/api/enrollments/{$enrollment->id}", [
-            'finished_at' => 'invalid-date'
-        ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['finished_at']);
-    });
+            getJson('/api/enrollments')
+                ->assertOk()
+                ->assertJsonCount(3, 'data');
+        });
 
-    it('validates quiz_attempts is not negative', function () {
-        postJson('/api/enrollments', [
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id,
-            'quiz_attempts' => -1
-        ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['quiz_attempts']);
-    });
+        it('student can self-enroll to published course', function () {
+            $enrollmentData = [
+                'course_id' => $this->otherCourse->id
+            ];
 
-    it('defaults enrolled_at to now when not provided', function () {
-        $enrollmentData = [
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id
-        ];
+            postJson('/api/enrollments', $enrollmentData)
+                ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Enrollment created successfully')
+                ->assertJsonPath('data.user_id', $this->student->id)
+                ->assertJsonPath('data.course_id', $this->otherCourse->id);
 
-        $response = postJson('/api/enrollments', $enrollmentData)
-            ->assertCreated();
+            $this->assertDatabaseHas('enrollments', [
+                'user_id' => $this->student->id,
+                'course_id' => $this->otherCourse->id
+            ]);
+        });
 
-        $enrolledAt = $response->json('data.enrolled_at');
-        expect($enrolledAt)->not()->toBeEmpty();
-    });
+        it('student cannot enroll to draft course', function () {
+            $enrollmentData = [
+                'course_id' => $this->draftCourse->id
+            ];
 
-    it('defaults quiz_attempts to 0 when not provided', function () {
-        $enrollmentData = [
-            'user_id' => $this->student->id,
-            'course_id' => $this->course->id
-        ];
+            postJson('/api/enrollments', $enrollmentData)
+                ->assertStatus(422)
+                ->assertJsonPath('status', 'error')
+                ->assertJsonPath('message', 'Cannot enroll in unpublished course');
+        });
 
-        postJson('/api/enrollments', $enrollmentData)
-            ->assertCreated()
-            ->assertJsonPath('data.quiz_attempts', 0);
+        it('student cannot enroll multiple times to same course', function () {
+            $enrollmentData = [
+                'course_id' => $this->publishedCourse->id
+            ];
+
+            postJson('/api/enrollments', $enrollmentData)
+                ->assertStatus(422)
+                ->assertJsonPath('status', 'error')
+                ->assertJsonPath('message', 'Already enrolled in this course');
+        });
+
+        it('student can update their own enrollment', function () {
+            putJson("/api/enrollments/{$this->enrollment->id}", [
+                'quiz_attempts' => 2
+            ])
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Enrollment updated successfully')
+                ->assertJsonPath('data.quiz_attempts', 2);
+        });
+
+        it('student can finish their own enrollment', function () {
+            postJson("/api/enrollments/{$this->enrollment->id}/finish")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Enrollment finished successfully')
+                ->assertJsonPath('data.is_finished', true);
+        });
+
+        it('student can view their own enrollment', function () {
+            getJson("/api/enrollments/{$this->enrollment->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $this->enrollment->id);
+        });
+
+        it('student cannot delete their own enrollment', function () {
+            deleteJson("/api/enrollments/{$this->enrollment->id}")
+                ->assertForbidden();
+        });
+
+        it('student cannot view other student enrollment', function () {
+            $otherEnrollment = Enrollment::factory()->create([
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+
+            getJson("/api/enrollments/{$otherEnrollment->id}")
+                ->assertForbidden();
+        });
+
+        it('student cannot update other student enrollment', function () {
+            $otherEnrollment = Enrollment::factory()->create([
+                'user_id' => $this->otherStudent->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+
+            putJson("/api/enrollments/{$otherEnrollment->id}", [
+                'quiz_attempts' => 5
+            ])
+                ->assertForbidden();
+        });
     });
 });

@@ -15,15 +15,15 @@ class ProgressFactory extends Factory
 
     public function definition(): array
     {
-        $isCompleted = $this->faker->boolean(70);
-
         return [
             'enrollment_id' => Enrollment::factory(),
             'user_id' => User::factory(),
             'course_id' => Course::factory(),
             'lesson_id' => Lesson::factory(),
-            'is_completed' => $isCompleted,
-            'score' => $isCompleted ? $this->faker->optional(0.6)->numberBetween(60, 100) : null,
+            'is_completed' => false,
+            'score' => null,
+            'created_at' => now()->subDays(2),
+            'updated_at' => now()->subDays(2),
         ];
     }
 

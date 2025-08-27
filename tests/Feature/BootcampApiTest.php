@@ -22,8 +22,8 @@ describe('bootcamp crud api', function () {
         $this->categories = Category::factory()->count(3)->create();
     });
 
-    describe('public access', function () {
-        it('public can only see published bootcamps', function () {
+    describe('guest access', function () {
+        it('guest can only see published bootcamps', function () {
             Bootcamp::factory()->count(3)->published()->create()->each(function ($bootcamp) {
                 $bootcamp->categories()->attach($this->categories->random(2)->pluck('id'));
             });
@@ -36,7 +36,7 @@ describe('bootcamp crud api', function () {
                 ->assertJsonCount(3, 'data');
         });
 
-        it('public can get published bootcamp details', function () {
+        it('guest can get published bootcamp details', function () {
             $bootcamp = Bootcamp::factory()->published()->create();
             $bootcamp->categories()->attach($this->categories->take(2)->pluck('id'));
 
@@ -45,7 +45,7 @@ describe('bootcamp crud api', function () {
                 ->assertJsonPath('data.status', 'publish');
         });
 
-        it('public cannot see draft bootcamp details', function () {
+        it('guest cannot see draft bootcamp details', function () {
             $draftBootcamp = Bootcamp::factory()->draft()->create();
 
             getJson("/api/bootcamps/{$draftBootcamp->id}")

@@ -22,8 +22,8 @@ describe('course crud api', function () {
         $this->categories = Category::factory()->count(3)->create();
     });
 
-    describe('public access', function () {
-        it('public can only see published courses', function () {
+    describe('guest access', function () {
+        it('guest can only see published courses', function () {
             Course::factory()->count(3)->published()->create()->each(function ($course) {
                 $course->categories()->attach($this->categories->random(2)->pluck('id'));
             });
@@ -36,7 +36,7 @@ describe('course crud api', function () {
                 ->assertJsonCount(3, 'data');
         });
 
-        it('public can get published course details', function () {
+        it('guest can get published course details', function () {
             $course = Course::factory()->published()->create();
             $course->categories()->attach($this->categories->take(2)->pluck('id'));
 
@@ -45,7 +45,7 @@ describe('course crud api', function () {
                 ->assertJsonPath('data.status', 'published');
         });
 
-        it('public cannot see draft course details', function () {
+        it('guest cannot see draft course details', function () {
             $draftCourse = Course::factory()->draft()->create();
 
             getJson("/api/courses/{$draftCourse->id}")

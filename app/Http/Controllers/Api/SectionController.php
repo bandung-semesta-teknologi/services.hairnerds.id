@@ -12,15 +12,21 @@ use Illuminate\Support\Facades\Log;
 
 class SectionController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('role:admin,instructor')->except(['index', 'show']);
-    }
-
     public function index(Request $request)
     {
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('viewAny', Section::class);
+
         $sections = Section::query()
             ->with(['course', 'lessons'])
+            ->when(!$user || $user->role === 'student', function($q) {
+                return $q->whereHas('course', fn($q) => $q->where('status', 'published'));
+            })
+            ->when($user && $user->role === 'admin', fn($q) => $q)
+            ->when($user && $user->role === 'instructor', function($q) use ($user) {
+                return $q->whereHas('course.instructors', fn($q) => $q->where('users.id', $user->id));
+            })
             ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
             ->ordered()
             ->paginate($request->per_page ?? 15);
@@ -30,6 +36,8 @@ class SectionController extends Controller
 
     public function store(SectionStoreRequest $request)
     {
+        $this->authorize('create', Section::class);
+
         try {
             $section = Section::create($request->validated());
             $section->load('course');
@@ -49,8 +57,12 @@ class SectionController extends Controller
         }
     }
 
-    public function show(Section $section)
+    public function show(Request $request, Section $section)
     {
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('view', $section);
+
         $section->load(['course', 'lessons']);
 
         return new SectionResource($section);
@@ -58,6 +70,8 @@ class SectionController extends Controller
 
     public function update(SectionUpdateRequest $request, Section $section)
     {
+        $this->authorize('update', $section);
+
         try {
             $section->update($request->validated());
             $section->load('course');
@@ -79,6 +93,8 @@ class SectionController extends Controller
 
     public function destroy(Section $section)
     {
+        $this->authorize('delete', $section);
+
         try {
             $section->delete();
 
@@ -96,9 +112,17 @@ class SectionController extends Controller
         }
     }
 
-    private function isAdminOrInstructor(Request $request): bool
+    private function resolveOptionalUser(Request $request)
     {
-        $user = $request->user();
-        return $user && in_array($user->role, ['admin', 'instructor']);
+        if ($user = $request->user()) {
+            return $user;
+        }
+
+        if ($token = $request->bearerToken()) {
+            $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            return $accessToken?->tokenable;
+        }
+
+        return null;
     }
 }

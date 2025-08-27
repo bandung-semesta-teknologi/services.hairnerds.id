@@ -14,8 +14,22 @@ class LessonController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Lesson::class);
+
+        $user = $request->user();
+
         $lessons = Lesson::query()
             ->with(['section', 'course'])
+            ->when($user->role === 'student', function($q) use ($user) {
+                return $q->whereHas('course', function($q) {
+                    $q->where('status', 'published');
+                })->whereHas('course.enrollments', function($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            })
+            ->when($user->role === 'instructor', function($q) use ($user) {
+                return $q->whereHas('course.instructors', fn($q) => $q->where('users.id', $user->id));
+            })
             ->when($request->section_id, fn($q) => $q->where('section_id', $request->section_id))
             ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
             ->when($request->type, fn($q) => $q->where('type', $request->type))
@@ -27,6 +41,8 @@ class LessonController extends Controller
 
     public function store(LessonStoreRequest $request)
     {
+        $this->authorize('create', Lesson::class);
+
         try {
             $lesson = Lesson::create($request->validated());
             $lesson->load(['section', 'course']);
@@ -48,6 +64,8 @@ class LessonController extends Controller
 
     public function show(Lesson $lesson)
     {
+        $this->authorize('view', $lesson);
+
         $lesson->load(['section', 'course']);
 
         return new LessonResource($lesson);
@@ -55,6 +73,8 @@ class LessonController extends Controller
 
     public function update(LessonUpdateRequest $request, Lesson $lesson)
     {
+        $this->authorize('update', $lesson);
+
         try {
             $lesson->update($request->validated());
             $lesson->load(['section', 'course']);
@@ -76,6 +96,8 @@ class LessonController extends Controller
 
     public function destroy(Lesson $lesson)
     {
+        $this->authorize('delete', $lesson);
+
         try {
             $lesson->delete();
 

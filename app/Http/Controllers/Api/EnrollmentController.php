@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\EnrollmentStoreRequest;
 use App\Http\Requests\EnrollmentUpdateRequest;
 use App\Http\Resources\EnrollmentResource;
+use App\Models\Course;
 use App\Models\Enrollment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -14,8 +15,18 @@ class EnrollmentController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Enrollment::class);
+
+        $user = $request->user();
+
         $enrollments = Enrollment::query()
             ->with(['user', 'course', 'progress'])
+            ->when($user->role === 'student', function($q) use ($user) {
+                return $q->where('user_id', $user->id);
+            })
+            ->when($user->role === 'instructor', function($q) use ($user) {
+                return $q->whereHas('course.instructors', fn($q) => $q->where('users.id', $user->id));
+            })
             ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
             ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
             ->when($request->status === 'finished', fn($q) => $q->finished())
@@ -28,8 +39,47 @@ class EnrollmentController extends Controller
 
     public function store(EnrollmentStoreRequest $request)
     {
+        $this->authorize('create', Enrollment::class);
+
         try {
-            $enrollment = Enrollment::create($request->validated());
+            $data = $request->validated();
+            $user = $request->user();
+
+            if ($user->role === 'student') {
+                $data['user_id'] = $user->id;
+                $course = Course::findOrFail($data['course_id']);
+
+                if ($course->status !== 'published') {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Cannot enroll in unpublished course'
+                    ], 422);
+                }
+
+                $existingEnrollment = Enrollment::where('user_id', $user->id)
+                    ->where('course_id', $course->id)
+                    ->exists();
+
+                if ($existingEnrollment) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Already enrolled in this course'
+                    ], 422);
+                }
+            }
+
+            if ($user->role === 'instructor') {
+                $course = Course::findOrFail($data['course_id']);
+
+                if (!$course->instructors->contains($user)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Cannot enroll students in courses you do not teach'
+                    ], 403);
+                }
+            }
+
+            $enrollment = Enrollment::create($data);
             $enrollment->load(['user', 'course']);
 
             return response()->json([
@@ -49,6 +99,8 @@ class EnrollmentController extends Controller
 
     public function show(Enrollment $enrollment)
     {
+        $this->authorize('view', $enrollment);
+
         $enrollment->load(['user', 'course', 'progress']);
 
         return new EnrollmentResource($enrollment);
@@ -56,6 +108,8 @@ class EnrollmentController extends Controller
 
     public function update(EnrollmentUpdateRequest $request, Enrollment $enrollment)
     {
+        $this->authorize('update', $enrollment);
+
         try {
             $enrollment->update($request->validated());
             $enrollment->load(['user', 'course']);
@@ -77,6 +131,8 @@ class EnrollmentController extends Controller
 
     public function destroy(Enrollment $enrollment)
     {
+        $this->authorize('delete', $enrollment);
+
         try {
             $enrollment->delete();
 
@@ -96,6 +152,8 @@ class EnrollmentController extends Controller
 
     public function finish(Enrollment $enrollment)
     {
+        $this->authorize('finish', $enrollment);
+
         try {
             $enrollment->update(['finished_at' => now()]);
             $enrollment->load(['user', 'course']);

@@ -2,6 +2,7 @@
 
 use App\Models\Category;
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\Lesson;
 use App\Models\Section;
 use App\Models\User;
@@ -15,245 +16,476 @@ use function Pest\Laravel\putJson;
 
 describe('lesson crud api', function () {
     beforeEach(function () {
-        $this->user = User::factory()
+        $this->admin = User::factory()
             ->has(UserCredential::factory()->emailCredential())
-            ->create();
+            ->create(['role' => 'admin']);
 
-        actingAs($this->user);
+        $this->instructor = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'instructor']);
+
+        $this->otherInstructor = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'instructor']);
+
+        $this->student = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'student']);
+
+        $this->otherStudent = User::factory()
+            ->has(UserCredential::factory()->emailCredential())
+            ->create(['role' => 'student']);
 
         $this->categories = Category::factory()->count(2)->create();
-        $this->course = Course::factory()->create();
-        $this->course->categories()->attach($this->categories->first()->id);
-        $this->section = Section::factory()->create(['course_id' => $this->course->id]);
+
+        $this->publishedCourse = Course::factory()->published()->create();
+        $this->publishedCourse->categories()->attach($this->categories->first()->id);
+        $this->publishedCourse->instructors()->attach($this->instructor->id);
+
+        $this->draftCourse = Course::factory()->draft()->create();
+        $this->draftCourse->categories()->attach($this->categories->last()->id);
+        $this->draftCourse->instructors()->attach($this->instructor->id);
+
+        $this->otherCourse = Course::factory()->published()->create();
+        $this->otherCourse->categories()->attach($this->categories->first()->id);
+        $this->otherCourse->instructors()->attach($this->otherInstructor->id);
+
+        $this->publishedSection = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
+        $this->draftSection = Section::factory()->create(['course_id' => $this->draftCourse->id]);
+        $this->otherSection = Section::factory()->create(['course_id' => $this->otherCourse->id]);
+
+        $this->enrollment = Enrollment::factory()->create([
+            'user_id' => $this->student->id,
+            'course_id' => $this->publishedCourse->id
+        ]);
     });
 
-    it('user can get all lessons with pagination', function () {
-        Lesson::factory()->count(8)->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
+    describe('guest access (forbidden)', function () {
+        it('guest user cannot view lessons', function () {
+            getJson('/api/lessons')
+                ->assertUnauthorized();
+        });
 
-        getJson('/api/lessons')
-            ->assertOk()
-            ->assertJsonStructure([
-                'data' => [
-                    '*' => [
-                        'id',
-                        'section_id',
-                        'section',
-                        'course_id',
-                        'course',
-                        'sequence',
-                        'type',
-                        'title',
-                        'url',
-                        'summary',
-                        'datetime',
-                        'created_at',
-                        'updated_at',
-                    ]
-                ],
-                'links',
-                'meta'
+        it('guest user cannot view single lesson', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
             ]);
+
+            getJson("/api/lessons/{$lesson->id}")
+                ->assertUnauthorized();
+        });
+
+        it('guest user cannot create lesson', function () {
+            postJson('/api/lessons', [
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'sequence' => 1,
+                'type' => 'youtube',
+                'title' => 'Introduction Video',
+                'url' => 'https://youtube.com/watch?v=example'
+            ])
+                ->assertUnauthorized();
+        });
+
+        it('guest user cannot update lesson', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+
+            putJson("/api/lessons/{$lesson->id}", [
+                'title' => 'Updated title'
+            ])
+                ->assertUnauthorized();
+        });
+
+        it('guest user cannot delete lesson', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+
+            deleteJson("/api/lessons/{$lesson->id}")
+                ->assertUnauthorized();
+        });
     });
 
-    it('user can filter lessons by section', function () {
-        $section1 = Section::factory()->create(['course_id' => $this->course->id]);
-        $section2 = Section::factory()->create(['course_id' => $this->course->id]);
+    describe('admin access', function () {
+        beforeEach(function () {
+            actingAs($this->admin);
+        });
 
-        Lesson::factory()->count(3)->create([
-            'section_id' => $section1->id,
-            'course_id' => $this->course->id
-        ]);
-        Lesson::factory()->count(2)->create([
-            'section_id' => $section2->id,
-            'course_id' => $this->course->id
-        ]);
+        it('admin can see all lessons from all courses', function () {
+            Lesson::factory()->count(3)->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+            Lesson::factory()->count(2)->create([
+                'section_id' => $this->draftSection->id,
+                'course_id' => $this->draftCourse->id
+            ]);
+            Lesson::factory()->count(2)->create([
+                'section_id' => $this->otherSection->id,
+                'course_id' => $this->otherCourse->id
+            ]);
 
-        getJson("/api/lessons?section_id={$section1->id}")
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
+            getJson('/api/lessons')
+                ->assertOk()
+                ->assertJsonCount(7, 'data')
+                ->assertJsonStructure([
+                    'data' => [
+                        '*' => [
+                            'id',
+                            'section_id',
+                            'section',
+                            'course_id',
+                            'course',
+                            'sequence',
+                            'type',
+                            'title',
+                            'url',
+                            'summary',
+                            'datetime',
+                            'created_at',
+                            'updated_at',
+                        ]
+                    ],
+                    'links',
+                    'meta'
+                ]);
+        });
+
+        it('admin can create new lesson', function () {
+            $lessonData = [
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'sequence' => 1,
+                'type' => 'youtube',
+                'title' => 'Introduction to Laravel',
+                'url' => 'https://youtube.com/watch?v=example',
+                'summary' => 'Basic introduction to Laravel framework'
+            ];
+
+            postJson('/api/lessons', $lessonData)
+                ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Lesson created successfully')
+                ->assertJsonPath('data.title', 'Introduction to Laravel')
+                ->assertJsonPath('data.type', 'youtube')
+                ->assertJsonPath('data.sequence', 1);
+
+            $this->assertDatabaseHas('lessons', [
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'title' => 'Introduction to Laravel',
+                'type' => 'youtube'
+            ]);
+        });
+
+        it('validates required fields when creating lesson', function () {
+            postJson('/api/lessons', [])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['section_id', 'course_id', 'sequence', 'type', 'title', 'url']);
+        });
+
+        it('admin can update any lesson', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+
+            $updateData = [
+                'title' => 'Updated Lesson Title',
+                'summary' => 'Updated lesson summary'
+            ];
+
+            putJson("/api/lessons/{$lesson->id}", $updateData)
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Lesson updated successfully')
+                ->assertJsonPath('data.title', 'Updated Lesson Title')
+                ->assertJsonPath('data.summary', 'Updated lesson summary');
+
+            $this->assertDatabaseHas('lessons', [
+                'id' => $lesson->id,
+                'title' => 'Updated Lesson Title',
+                'summary' => 'Updated lesson summary'
+            ]);
+        });
+
+        it('admin can delete any lesson', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+
+            deleteJson("/api/lessons/{$lesson->id}")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Lesson deleted successfully');
+
+            $this->assertSoftDeleted('lessons', ['id' => $lesson->id]);
+        });
+
+        it('admin can view any lesson', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->draftSection->id,
+                'course_id' => $this->draftCourse->id
+            ]);
+
+            getJson("/api/lessons/{$lesson->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $lesson->id);
+        });
     });
 
-    it('user can filter lessons by course', function () {
-        $course2 = Course::factory()->create();
-        $course2->categories()->attach($this->categories->last()->id);
-        $section2 = Section::factory()->create(['course_id' => $course2->id]);
+    describe('instructor access', function () {
+        beforeEach(function () {
+            actingAs($this->instructor);
+        });
 
-        Lesson::factory()->count(3)->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
-        Lesson::factory()->count(2)->create([
-            'section_id' => $section2->id,
-            'course_id' => $course2->id
-        ]);
+        it('instructor can see lessons only from their own courses', function () {
+            Lesson::factory()->count(3)->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+            Lesson::factory()->count(2)->create([
+                'section_id' => $this->draftSection->id,
+                'course_id' => $this->draftCourse->id
+            ]);
+            Lesson::factory()->count(2)->create([
+                'section_id' => $this->otherSection->id,
+                'course_id' => $this->otherCourse->id
+            ]);
 
-        getJson("/api/lessons?course_id={$this->course->id}")
-            ->assertOk()
-            ->assertJsonCount(3, 'data');
+            getJson('/api/lessons')
+                ->assertOk()
+                ->assertJsonCount(5, 'data');
+        });
+
+        it('instructor can create lesson for their own course', function () {
+            $lessonData = [
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'sequence' => 1,
+                'type' => 'document',
+                'title' => 'Course Materials PDF',
+                'url' => 'https://example.com/materials.pdf'
+            ];
+
+            postJson('/api/lessons', $lessonData)
+                ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Lesson created successfully')
+                ->assertJsonPath('data.title', 'Course Materials PDF')
+                ->assertJsonPath('data.type', 'document');
+        });
+
+        it('instructor can update lesson from their own course', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+
+            putJson("/api/lessons/{$lesson->id}", [
+                'title' => 'Instructor Updated Lesson',
+                'summary' => 'Updated by instructor'
+            ])
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Lesson updated successfully')
+                ->assertJsonPath('data.title', 'Instructor Updated Lesson');
+        });
+
+        it('instructor can delete lesson from their own course', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+
+            deleteJson("/api/lessons/{$lesson->id}")
+                ->assertOk()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'Lesson deleted successfully');
+
+            $this->assertSoftDeleted('lessons', ['id' => $lesson->id]);
+        });
+
+        it('instructor can view lesson from their own course', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->draftSection->id,
+                'course_id' => $this->draftCourse->id
+            ]);
+
+            getJson("/api/lessons/{$lesson->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $lesson->id);
+        });
+
+        it('instructor cannot update lesson from other instructor course', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->otherSection->id,
+                'course_id' => $this->otherCourse->id
+            ]);
+
+            putJson("/api/lessons/{$lesson->id}", [
+                'title' => 'Unauthorized update'
+            ])
+                ->assertForbidden();
+        });
+
+        it('instructor cannot delete lesson from other instructor course', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->otherSection->id,
+                'course_id' => $this->otherCourse->id
+            ]);
+
+            deleteJson("/api/lessons/{$lesson->id}")
+                ->assertForbidden();
+        });
+
+        it('instructor cannot view lesson from other instructor course', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->otherSection->id,
+                'course_id' => $this->otherCourse->id
+            ]);
+
+            getJson("/api/lessons/{$lesson->id}")
+                ->assertForbidden();
+        });
     });
 
-    it('user can filter lessons by type', function () {
-        Lesson::factory()->youtube()->count(2)->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
-        Lesson::factory()->document()->count(3)->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
+    describe('student access', function () {
+        beforeEach(function () {
+            actingAs($this->student);
+        });
 
-        getJson('/api/lessons?type=youtube')
-            ->assertOk()
-            ->assertJsonCount(2, 'data');
-    });
+        it('student can view lessons from enrolled published courses only', function () {
+            Lesson::factory()->count(3)->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+            Lesson::factory()->count(2)->create([
+                'section_id' => $this->draftSection->id,
+                'course_id' => $this->draftCourse->id
+            ]);
+            Lesson::factory()->count(2)->create([
+                'section_id' => $this->otherSection->id,
+                'course_id' => $this->otherCourse->id
+            ]);
 
-    it('lessons are ordered by sequence', function () {
-        Lesson::factory()->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id,
-            'sequence' => 3
-        ]);
-        Lesson::factory()->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id,
-            'sequence' => 1
-        ]);
-        Lesson::factory()->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id,
-            'sequence' => 2
-        ]);
+            getJson('/api/lessons')
+                ->assertOk()
+                ->assertJsonCount(3, 'data');
+        });
 
-        getJson("/api/lessons?section_id={$this->section->id}")
-            ->assertOk()
-            ->assertJsonPath('data.0.sequence', 1)
-            ->assertJsonPath('data.1.sequence', 2)
-            ->assertJsonPath('data.2.sequence', 3);
-    });
+        it('student can view single lesson from enrolled published course', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
 
-    it('user can create new lesson', function () {
-        $lessonData = [
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id,
-            'sequence' => 1,
-            'type' => 'youtube',
-            'title' => 'Introduction Video',
-            'url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-            'summary' => 'This is an introduction video',
-            'datetime' => now()->toDateTimeString()
-        ];
+            getJson("/api/lessons/{$lesson->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $lesson->id);
+        });
 
-        postJson('/api/lessons', $lessonData)
-            ->assertCreated()
-            ->assertJsonPath('data.title', 'Introduction Video')
-            ->assertJsonPath('data.type', 'youtube')
-            ->assertJsonPath('data.sequence', 1)
-            ->assertJsonPath('data.section_id', $this->section->id)
-            ->assertJsonPath('data.course_id', $this->course->id);
+        it('student cannot view lesson from non-enrolled course', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->otherSection->id,
+                'course_id' => $this->otherCourse->id
+            ]);
 
-        $this->assertDatabaseHas('lessons', [
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id,
-            'title' => 'Introduction Video',
-            'type' => 'youtube'
-        ]);
-    });
+            getJson("/api/lessons/{$lesson->id}")
+                ->assertForbidden();
+        });
 
-    it('validates required fields when creating lesson', function () {
-        postJson('/api/lessons', [])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['section_id', 'course_id', 'sequence', 'type', 'title', 'url']);
-    });
+        it('student cannot view lesson from draft course even if enrolled', function () {
+            Enrollment::factory()->create([
+                'user_id' => $this->student->id,
+                'course_id' => $this->draftCourse->id
+            ]);
 
-    it('validates lesson type enum', function () {
-        postJson('/api/lessons', [
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id,
-            'sequence' => 1,
-            'type' => 'invalid_type',
-            'title' => 'Test Lesson',
-            'url' => 'https://example.com'
-        ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['type']);
-    });
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->draftSection->id,
+                'course_id' => $this->draftCourse->id
+            ]);
 
-    it('user can get single lesson with relationships', function () {
-        $lesson = Lesson::factory()->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
+            getJson("/api/lessons/{$lesson->id}")
+                ->assertForbidden();
+        });
 
-        getJson("/api/lessons/{$lesson->id}")
-            ->assertOk()
-            ->assertJsonPath('data.id', $lesson->id)
-            ->assertJsonPath('data.title', $lesson->title)
-            ->assertJsonPath('data.type', $lesson->type)
-            ->assertJsonPath('data.section.id', $this->section->id)
-            ->assertJsonPath('data.course.id', $this->course->id);
-    });
+        it('student can filter lessons by enrolled course', function () {
+            Lesson::factory()->count(3)->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
 
-    it('returns 404 when lesson not found', function () {
-        getJson('/api/lessons/99999')
-            ->assertNotFound();
-    });
+            getJson("/api/lessons?course_id={$this->publishedCourse->id}")
+                ->assertOk()
+                ->assertJsonCount(3, 'data');
+        });
 
-    it('user can update lesson', function () {
-        $lesson = Lesson::factory()->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
+        it('student can filter lessons by section', function () {
+            Lesson::factory()->count(2)->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
 
-        $updateData = [
-            'title' => 'Updated Lesson Title',
-            'type' => 'document',
-            'url' => 'https://example.com/updated.pdf',
-            'sequence' => 5
-        ];
+            getJson("/api/lessons?section_id={$this->publishedSection->id}")
+                ->assertOk()
+                ->assertJsonCount(2, 'data');
+        });
 
-        putJson("/api/lessons/{$lesson->id}", $updateData)
-            ->assertOk()
-            ->assertJsonPath('data.title', 'Updated Lesson Title')
-            ->assertJsonPath('data.type', 'document')
-            ->assertJsonPath('data.sequence', 5);
+        it('student cannot create lesson', function () {
+            postJson('/api/lessons', [
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'sequence' => 1,
+                'type' => 'youtube',
+                'title' => 'Unauthorized lesson',
+                'url' => 'https://youtube.com/watch?v=example'
+            ])
+                ->assertForbidden();
+        });
 
-        $this->assertDatabaseHas('lessons', [
-            'id' => $lesson->id,
-            'title' => 'Updated Lesson Title',
-            'type' => 'document',
-            'sequence' => 5
-        ]);
-    });
+        it('student cannot update lesson', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
 
-    it('user can delete lesson', function () {
-        $lesson = Lesson::factory()->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
+            putJson("/api/lessons/{$lesson->id}", [
+                'title' => 'Unauthorized update'
+            ])
+                ->assertForbidden();
+        });
 
-        deleteJson("/api/lessons/{$lesson->id}")
-            ->assertOk()
-            ->assertJson(['message' => 'Lesson deleted successfully']);
+        it('student cannot delete lesson', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
 
-        $this->assertSoftDeleted('lessons', ['id' => $lesson->id]);
-    });
+            deleteJson("/api/lessons/{$lesson->id}")
+                ->assertForbidden();
+        });
 
-    it('returns 404 when deleting non-existent lesson', function () {
-        deleteJson('/api/lessons/99999')
-            ->assertNotFound();
-    });
+        it('returns 404 when lesson not found', function () {
+            getJson('/api/lessons/99999')
+                ->assertNotFound();
+        });
 
-    it('user can set custom per_page for pagination', function () {
-        Lesson::factory()->count(10)->create([
-            'section_id' => $this->section->id,
-            'course_id' => $this->course->id
-        ]);
+        it('student can set custom per_page for pagination', function () {
+            Lesson::factory()->count(10)->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
 
-        getJson('/api/lessons?per_page=4')
-            ->assertOk()
-            ->assertJsonCount(4, 'data');
+            getJson('/api/lessons?per_page=4')
+                ->assertOk()
+                ->assertJsonCount(4, 'data');
+        });
     });
 });
