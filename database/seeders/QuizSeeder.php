@@ -25,7 +25,7 @@ class QuizSeeder extends Seeder
                 continue;
             }
 
-            $quizCount = rand(1, 2);
+            $quizCount = 2;
 
             for ($i = 0; $i < $quizCount; $i++) {
                 $randomLesson = $lessons->random();

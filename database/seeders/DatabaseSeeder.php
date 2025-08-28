@@ -107,7 +107,7 @@ class DatabaseSeeder extends Seeder
             'verified_at' => now(),
         ]);
 
-        User::factory(8)->create()->each(function ($user) {
+        User::factory(4)->create()->each(function ($user) {
             UserProfile::factory()->for($user)->create();
             UserCredential::factory()->for($user)->emailCredential($user->email)->create();
             UserCredential::factory()->for($user)->phoneCredential()->create();
@@ -139,29 +139,7 @@ class DatabaseSeeder extends Seeder
         $categories = Category::all();
         $instructors = User::where('role', 'instructor')->get();
 
-        Course::factory()->count(5)->published()->verified()->create()->each(function ($course) use ($categories, $instructors) {
-            $course->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
-            $course->instructors()->attach($instructors->random(rand(1, 2))->pluck('id'));
-        });
-
-        Course::factory()->count(2)->published()->verified()->highlight()->create()->each(function ($course) use ($categories, $instructors) {
-            $course->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
-            $course->instructors()->attach($instructors->random(rand(1, 2))->pluck('id'));
-        });
-
-        Course::factory()->count(2)->notpublished()->verified()->create()->each(function ($course) use ($categories, $instructors) {
-            $course->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
-            $course->instructors()->attach($instructors->random(rand(1, 2))->pluck('id'));
-        });
-
-        Course::factory()->count(3)->draft()->create([
-            'verified_at' => null
-        ])->each(function ($course) use ($categories, $instructors) {
-            $course->categories()->attach($categories->random(rand(1, 2))->pluck('id'));
-            $course->instructors()->attach($instructors->random(1)->pluck('id'));
-        });
-
-        Course::factory()->count(1)->rejected()->verified()->create()->each(function ($course) use ($categories, $instructors) {
+        Course::factory()->count(3)->published()->verified()->create()->each(function ($course) use ($categories, $instructors) {
             $course->categories()->attach($categories->random(rand(1, 2))->pluck('id'));
             $course->instructors()->attach($instructors->random(1)->pluck('id'));
         });
@@ -170,31 +148,15 @@ class DatabaseSeeder extends Seeder
     private function createBootcamps(): void
     {
         $categories = Category::all();
-        $instructors = User::where('role', 'instructor')->get();
+        $instructor = User::where('role', 'instructor')->first();
 
-        foreach ($instructors as $instructor) {
-            \App\Models\Bootcamp::factory()->count(2)->published()->verified()->create([
-                'user_id' => $instructor->id
-            ])->each(function ($bootcamp) use ($categories) {
-                $bootcamp->categories()->attach($categories->random(rand(1, 3))->pluck('id'));
-            });
-
-            \App\Models\Bootcamp::factory()->count(2)->draft()->create([
-                'user_id' => $instructor->id
-            ])->each(function ($bootcamp) use ($categories) {
-                $bootcamp->categories()->attach($categories->random(rand(1, 2))->pluck('id'));
-            });
-
-            \App\Models\Bootcamp::factory()->count(1)->rejected()->verified()->create([
+        if ($instructor) {
+            \App\Models\Bootcamp::factory()->count(1)->published()->verified()->create([
                 'user_id' => $instructor->id
             ])->each(function ($bootcamp) use ($categories) {
                 $bootcamp->categories()->attach($categories->random(1)->pluck('id'));
             });
         }
-
-        \App\Models\Bootcamp::factory()->count(2)->unpublished()->verified()->create()->each(function ($bootcamp) use ($categories) {
-            $bootcamp->categories()->attach($categories->random(rand(1, 2))->pluck('id'));
-        });
     }
 
     private function callRelatedSeeders(): void

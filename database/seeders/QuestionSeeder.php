@@ -18,8 +18,8 @@ class QuestionSeeder extends Seeder
         }
 
         foreach ($quizzes as $quiz) {
-            $questionCount = rand(5, 10);
-            $types = ['single_choice', 'multiple_choice', 'fill_blank'];
+            $questionCount = 5;
+            $types = ['single_choice', 'multiple_choice'];
 
             for ($i = 0; $i < $questionCount; $i++) {
                 $selectedType = fake()->randomElement($types);

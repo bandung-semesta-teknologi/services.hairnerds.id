@@ -25,7 +25,7 @@ class ReviewSeeder extends Seeder
         }
 
         foreach ($courses as $course) {
-            $reviewCount = rand(3, 8);
+            $reviewCount = rand(2, 3);
 
             for ($i = 0; $i < $reviewCount; $i++) {
                 Review::factory()->create([
