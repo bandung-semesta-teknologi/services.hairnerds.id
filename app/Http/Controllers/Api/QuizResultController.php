@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\QuizResultStoreRequest;
 use App\Http\Requests\QuizResultUpdateRequest;
 use App\Http\Resources\QuizResultResource;
+use App\Jobs\AutoSubmitQuiz;
 use App\Models\QuizResult;
 use App\Models\Quiz;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class QuizResultController extends Controller
 {
@@ -96,6 +98,25 @@ class QuizResultController extends Controller
             $quizResult = QuizResult::create($data);
             $quizResult->load(['user', 'quiz.course', 'lesson']);
 
+            if ($quizResult->quiz->duration && $user->role === 'student') {
+                $duration = $quizResult->quiz->duration;
+                if (is_string($duration)) {
+                    $durationParts = explode(':', $duration);
+                } else {
+                    $durationParts = explode(':', $duration->format('H:i:s'));
+                }
+
+                $hours = (int) $durationParts[0];
+                $minutes = (int) $durationParts[1];
+                $seconds = (int) $durationParts[2];
+
+                $delaySeconds = ($hours * 3600) + ($minutes * 60) + $seconds;
+                $bufferSeconds = 1 * 60;
+                $totalDelaySeconds = $delaySeconds + $bufferSeconds;
+
+                AutoSubmitQuiz::dispatch($quizResult->id)->delay($totalDelaySeconds);
+            }
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Quiz result created successfully',
@@ -128,11 +149,35 @@ class QuizResultController extends Controller
             $data = $request->validated();
             $user = $request->user();
 
-            if ($user->role === 'student' && $quizResult->is_submitted) {
+            if ($quizResult->is_submitted) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Cannot update submitted quiz result'
+                    'message' => 'Quiz already submitted'
                 ], 422);
+            }
+
+            if ($user->role === 'student' && $quizResult->isExpired()) {
+                $quizResult->autoSubmit();
+
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Quiz time has expired and has been automatically submitted',
+                    'data' => new QuizResultResource($quizResult->fresh(['user', 'quiz.course', 'lesson']))
+                ], 422);
+            }
+
+            if (isset($data['is_submitted']) && $data['is_submitted']) {
+                $enrollment = $quizResult->user->enrollments()
+                    ->where('course_id', $quizResult->quiz->course_id)
+                    ->first();
+
+                if ($enrollment) {
+                    $enrollment->increment('quiz_attempts');
+                }
+
+                if (!isset($data['finished_at'])) {
+                    $data['finished_at'] = now();
+                }
             }
 
             $quizResult->update($data);

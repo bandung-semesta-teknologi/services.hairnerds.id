@@ -209,7 +209,6 @@ class DatabaseSeeder extends Seeder
             AnswerBankSeeder::class,
             EnrollmentSeeder::class,
             ProgressSeeder::class,
-            QuizResultSeeder::class,
         ]);
     }
 }
