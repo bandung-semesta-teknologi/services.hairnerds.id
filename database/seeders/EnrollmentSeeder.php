@@ -25,7 +25,7 @@ class EnrollmentSeeder extends Seeder
         }
 
         foreach ($users as $user) {
-            $enrolledCourses = $courses->random(min(rand(1, 3), $courses->count()));
+            $enrolledCourses = $courses->random(min(rand(1, 2), $courses->count()));
 
             foreach ($enrolledCourses as $course) {
                 if (!Enrollment::where('user_id', $user->id)->where('course_id', $course->id)->exists()) {
@@ -34,7 +34,7 @@ class EnrollmentSeeder extends Seeder
                         'course_id' => $course->id,
                     ]);
 
-                    if (fake()->boolean(30)) {
+                    if (fake()->boolean(20)) {
                         $enrollment->update(['finished_at' => fake()->dateTimeBetween('-1 month', 'now')]);
                     }
                 }

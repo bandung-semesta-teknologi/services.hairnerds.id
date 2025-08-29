@@ -18,7 +18,7 @@ class LessonSeeder extends Seeder
         }
 
         foreach ($sections as $section) {
-            $lessonCount = rand(3, 6);
+            $lessonCount = 2;
 
             for ($i = 1; $i <= $lessonCount; $i++) {
                 Lesson::factory()->create([

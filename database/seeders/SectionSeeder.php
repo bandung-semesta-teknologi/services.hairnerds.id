@@ -18,7 +18,7 @@ class SectionSeeder extends Seeder
         }
 
         foreach ($courses as $course) {
-            $sectionCount = rand(3, 6);
+            $sectionCount = 4;
 
             for ($i = 1; $i <= $sectionCount; $i++) {
                 Section::factory()->create([

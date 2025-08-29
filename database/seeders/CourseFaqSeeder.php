@@ -19,7 +19,7 @@ class CourseFaqSeeder extends Seeder
 
         foreach ($courses as $course) {
             CourseFaq::factory()
-                ->count(rand(3, 5))
+                ->count(rand(2, 3))
                 ->create(['course_id' => $course->id]);
         }
     }

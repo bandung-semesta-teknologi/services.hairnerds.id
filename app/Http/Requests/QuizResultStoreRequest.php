@@ -13,6 +13,19 @@ class QuizResultStoreRequest extends FormRequest
 
     public function rules(): array
     {
+        $user = $this->user();
+
+        if ($user && $user->role === 'student') {
+            return [
+                'quiz_id' => 'required|exists:quizzes,id',
+                'lesson_id' => 'required|exists:lessons,id',
+                'answered' => 'nullable|integer|min:0',
+                'correct_answers' => 'nullable|integer|min:0',
+                'total_obtained_marks' => 'nullable|integer|min:0',
+                'started_at' => 'nullable|date',
+            ];
+        }
+
         return [
             'user_id' => 'required|exists:users,id',
             'quiz_id' => 'required|exists:quizzes,id',

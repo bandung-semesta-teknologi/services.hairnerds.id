@@ -35,13 +35,15 @@ class QuizFactory extends Factory
             'This quiz tests your understanding of the material covered.'
         ];
 
+        $durations = ['00:30:00', '01:00:00'];
+
         return [
             'section_id' => Section::factory(),
             'lesson_id' => Lesson::factory(),
             'course_id' => Course::factory(),
             'title' => $this->faker->randomElement($titles),
             'instruction' => $this->faker->randomElement($instructions),
-            'duration' => $this->faker->time('H:i:s', '02:00:00'),
+            'duration' => $this->faker->randomElement($durations),
             'total_marks' => $this->faker->numberBetween(50, 200),
             'pass_marks' => function (array $attributes) {
                 return (int) ($attributes['total_marks'] * 0.6);
