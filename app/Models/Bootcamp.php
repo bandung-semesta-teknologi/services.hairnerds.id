@@ -36,6 +36,11 @@ class Bootcamp extends Model
         return $this->belongsToMany(Category::class, 'bootcamp_categories');
     }
 
+    public function payments()
+    {
+        return $this->morphMany(Payment::class, 'payable');
+    }
+
     public function scopePublished($query)
     {
         return $query->where('status', 'publish');
@@ -62,6 +67,21 @@ class Bootcamp extends Model
     }
 
     public function isAvailable()
+    {
+        return $this->seat_available > 0;
+    }
+
+    public function isFree(): bool
+    {
+        return $this->price === 0;
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->price > 0;
+    }
+
+    public function hasAvailableSeats(): bool
     {
         return $this->seat_available > 0;
     }

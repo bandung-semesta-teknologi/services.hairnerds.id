@@ -80,6 +80,11 @@ class Course extends Model
         return $this->hasMany(Progress::class);
     }
 
+    public function payments()
+    {
+        return $this->morphMany(Payment::class, 'payable');
+    }
+
     public function scopePublished($query)
     {
         return $query->where('status', 'published');
@@ -108,5 +113,15 @@ class Course extends Model
     public function scopeHighlight($query)
     {
         return $query->where('is_highlight', true);
+    }
+
+    public function isFree(): bool
+    {
+        return $this->price === 0;
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->price > 0;
     }
 }

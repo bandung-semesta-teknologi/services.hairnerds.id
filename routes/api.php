@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\QuizController;
 use App\Http\Controllers\Api\QuizResultController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SectionController;
+use App\Http\Controllers\Api\PaymentController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -38,6 +39,10 @@ Route::get('/bootcamps/{bootcamp}', [BootcampController::class, 'show']);
 
 Route::get('/reviews', [ReviewController::class, 'index']);
 Route::get('/reviews/{review}', [ReviewController::class, 'show']);
+
+Route::post('/payments/callback', [PaymentController::class, 'callback'])->name('payment.callback');
+Route::get('/payments/finish', [PaymentController::class, 'finish'])->name('payment.finish');
+Route::post('/payments/generate-signature', [PaymentController::class, 'generateSignature']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -90,4 +95,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('quiz-results', QuizResultController::class);
     Route::post('/quiz-results/{quizResult}/submit', [QuizResultController::class, 'submit']);
+
+    Route::get('/payments', [PaymentController::class, 'index']);
+    Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+    Route::get('/payments/{payment}/status', [PaymentController::class, 'checkStatus']);
+
+    Route::post('/courses/{course}/payment', [PaymentController::class, 'createCoursePayment']);
+    Route::post('/bootcamps/{bootcamp}/payment', [PaymentController::class, 'createBootcampPayment']);
 });

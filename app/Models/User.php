@@ -91,4 +91,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Bootcamp::class);
     }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
 }
