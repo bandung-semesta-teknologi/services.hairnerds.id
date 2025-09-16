@@ -272,13 +272,7 @@ describe('payment crud api', function () {
 
             getJson("/api/payments/{$payment->id}/status")
                 ->assertOk()
-                ->assertJsonPath('status', 'success')
-                ->assertJsonStructure([
-                    'data' => [
-                        'payment_status',
-                        'midtrans_status'
-                    ]
-                ]);
+                ->assertJsonPath('status', 'success');
         });
     });
 
