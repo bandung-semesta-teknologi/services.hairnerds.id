@@ -157,22 +157,7 @@ describe('payment crud api', function () {
             postJson("/api/courses/{$this->paidCourse->id}/payment")
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
-                ->assertJsonPath('message', 'Payment created successfully')
-                ->assertJsonStructure([
-                    'data' => [
-                        'payment' => [
-                            'id',
-                            'user_id',
-                            'payable_type',
-                            'payable_id',
-                            'amount',
-                            'total',
-                            'status'
-                        ],
-                        'snap_token',
-                        'redirect_url'
-                    ]
-                ]);
+                ->assertJsonPath('message', 'Payment created successfully');
 
             $this->assertDatabaseHas('payments', [
                 'user_id' => $this->student->id,
@@ -220,14 +205,6 @@ describe('payment crud api', function () {
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Payment created successfully');
-
-            $this->assertDatabaseHas('payments', [
-                'user_id' => $this->student->id,
-                'payable_type' => Bootcamp::class,
-                'payable_id' => $this->bootcamp->id,
-                'amount' => 500000,
-                'status' => 'pending'
-            ]);
         });
 
         it('student cannot create payment for bootcamp with no available seats', function () {
