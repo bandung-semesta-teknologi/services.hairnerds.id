@@ -12,7 +12,14 @@ class AnswerBankResource extends JsonResource
         return [
             'id' => $this->id,
             'question_id' => $this->question_id,
-            'question' => new QuestionResource($this->whenLoaded('question')),
+            'question' => $this->when($this->relationLoaded('question'), function () {
+                return [
+                    'id' => $this->question->id,
+                    'type' => $this->question->type,
+                    'question' => $this->question->question,
+                    'score' => $this->question->score,
+                ];
+            }),
             'answer' => $this->answer,
             'is_true' => $this->is_true,
             'created_at' => $this->created_at,

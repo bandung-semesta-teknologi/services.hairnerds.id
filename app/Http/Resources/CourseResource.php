@@ -25,8 +25,38 @@ class CourseResource extends JsonResource
             'status' => $this->status,
             'thumbnail' => $this->thumbnail,
             'verified_at' => $this->verified_at,
-            'faqs' => CourseFaqResource::collection($this->whenLoaded('faqs')),
-            'sections' => SectionResource::collection($this->whenLoaded('sections')),
+            'faqs' => $this->when($this->relationLoaded('faqs'), function () {
+                return $this->faqs->map(function ($faq) {
+                    return [
+                        'id' => $faq->id,
+                        'question' => $faq->question,
+                        'answer' => $faq->answer,
+                    ];
+                });
+            }),
+            'sections' => $this->when($this->relationLoaded('sections'), function () {
+                return $this->sections->map(function ($section) {
+                    return [
+                        'id' => $section->id,
+                        'sequence' => $section->sequence,
+                        'title' => $section->title,
+                        'objective' => $section->objective,
+                        'lessons' => $section->relationLoaded('lessons')
+                            ? $section->lessons->map(function ($lesson) {
+                                return [
+                                    'id' => $lesson->id,
+                                    'sequence' => $lesson->sequence,
+                                    'type' => $lesson->type,
+                                    'title' => $lesson->title,
+                                    'url' => $lesson->url,
+                                    'summary' => $lesson->summary,
+                                    'datetime' => $lesson->datetime,
+                                ];
+                            })
+                            : null,
+                    ];
+                });
+            }),
             'reviews' => $this->when($this->relationLoaded('reviews'), function () {
                 return $this->reviews->map(function ($review) {
                     return [
