@@ -12,11 +12,32 @@ class SectionResource extends JsonResource
         return [
             'id' => $this->id,
             'course_id' => $this->course_id,
-            'course' => new CourseResource($this->whenLoaded('course')),
+            'course' => $this->when($this->relationLoaded('course'), function () {
+                return [
+                    'id' => $this->course->id,
+                    'title' => $this->course->title,
+                    'slug' => $this->course->slug,
+                    'short_description' => $this->course->short_description,
+                    'level' => $this->course->level,
+                    'price' => $this->course->price,
+                ];
+            }),
             'sequence' => $this->sequence,
             'title' => $this->title,
             'objective' => $this->objective,
-            'lessons' => LessonResource::collection($this->whenLoaded('lessons')),
+            'lessons' => $this->when($this->relationLoaded('lessons'), function () {
+                return $this->lessons->map(function ($lesson) {
+                    return [
+                        'id' => $lesson->id,
+                        'sequence' => $lesson->sequence,
+                        'type' => $lesson->type,
+                        'title' => $lesson->title,
+                        'url' => $lesson->url,
+                        'summary' => $lesson->summary,
+                        'datetime' => $lesson->datetime,
+                    ];
+                });
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

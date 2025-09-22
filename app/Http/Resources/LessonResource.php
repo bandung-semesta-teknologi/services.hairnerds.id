@@ -12,7 +12,14 @@ class LessonResource extends JsonResource
         return [
             'id' => $this->id,
             'section_id' => $this->section_id,
-            'section' => new SectionResource($this->whenLoaded('section')),
+            'section' => $this->when($this->relationLoaded('section'), function () {
+                return [
+                    'id' => $this->section->id,
+                    'sequence' => $this->section->sequence,
+                    'title' => $this->section->title,
+                    'objective' => $this->section->objective,
+                ];
+            }),
             'course_id' => $this->course_id,
             'course' => new CourseResource($this->whenLoaded('course')),
             'sequence' => $this->sequence,
