@@ -69,6 +69,20 @@ class CourseResource extends JsonResource
                     ];
                 });
             }),
+            'sections_count' => $this->whenLoaded('sections', fn() => $this->sections->count(), 0),
+            'lessons_count' => $this->whenLoaded('sections', function () {
+                return $this->sections->sum(function ($section) {
+                    return $section->relationLoaded('lessons') ? $section->lessons->count() : 0;
+                });
+            }, 0),
+            'faqs_count' => $this->whenLoaded('faqs', fn() => $this->faqs->count(), 0),
+            'reviews_count' => $this->whenLoaded('reviews', fn() => $this->reviews->count(), 0),
+            'students_count' => $this->whenLoaded('enrollments', fn() => $this->enrollments->count(), 0),
+            'average_rating' => $this->whenLoaded('reviews', function () {
+                return $this->reviews->count() > 0
+                    ? round($this->reviews->avg('rating'), 1)
+                    : null;
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

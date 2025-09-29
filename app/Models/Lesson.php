@@ -26,6 +26,11 @@ class Lesson extends Model
         return $this->belongsTo(Course::class);
     }
 
+    public function quiz()
+    {
+        return $this->hasOne(Quiz::class);
+    }
+
     public function progress()
     {
         return $this->hasMany(Progress::class);

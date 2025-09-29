@@ -21,7 +21,7 @@ class CourseController extends Controller
         $this->authorize('viewAny', Course::class);
 
         $courses = Course::query()
-            ->with(['categories', 'faqs', 'sections', 'instructors', 'reviews'])
+            ->with(['categories', 'faqs', 'sections', 'instructors', 'reviews', 'enrollments'])
             ->when(!$user || $user->role === 'student', fn($q) => $q->published())
             ->when($user && $user->role === 'admin', fn($q) => $q)
             ->when($user && $user->role === 'instructor', function($q) use ($user) {
