@@ -28,6 +28,52 @@ class LessonResource extends JsonResource
             'url' => $this->url,
             'summary' => $this->summary,
             'datetime' => $this->datetime,
+
+            'quiz' => $this->when(
+                $this->type === 'quiz' && $this->relationLoaded('quiz'),
+                function () {
+                    if (!$this->quiz) {
+                        return null;
+                    }
+
+                    return [
+                        'id' => $this->quiz->id,
+                        'title' => $this->quiz->title,
+                        'instruction' => $this->quiz->instruction,
+                        'duration' => $this->quiz->duration?->format('H:i:s'),
+                        'total_marks' => $this->quiz->total_marks,
+                        'pass_marks' => $this->quiz->pass_marks,
+                        'max_retakes' => $this->quiz->max_retakes,
+                        'min_lesson_taken' => $this->quiz->min_lesson_taken,
+                        'questions_count' => $this->quiz->relationLoaded('questions')
+                            ? $this->quiz->questions->count()
+                            : 0,
+                        'questions' => $this->quiz->relationLoaded('questions')
+                            ? $this->quiz->questions->map(function ($question) {
+                                return [
+                                    'id' => $question->id,
+                                    'type' => $question->type,
+                                    'question' => $question->question,
+                                    'score' => $question->score,
+                                    'answer_banks_count' => $question->relationLoaded('answerBanks')
+                                        ? $question->answerBanks->count()
+                                        : 0,
+                                    'answer_banks' => $question->relationLoaded('answerBanks')
+                                        ? $question->answerBanks->map(function ($answerBank) {
+                                            return [
+                                                'id' => $answerBank->id,
+                                                'answer' => $answerBank->answer,
+                                                'is_true' => $answerBank->is_true,
+                                            ];
+                                        })
+                                        : null,
+                                ];
+                            })
+                            : null,
+                    ];
+                }
+            ),
+
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

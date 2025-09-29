@@ -36,6 +36,14 @@ class LessonController extends Controller
             ->ordered()
             ->paginate($request->per_page ?? 15);
 
+        // Load quiz data for lessons with type 'quiz'
+        $lessons->getCollection()->transform(function ($lesson) {
+            if ($lesson->type === 'quiz') {
+                $lesson->load(['quiz.questions.answerBanks']);
+            }
+            return $lesson;
+        });
+
         return LessonResource::collection($lessons);
     }
 
@@ -46,6 +54,11 @@ class LessonController extends Controller
         try {
             $lesson = Lesson::create($request->validated());
             $lesson->load(['section', 'course']);
+
+            // Load quiz data if lesson type is 'quiz'
+            if ($lesson->type === 'quiz') {
+                $lesson->load(['quiz.questions.answerBanks']);
+            }
 
             return response()->json([
                 'status' => 'success',
@@ -68,6 +81,11 @@ class LessonController extends Controller
 
         $lesson->load(['section', 'course']);
 
+        // Load quiz data if lesson type is 'quiz'
+        if ($lesson->type === 'quiz') {
+            $lesson->load(['quiz.questions.answerBanks']);
+        }
+
         return new LessonResource($lesson);
     }
 
@@ -78,6 +96,11 @@ class LessonController extends Controller
         try {
             $lesson->update($request->validated());
             $lesson->load(['section', 'course']);
+
+            // Load quiz data if lesson type is 'quiz'
+            if ($lesson->type === 'quiz') {
+                $lesson->load(['quiz.questions.answerBanks']);
+            }
 
             return response()->json([
                 'status' => 'success',
