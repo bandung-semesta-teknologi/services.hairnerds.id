@@ -29,6 +29,9 @@ class LessonResource extends JsonResource
             'summary' => $this->summary,
             'datetime' => $this->datetime,
 
+            'attachments' => AttachmentResource::collection($this->whenLoaded('attachments')),
+            'attachments_count' => $this->whenLoaded('attachments', fn() => $this->attachments->count(), 0),
+
             'quiz' => $this->when(
                 $this->type === 'quiz' && $this->relationLoaded('quiz'),
                 function () {
