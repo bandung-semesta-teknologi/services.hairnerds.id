@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\CourseFaqController;
 use App\Http\Controllers\Api\CourseWithFaqController;
+use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\EnrollmentController;
 use App\Http\Controllers\Api\LessonController;
 use App\Http\Controllers\Api\ProgressController;
@@ -66,6 +67,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
     Route::post('/courses/{course}/verify', [CourseController::class, 'verify']);
     Route::post('/courses/{course}/reject', [CourseController::class, 'reject']);
+
+    Route::post('/curriculum', [CurriculumController::class, 'store']);
+    Route::put('/curriculum/{section}', [CurriculumController::class, 'update']);
 
     Route::post('/courses-with-faqs', [CourseWithFaqController::class, 'store']);
     Route::put('/courses-with-faqs/{course}', [CourseWithFaqController::class, 'update']);

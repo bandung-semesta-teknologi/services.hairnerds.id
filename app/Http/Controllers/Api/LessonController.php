@@ -278,7 +278,7 @@ class LessonController extends Controller
                     'status' => 'success',
                     'message' => 'Lesson updated successfully',
                     'data' => new LessonResource($lesson)
-                ], 200);
+                ], 201);
             });
         } catch (\Exception $e) {
             Log::error('Error updating lesson: ' . $e->getMessage());
