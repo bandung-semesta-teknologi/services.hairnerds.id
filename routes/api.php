@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BootcampController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\CourseFaqController;
+use App\Http\Controllers\Api\CourseWithFaqController;
 use App\Http\Controllers\Api\EnrollmentController;
 use App\Http\Controllers\Api\LessonController;
 use App\Http\Controllers\Api\ProgressController;
@@ -65,6 +66,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
     Route::post('/courses/{course}/verify', [CourseController::class, 'verify']);
     Route::post('/courses/{course}/reject', [CourseController::class, 'reject']);
+
+    Route::post('/courses-with-faqs', [CourseWithFaqController::class, 'store']);
+    Route::put('/courses-with-faqs/{course}', [CourseWithFaqController::class, 'update']);
 
     Route::post('/bootcamps', [BootcampController::class, 'store']);
     Route::put('/bootcamps/{bootcamp}', [BootcampController::class, 'update']);

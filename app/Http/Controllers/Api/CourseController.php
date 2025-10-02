@@ -21,7 +21,7 @@ class CourseController extends Controller
         $this->authorize('viewAny', Course::class);
 
         $courses = Course::query()
-            ->with(['categories', 'faqs', 'sections', 'instructors', 'reviews', 'enrollments'])
+            ->with(['categories', 'faqs', 'sections.lessons', 'instructors', 'reviews', 'enrollments'])
             ->when(!$user || $user->role === 'student', fn($q) => $q->published())
             ->when($user && $user->role === 'admin', fn($q) => $q)
             ->when($user && $user->role === 'instructor', function($q) use ($user) {
@@ -85,7 +85,7 @@ class CourseController extends Controller
 
         $this->authorize('view', $course);
 
-        $course->load(['categories', 'faqs', 'sections', 'instructors', 'reviews']);
+        $course->load(['categories', 'faqs', 'sections.lessons', 'instructors', 'reviews']);
 
         return new CourseResource($course);
     }
