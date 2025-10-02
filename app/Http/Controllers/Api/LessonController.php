@@ -143,6 +143,7 @@ class LessonController extends Controller
                     return $value !== null;
                 });
 
+                $attachmentIds = $request->input('attachment_ids');
                 $attachmentTypes = $request->input('attachment_types');
                 $attachmentTitles = $request->input('attachment_titles');
                 $attachmentFiles = $request->file('attachment_files');
@@ -173,25 +174,96 @@ class LessonController extends Controller
                     $lesson->update($data);
                 }
 
-                if ($attachmentTypes !== null && !empty($attachmentTypes)) {
-                    foreach ($attachmentTypes as $index => $type) {
-                        $attachmentData = [
-                            'lesson_id' => $lesson->id,
-                            'type' => $type,
-                            'title' => $attachmentTitles[$index] ?? 'Untitled',
-                        ];
+                if ($attachmentTypes !== null) {
+                    $existingAttachmentIds = $lesson->attachments()->pluck('id')->toArray();
+                    $submittedAttachmentIds = [];
 
-                        if (isset($attachmentFiles[$index]) && $attachmentFiles[$index]) {
-                            $file = $attachmentFiles[$index];
-                            $path = $file->store('lessons/attachments', 'public');
-                            $attachmentData['url'] = $path;
-                        } elseif (isset($attachmentUrls[$index]) && $attachmentUrls[$index]) {
-                            $attachmentData['url'] = $attachmentUrls[$index];
-                        } else {
-                            $attachmentData['url'] = '';
+                    if (empty($attachmentTypes)) {
+                        $attachmentsToDelete = $lesson->attachments;
+                        foreach ($attachmentsToDelete as $attachment) {
+                            if (!filter_var($attachment->url, FILTER_VALIDATE_URL)) {
+                                if (Storage::exists($attachment->url)) {
+                                    Storage::delete($attachment->url);
+                                }
+                            }
+                        }
+                        $lesson->attachments()->delete();
+
+                        Log::info("Deleted all attachments for lesson {$lesson->id} - empty array submitted");
+                    } else {
+                        foreach ($attachmentTypes as $index => $type) {
+                            $attachmentId = $attachmentIds[$index] ?? null;
+
+                            if ($attachmentId) {
+                                $attachment = $lesson->attachments()->find($attachmentId);
+
+                                if ($attachment) {
+                                    $submittedAttachmentIds[] = $attachmentId;
+
+                                    $attachmentData = [
+                                        'type' => $type,
+                                        'title' => $attachmentTitles[$index] ?? $attachment->title,
+                                    ];
+
+                                    if (isset($attachmentFiles[$index]) && $attachmentFiles[$index]) {
+                                        if (!filter_var($attachment->url, FILTER_VALIDATE_URL)) {
+                                            if (Storage::exists($attachment->url)) {
+                                                Storage::delete($attachment->url);
+                                            }
+                                        }
+
+                                        $file = $attachmentFiles[$index];
+                                        $path = $file->store('lessons/attachments', 'public');
+                                        $attachmentData['url'] = $path;
+                                    } elseif (isset($attachmentUrls[$index]) && $attachmentUrls[$index]) {
+                                        $attachmentData['url'] = $attachmentUrls[$index];
+                                    }
+
+                                    $attachment->update($attachmentData);
+
+                                    Log::info("Updated attachment {$attachmentId} for lesson {$lesson->id}");
+                                }
+                            } else {
+                                $attachmentData = [
+                                    'lesson_id' => $lesson->id,
+                                    'type' => $type,
+                                    'title' => $attachmentTitles[$index] ?? 'Untitled',
+                                ];
+
+                                if (isset($attachmentFiles[$index]) && $attachmentFiles[$index]) {
+                                    $file = $attachmentFiles[$index];
+                                    $path = $file->store('lessons/attachments', 'public');
+                                    $attachmentData['url'] = $path;
+                                } elseif (isset($attachmentUrls[$index]) && $attachmentUrls[$index]) {
+                                    $attachmentData['url'] = $attachmentUrls[$index];
+                                } else {
+                                    $attachmentData['url'] = '';
+                                }
+
+                                $newAttachment = $lesson->attachments()->create($attachmentData);
+                                $submittedAttachmentIds[] = $newAttachment->id;
+
+                                Log::info("Created new attachment {$newAttachment->id} for lesson {$lesson->id}");
+                            }
                         }
 
-                        $lesson->attachments()->create($attachmentData);
+                        $attachmentsToDelete = array_diff($existingAttachmentIds, $submittedAttachmentIds);
+
+                        if (!empty($attachmentsToDelete)) {
+                            $toDelete = $lesson->attachments()->whereIn('id', $attachmentsToDelete)->get();
+
+                            foreach ($toDelete as $attachment) {
+                                if (!filter_var($attachment->url, FILTER_VALIDATE_URL)) {
+                                    if (Storage::exists($attachment->url)) {
+                                        Storage::delete($attachment->url);
+                                    }
+                                }
+                            }
+
+                            $lesson->attachments()->whereIn('id', $attachmentsToDelete)->delete();
+
+                            Log::info("Deleted attachments " . implode(', ', $attachmentsToDelete) . " for lesson {$lesson->id}");
+                        }
                     }
                 }
 
@@ -206,7 +278,7 @@ class LessonController extends Controller
                     'status' => 'success',
                     'message' => 'Lesson updated successfully',
                     'data' => new LessonResource($lesson)
-                ], 201);
+                ], 200);
             });
         } catch (\Exception $e) {
             Log::error('Error updating lesson: ' . $e->getMessage());
