@@ -27,7 +27,7 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.verify');
 
 Route::get('/courses', [CourseController::class, 'index']);
-Route::get('/courses/{course}', [CourseController::class, 'show']);
+Route::get('/courses/{course:slug}', [CourseController::class, 'show']);
 
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}', [CategoryController::class, 'show']);
@@ -63,16 +63,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
     Route::post('/courses', [CourseController::class, 'store']);
-    Route::put('/courses/{course}', [CourseController::class, 'update']);
-    Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
-    Route::post('/courses/{course}/verify', [CourseController::class, 'verify']);
-    Route::post('/courses/{course}/reject', [CourseController::class, 'reject']);
+    Route::put('/courses/{course:slug}', [CourseController::class, 'update']);
+    Route::delete('/courses/{course:slug}', [CourseController::class, 'destroy']);
+    Route::post('/courses/{course:slug}/verify', [CourseController::class, 'verify']);
+    Route::post('/courses/{course:slug}/reject', [CourseController::class, 'reject']);
 
     Route::post('/curriculum', [CurriculumController::class, 'store']);
     Route::put('/curriculum/{section}', [CurriculumController::class, 'update']);
 
     Route::post('/courses-with-faqs', [CourseWithFaqController::class, 'store']);
-    Route::put('/courses-with-faqs/{course}', [CourseWithFaqController::class, 'update']);
+    Route::put('/courses-with-faqs/{course:slug}', [CourseWithFaqController::class, 'update']);
 
     Route::post('/bootcamps', [BootcampController::class, 'store']);
     Route::put('/bootcamps/{bootcamp}', [BootcampController::class, 'update']);
@@ -124,6 +124,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/payments/{payment}', [PaymentController::class, 'show']);
     Route::get('/payments/{payment}/status', [PaymentController::class, 'checkStatus']);
 
-    Route::post('/courses/{course}/payment', [PaymentController::class, 'createCoursePayment']);
+    Route::post('/courses/{course:slug}/payment', [PaymentController::class, 'createCoursePayment']);
     Route::post('/bootcamps/{bootcamp}/payment', [PaymentController::class, 'createBootcampPayment']);
 });
