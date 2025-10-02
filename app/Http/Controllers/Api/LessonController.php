@@ -10,6 +10,7 @@ use App\Models\Lesson;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class LessonController extends Controller
 {
@@ -127,6 +128,8 @@ class LessonController extends Controller
 
         try {
             return DB::transaction(function () use ($request, $lesson) {
+                $oldType = $lesson->type;
+
                 $data = array_filter([
                     'section_id' => $request->input('section_id'),
                     'course_id' => $request->input('course_id'),
@@ -144,6 +147,27 @@ class LessonController extends Controller
                 $attachmentTitles = $request->input('attachment_titles');
                 $attachmentFiles = $request->file('attachment_files');
                 $attachmentUrls = $request->input('attachment_urls');
+
+                $newType = $data['type'] ?? $oldType;
+
+                $oldRequiresAttachment = in_array($oldType, ['document', 'audio']);
+                $newRequiresAttachment = in_array($newType, ['document', 'audio']);
+
+                if ($oldRequiresAttachment && !$newRequiresAttachment) {
+                    $existingAttachments = $lesson->attachments;
+
+                    foreach ($existingAttachments as $attachment) {
+                        if (!filter_var($attachment->url, FILTER_VALIDATE_URL)) {
+                            if (Storage::exists($attachment->url)) {
+                                Storage::delete($attachment->url);
+                            }
+                        }
+                    }
+
+                    $lesson->attachments()->delete();
+
+                    Log::info("Deleted all attachments for lesson {$lesson->id} due to type change from {$oldType} to {$newType}");
+                }
 
                 if (!empty($data)) {
                     $lesson->update($data);

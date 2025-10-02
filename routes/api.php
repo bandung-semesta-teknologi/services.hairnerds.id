@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\LessonController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\QuestionController;
 use App\Http\Controllers\Api\QuizController;
+use App\Http\Controllers\Api\QuizLessonController;
 use App\Http\Controllers\Api\QuizResultController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SectionController;
@@ -84,6 +85,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/lessons/{lesson}', [LessonController::class, 'show']);
     Route::post('/lessons/{lesson}', [LessonController::class, 'update']);
     Route::delete('/lessons/{lesson}', [LessonController::class, 'destroy']);
+
+    Route::post('/quiz-lessons', [QuizLessonController::class, 'store']);
+    Route::put('/quiz-lessons/{lesson}', [QuizLessonController::class, 'update']);
 
     Route::get('/attachments', [AttachmentController::class, 'index']);
     Route::post('/attachments', [AttachmentController::class, 'store']);
