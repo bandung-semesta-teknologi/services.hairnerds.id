@@ -41,8 +41,18 @@ class Lesson extends Model
         return $this->hasMany(QuizResult::class);
     }
 
+    public function attachments()
+    {
+        return $this->hasMany(Attachment::class);
+    }
+
     public function scopeOrdered($query)
     {
         return $query->orderBy('sequence');
+    }
+
+    public function requiresAttachment(): bool
+    {
+        return in_array($this->type, ['document', 'audio']);
     }
 }

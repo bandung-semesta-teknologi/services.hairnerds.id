@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Attachment;
 use App\Models\Category;
 use App\Models\Course;
 use App\Models\Enrollment;
@@ -7,6 +8,8 @@ use App\Models\Lesson;
 use App\Models\Section;
 use App\Models\User;
 use App\Models\UserCredential;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\deleteJson;
@@ -16,6 +19,8 @@ use function Pest\Laravel\putJson;
 
 describe('lesson crud api', function () {
     beforeEach(function () {
+        Storage::fake('public');
+
         $this->admin = User::factory()
             ->has(UserCredential::factory()->emailCredential())
             ->create(['role' => 'admin']);
@@ -94,7 +99,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            putJson("/api/lessons/{$lesson->id}", [
+            postJson("/api/lessons/{$lesson->id}", [
                 'title' => 'Updated title'
             ])
                 ->assertUnauthorized();
@@ -147,6 +152,8 @@ describe('lesson crud api', function () {
                             'url',
                             'summary',
                             'datetime',
+                            'attachments',
+                            'attachments_count',
                             'created_at',
                             'updated_at',
                         ]
@@ -183,10 +190,82 @@ describe('lesson crud api', function () {
             ]);
         });
 
-        it('validates required fields when creating lesson', function () {
-            postJson('/api/lessons', [])
+        it('admin can create document lesson with attachments', function () {
+            $lessonData = [
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'sequence' => 1,
+                'type' => 'document',
+                'title' => 'Fade Techniques Manual',
+                'summary' => 'Complete guide to fade techniques',
+                'attachment_types' => ['document', 'youtube'],
+                'attachment_titles' => ['Fade Manual PDF', 'Demo Video'],
+                'attachment_files' => [UploadedFile::fake()->create('manual.pdf', 1024)],
+                'attachment_urls' => [null, 'https://youtube.com/watch?v=demo']
+            ];
+
+            $response = postJson('/api/lessons', $lessonData)
+                ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('data.attachments_count', 2);
+
+            $lesson = Lesson::latest()->first();
+            expect($lesson->attachments)->toHaveCount(2);
+            Storage::disk('public')->assertExists($lesson->attachments->first()->url);
+        });
+
+        it('validates required attachments for document type', function () {
+            postJson('/api/lessons', [
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'sequence' => 1,
+                'type' => 'document',
+                'title' => 'Test Document Lesson',
+            ])
                 ->assertUnprocessable()
-                ->assertJsonValidationErrors(['section_id', 'course_id', 'sequence', 'type', 'title', 'url']);
+                ->assertJsonValidationErrors(['attachment_types', 'attachment_titles', 'attachment_files']);
+        });
+
+        it('validates required attachments for audio type', function () {
+            postJson('/api/lessons', [
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'sequence' => 1,
+                'type' => 'audio',
+                'title' => 'Test Audio Lesson',
+            ])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['attachment_types', 'attachment_titles', 'attachment_files']);
+        });
+
+        it('validates file size for attachments', function () {
+            postJson('/api/lessons', [
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'sequence' => 1,
+                'type' => 'document',
+                'title' => 'Test Document',
+                'attachment_types' => ['document'],
+                'attachment_titles' => ['Large File'],
+                'attachment_files' => [UploadedFile::fake()->create('large.pdf', 11000)]
+            ])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['attachment_files.0']);
+        });
+
+        it('validates file type for document attachments', function () {
+            postJson('/api/lessons', [
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'sequence' => 1,
+                'type' => 'document',
+                'title' => 'Test Document',
+                'attachment_types' => ['document'],
+                'attachment_titles' => ['Invalid File'],
+                'attachment_files' => [UploadedFile::fake()->create('file.exe', 1024)]
+            ])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['attachment_files.0']);
         });
 
         it('admin can update any lesson', function () {
@@ -200,8 +279,8 @@ describe('lesson crud api', function () {
                 'summary' => 'Updated lesson summary'
             ];
 
-            putJson("/api/lessons/{$lesson->id}", $updateData)
-                ->assertOk()
+            postJson("/api/lessons/{$lesson->id}", $updateData)
+                ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Lesson updated successfully')
                 ->assertJsonPath('data.title', 'Updated Lesson Title')
@@ -212,6 +291,28 @@ describe('lesson crud api', function () {
                 'title' => 'Updated Lesson Title',
                 'summary' => 'Updated lesson summary'
             ]);
+        });
+
+        it('admin can add attachments when updating lesson', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'type' => 'youtube'
+            ]);
+
+            $file = UploadedFile::fake()->create('material.pdf', 1024);
+
+            postJson('/api/attachments', [
+                'lesson_id' => $lesson->id,
+                'type' => 'document',
+                'title' => 'Additional Material',
+                'file' => $file
+            ])
+                ->assertCreated();
+
+            $lesson->refresh();
+            expect($lesson->attachments)->toHaveCount(1);
+            expect($lesson->attachments->first()->title)->toBe('Additional Material');
         });
 
         it('admin can delete any lesson', function () {
@@ -269,17 +370,31 @@ describe('lesson crud api', function () {
                 'section_id' => $this->publishedSection->id,
                 'course_id' => $this->publishedCourse->id,
                 'sequence' => 1,
-                'type' => 'document',
-                'title' => 'Course Materials PDF',
-                'url' => 'https://example.com/materials.pdf'
+                'type' => 'youtube',
+                'title' => 'Course Materials Video',
+                'url' => 'https://youtube.com/watch?v=example123'
             ];
 
             postJson('/api/lessons', $lessonData)
                 ->assertCreated()
-                ->assertJsonPath('status', 'success')
-                ->assertJsonPath('message', 'Lesson created successfully')
-                ->assertJsonPath('data.title', 'Course Materials PDF')
-                ->assertJsonPath('data.type', 'document');
+                ->assertJsonPath('status', 'success');
+        });
+
+        it('instructor can create audio lesson with attachments', function () {
+            $lessonData = [
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id,
+                'sequence' => 1,
+                'type' => 'audio',
+                'title' => 'Customer Service Podcast',
+                'attachment_types' => ['audio'],
+                'attachment_titles' => ['Podcast Episode 1'],
+                'attachment_files' => [UploadedFile::fake()->create('podcast.mp3', 2048)]
+            ];
+
+            postJson('/api/lessons', $lessonData)
+                ->assertCreated()
+                ->assertJsonPath('data.attachments_count', 1);
         });
 
         it('instructor can update lesson from their own course', function () {
@@ -288,11 +403,11 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            putJson("/api/lessons/{$lesson->id}", [
+            postJson("/api/lessons/{$lesson->id}", [
                 'title' => 'Instructor Updated Lesson',
                 'summary' => 'Updated by instructor'
             ])
-                ->assertOk()
+                ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Lesson updated successfully')
                 ->assertJsonPath('data.title', 'Instructor Updated Lesson');
@@ -329,7 +444,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            putJson("/api/lessons/{$lesson->id}", [
+            postJson("/api/lessons/{$lesson->id}", [
                 'title' => 'Unauthorized update'
             ])
                 ->assertForbidden();
@@ -378,6 +493,29 @@ describe('lesson crud api', function () {
             getJson('/api/lessons')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
+        });
+
+        it('student can view lesson with attachments', function () {
+            $lesson = Lesson::factory()->create([
+                'section_id' => $this->publishedSection->id,
+                'course_id' => $this->publishedCourse->id
+            ]);
+
+            Attachment::factory()->count(2)->create([
+                'lesson_id' => $lesson->id
+            ]);
+
+            getJson("/api/lessons/{$lesson->id}")
+                ->assertOk()
+                ->assertJsonPath('data.id', $lesson->id)
+                ->assertJsonPath('data.attachments_count', 2)
+                ->assertJsonStructure([
+                    'data' => [
+                        'attachments' => [
+                            '*' => ['id', 'type', 'title', 'url', 'full_url']
+                        ]
+                    ]
+                ]);
         });
 
         it('student can view single lesson from enrolled published course', function () {
@@ -456,7 +594,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            putJson("/api/lessons/{$lesson->id}", [
+            postJson("/api/lessons/{$lesson->id}", [
                 'title' => 'Unauthorized update'
             ])
                 ->assertForbidden();

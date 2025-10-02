@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\AnswerBank;
+use App\Models\Attachment;
 use App\Models\Bootcamp;
 use App\Models\Category;
 use App\Models\Course;
@@ -17,6 +18,7 @@ use App\Models\QuizResult;
 use App\Models\Review;
 use App\Models\Section;
 use App\Policies\AnswerBankPolicy;
+use App\Policies\AttachmentPolicy;
 use App\Policies\BootcampPolicy;
 use App\Policies\CategoryPolicy;
 use App\Policies\CourseFaqPolicy;
@@ -35,20 +37,21 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
 class AuthServiceProvider extends ServiceProvider
 {
     protected $policies = [
-        Course::class => CoursePolicy::class,
-        Bootcamp::class => BootcampPolicy::class,
-        Section::class => SectionPolicy::class,
-        Category::class => CategoryPolicy::class,
-        CourseFaq::class => CourseFaqPolicy::class,
-        Review::class => ReviewPolicy::class,
-        Lesson::class => LessonPolicy::class,
-        Quiz::class => QuizPolicy::class,
-        Question::class => QuestionPolicy::class,
         AnswerBank::class => AnswerBankPolicy::class,
+        Attachment::class => AttachmentPolicy::class,
+        Bootcamp::class => BootcampPolicy::class,
+        Category::class => CategoryPolicy::class,
+        Course::class => CoursePolicy::class,
+        CourseFaq::class => CourseFaqPolicy::class,
         Enrollment::class => EnrollmentPolicy::class,
-        Progress::class => ProgressPolicy::class,
-        QuizResult::class => QuizResultPolicy::class,
+        Lesson::class => LessonPolicy::class,
         Payment::class => PaymentPolicy::class,
+        Progress::class => ProgressPolicy::class,
+        Question::class => QuestionPolicy::class,
+        Quiz::class => QuizPolicy::class,
+        QuizResult::class => QuizResultPolicy::class,
+        Review::class => ReviewPolicy::class,
+        Section::class => SectionPolicy::class,
     ];
 
     public function boot(): void

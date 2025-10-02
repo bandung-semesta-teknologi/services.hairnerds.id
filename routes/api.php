@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AnswerBankController;
+use App\Http\Controllers\Api\AttachmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BootcampController;
 use App\Http\Controllers\Api\CategoryController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Api\LessonController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\QuestionController;
 use App\Http\Controllers\Api\QuizController;
+use App\Http\Controllers\Api\QuizLessonController;
 use App\Http\Controllers\Api\QuizResultController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SectionController;
@@ -78,7 +80,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/sections/{section}', [SectionController::class, 'update']);
     Route::delete('/sections/{section}', [SectionController::class, 'destroy']);
 
-    Route::apiResource('lessons', LessonController::class);
+    Route::get('/lessons', [LessonController::class, 'index']);
+    Route::post('/lessons', [LessonController::class, 'store']);
+    Route::get('/lessons/{lesson}', [LessonController::class, 'show']);
+    Route::post('/lessons/{lesson}', [LessonController::class, 'update']);
+    Route::delete('/lessons/{lesson}', [LessonController::class, 'destroy']);
+
+    Route::post('/quiz-lessons', [QuizLessonController::class, 'store']);
+    Route::put('/quiz-lessons/{lesson}', [QuizLessonController::class, 'update']);
+
+    Route::get('/attachments', [AttachmentController::class, 'index']);
+    Route::post('/attachments', [AttachmentController::class, 'store']);
+    Route::get('/attachments/{attachment}', [AttachmentController::class, 'show']);
+    Route::post('/attachments/{attachment}', [AttachmentController::class, 'update']);
+    Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy']);
+
     Route::apiResource('quizzes', QuizController::class);
     Route::apiResource('questions', QuestionController::class);
     Route::apiResource('answer-banks', AnswerBankController::class);
