@@ -8,6 +8,7 @@ use App\Http\Requests\CourseFaqUpdateRequest;
 use App\Http\Resources\CourseFaqResource;
 use App\Models\CourseFaq;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class CourseFaqController extends Controller
@@ -27,7 +28,7 @@ class CourseFaqController extends Controller
                 return $q->whereHas('course.instructors', fn($q) => $q->where('users.id', $user->id));
             })
             ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
-            ->paginate($request->per_page ?? 15);
+            ->get();
 
         return CourseFaqResource::collection($faqs);
     }
@@ -37,20 +38,40 @@ class CourseFaqController extends Controller
         $this->authorize('create', CourseFaq::class);
 
         try {
-            $faq = CourseFaq::create($request->validated());
-            $faq->load('course');
+            $courseId = $request->validated()['course_id'];
+            $faqs = $request->validated()['faqs'];
+
+            $createdFaqs = DB::transaction(function () use ($courseId, $faqs) {
+                $faqsToInsert = collect($faqs)->map(function ($faq) use ($courseId) {
+                    return [
+                        'course_id' => $courseId,
+                        'question' => $faq['question'],
+                        'answer' => $faq['answer'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                })->toArray();
+
+                CourseFaq::insert($faqsToInsert);
+
+                return CourseFaq::with('course')
+                    ->where('course_id', $courseId)
+                    ->latest()
+                    ->limit(count($faqsToInsert))
+                    ->get();
+            });
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'FAQ created successfully',
-                'data' => new CourseFaqResource($faq)
+                'message' => 'FAQs created successfully',
+                'data' => CourseFaqResource::collection($createdFaqs)
             ], 201);
         } catch (\Exception $e) {
-            Log::error('Error creating FAQ: ' . $e->getMessage());
+            Log::error('Error creating FAQs: ' . $e->getMessage());
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to create FAQ'
+                'message' => 'Failed to create FAQs'
             ], 500);
         }
     }

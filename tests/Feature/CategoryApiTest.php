@@ -27,11 +27,12 @@ describe('category crud api', function () {
     });
 
     describe('guest access', function () {
-        it('anyone can get all categories with pagination without auth', function () {
+        it('anyone can get all categories without auth', function () {
             Category::factory()->count(8)->create();
 
             getJson('/api/categories')
                 ->assertOk()
+                ->assertJsonCount(8, 'data')
                 ->assertJsonStructure([
                     'data' => [
                         '*' => [
@@ -40,9 +41,7 @@ describe('category crud api', function () {
                             'created_at',
                             'updated_at',
                         ]
-                    ],
-                    'links',
-                    'meta'
+                    ]
                 ]);
         });
 
@@ -58,14 +57,6 @@ describe('category crud api', function () {
         it('returns 404 when category not found', function () {
             getJson('/api/categories/99999')
                 ->assertNotFound();
-        });
-
-        it('anyone can set custom per_page for pagination', function () {
-            Category::factory()->count(10)->create();
-
-            getJson('/api/categories?per_page=3')
-                ->assertOk()
-                ->assertJsonCount(3, 'data');
         });
     });
 
@@ -201,6 +192,7 @@ describe('category crud api', function () {
 
             getJson('/api/categories')
                 ->assertOk()
+                ->assertJsonCount(5, 'data')
                 ->assertJsonStructure([
                     'data' => [
                         '*' => [
@@ -209,9 +201,7 @@ describe('category crud api', function () {
                             'created_at',
                             'updated_at',
                         ]
-                    ],
-                    'links',
-                    'meta'
+                    ]
                 ]);
         });
 
@@ -254,6 +244,7 @@ describe('category crud api', function () {
 
             getJson('/api/categories')
                 ->assertOk()
+                ->assertJsonCount(3, 'data')
                 ->assertJsonStructure([
                     'data' => [
                         '*' => [
@@ -262,9 +253,7 @@ describe('category crud api', function () {
                             'created_at',
                             'updated_at',
                         ]
-                    ],
-                    'links',
-                    'meta'
+                    ]
                 ]);
         });
 
