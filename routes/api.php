@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\CourseFaqController;
 use App\Http\Controllers\Api\CourseWithFaqController;
 use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\EnrollmentController;
+use App\Http\Controllers\Api\InstructorController;
 use App\Http\Controllers\Api\LessonController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\QuestionController;
@@ -57,6 +58,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
     Route::post('/email/verification-notification', [AuthController::class, 'resendEmail'])->name('verification.send');
+
+    Route::get('/instructors', [InstructorController::class, 'index']);
 
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::put('/categories/{category}', [CategoryController::class, 'update']);
