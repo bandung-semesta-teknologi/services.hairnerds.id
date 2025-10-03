@@ -15,12 +15,7 @@ class CurriculumUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'course_id' => 'sometimes|required|exists:courses,id',
-            'sequence' => 'sometimes|required|integer|min:1',
-            'title' => 'sometimes|required|string|max:255',
-            'objective' => 'nullable|string|max:255',
-
-            'lessons' => 'nullable|array',
+            'lessons' => 'required|array|min:1',
             'lessons.*.id' => 'nullable|exists:lessons,id',
             'lessons.*.sequence' => 'required|integer|min:1',
             'lessons.*.type' => ['required', Rule::in(['youtube', 'document', 'text', 'audio', 'live', 'quiz'])],
@@ -115,6 +110,9 @@ class CurriculumUpdateRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'lessons.required' => 'Lessons data is required',
+            'lessons.array' => 'Lessons must be an array',
+            'lessons.min' => 'At least one lesson is required',
             'lessons.*.attachments.*.file.max' => 'File size must not exceed 10MB',
             'lessons.*.attachments.*.file.mimes' => 'Invalid file type',
         ];

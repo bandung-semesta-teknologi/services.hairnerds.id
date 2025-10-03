@@ -32,25 +32,9 @@ class CurriculumService
         return $section;
     }
 
-    public function updateCurriculum(Section $section, array $data): Section
+    public function updateCurriculumLessons(Section $section, array $lessons): Section
     {
-        $sectionData = array_filter([
-            'course_id' => $data['course_id'] ?? null,
-            'sequence' => $data['sequence'] ?? null,
-            'title' => $data['title'] ?? null,
-            'objective' => $data['objective'] ?? null,
-        ], function ($value) {
-            return $value !== null;
-        });
-
-        if (!empty($sectionData)) {
-            $section->update($sectionData);
-        }
-
-        if (isset($data['lessons'])) {
-            $this->syncLessons($section, $data['lessons']);
-        }
-
+        $this->syncLessons($section, $lessons);
         return $section->fresh();
     }
 
@@ -64,7 +48,7 @@ class CurriculumService
             'title' => $lessonData['title'],
             'url' => $lessonData['url'] ?? null,
             'summary' => $lessonData['summary'] ?? null,
-            'datetime' => $lessonData['datetime'],
+            'datetime' => $lessonData['datetime'] ?? null,
         ]);
 
         if (in_array($lessonData['type'], ['document', 'audio']) && !empty($lessonData['attachments'])) {

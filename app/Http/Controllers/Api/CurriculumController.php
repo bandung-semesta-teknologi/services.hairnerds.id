@@ -8,7 +8,6 @@ use App\Http\Requests\CurriculumUpdateRequest;
 use App\Http\Resources\CurriculumResource;
 use App\Models\Section;
 use App\Services\CurriculumService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -59,7 +58,10 @@ class CurriculumController extends Controller
 
         try {
             return DB::transaction(function () use ($request, $section) {
-                $section = $this->curriculumService->updateCurriculum($section, $request->validated());
+                $section = $this->curriculumService->updateCurriculumLessons(
+                    $section,
+                    $request->validated()['lessons']
+                );
 
                 $section->load([
                     'course',
@@ -91,7 +93,10 @@ class CurriculumController extends Controller
 
         try {
             return DB::transaction(function () use ($request, $section) {
-                $section = $this->curriculumService->updateCurriculum($section, $request->validated());
+                $section = $this->curriculumService->updateCurriculumLessons(
+                    $section,
+                    $request->validated()['lessons']
+                );
 
                 $section->load([
                     'course',
