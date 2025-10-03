@@ -87,6 +87,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'update']);
     Route::delete('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'destroy']);
 
+    Route::post('/sections/update-sequence', [SectionController::class, 'updateSequence']);
+
     Route::post('/sections', [SectionController::class, 'store']);
     Route::put('/sections/{section}', [SectionController::class, 'update']);
     Route::delete('/sections/{section}', [SectionController::class, 'destroy']);
