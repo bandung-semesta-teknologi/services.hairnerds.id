@@ -65,6 +65,7 @@ class CourseResource extends JsonResource
                         'id' => $review->id,
                         'user_id' => $review->user_id,
                         'user_name' => $review->user?->name,
+                        'email' => $review->user?->email,
                         'user_avatar' => $review->user?->userProfile?->avatar,
                         'comments' => $review->comments,
                         'rating' => $review->rating,
