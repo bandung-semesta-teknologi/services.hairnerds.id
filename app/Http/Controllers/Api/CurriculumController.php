@@ -84,4 +84,36 @@ class CurriculumController extends Controller
             ], 500);
         }
     }
+
+    public function updateViaPost(CurriculumUpdateRequest $request, Section $section)
+    {
+        $this->authorize('update', $section);
+
+        try {
+            return DB::transaction(function () use ($request, $section) {
+                $section = $this->curriculumService->updateCurriculum($section, $request->validated());
+
+                $section->load([
+                    'course',
+                    'lessons.attachments',
+                    'lessons.quiz.questions.answerBanks'
+                ]);
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Curriculum updated successfully',
+                    'data' => new CurriculumResource($section)
+                ], 200);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error updating curriculum via POST: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update curriculum',
+                'debug' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
 }

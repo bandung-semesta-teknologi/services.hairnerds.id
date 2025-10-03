@@ -76,6 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/curriculum', [CurriculumController::class, 'store']);
     Route::put('/curriculum/{section}', [CurriculumController::class, 'update']);
+    Route::post('/curriculum/{section}', [CurriculumController::class, 'updateViaPost']);
 
     Route::post('/courses-with-faqs', [CourseWithFaqController::class, 'store']);
     Route::put('/courses-with-faqs/{course:slug}', [CourseWithFaqController::class, 'update']);

@@ -96,7 +96,7 @@ class CurriculumUpdateRequest extends FormRequest
                         $hasId = !empty($attachment['id']);
 
                         if (in_array($attType, ['document', 'audio']) && !$hasId) {
-                            $hasFile = isset($attachment['file']);
+                            $hasFile = $this->hasFile("lessons.{$index}.attachments.{$attIndex}.file");
                             $hasUrl = !empty($attachment['url']);
 
                             if (!$hasFile && !$hasUrl) {
