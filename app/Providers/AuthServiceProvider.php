@@ -23,7 +23,6 @@ use App\Policies\BootcampPolicy;
 use App\Policies\CategoryPolicy;
 use App\Policies\CourseFaqPolicy;
 use App\Policies\CoursePolicy;
-use App\Policies\CurriculumPolicy;
 use App\Policies\EnrollmentPolicy;
 use App\Policies\LessonPolicy;
 use App\Policies\PaymentPolicy;
@@ -53,7 +52,6 @@ class AuthServiceProvider extends ServiceProvider
         QuizResult::class => QuizResultPolicy::class,
         Review::class => ReviewPolicy::class,
         Section::class => SectionPolicy::class,
-        Section::class => CurriculumPolicy::class,
     ];
 
     public function boot(): void
