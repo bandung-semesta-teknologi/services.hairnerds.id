@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\QuestionController;
 use App\Http\Controllers\Api\QuizController;
 use App\Http\Controllers\Api\QuizLessonController;
 use App\Http\Controllers\Api\QuizResultController;
+use App\Http\Controllers\Api\CourseStudentProgressController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SectionController;
 use App\Http\Controllers\Api\PaymentController;
@@ -64,6 +65,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::put('/categories/{category}', [CategoryController::class, 'update']);
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+
+    Route::get('/courses/{course:slug}/student-progress', [CourseStudentProgressController::class, 'index']);
 
     Route::post('/courses', [CourseController::class, 'store']);
     Route::put('/courses/{course:slug}', [CourseController::class, 'update']);

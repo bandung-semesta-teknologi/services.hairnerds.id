@@ -122,6 +122,7 @@ class CourseController extends Controller
             'faqs',
             'sections.lessons',
             'instructors',
+            'enrollments',
             'reviews' => function($q) use ($reviewsLimit) {
                 $q->with('user.userProfile')
                     ->where('is_visible', true)
