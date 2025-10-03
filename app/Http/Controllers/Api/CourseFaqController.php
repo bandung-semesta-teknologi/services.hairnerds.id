@@ -19,7 +19,7 @@ class CourseFaqController extends Controller
 
         $this->authorize('viewAny', CourseFaq::class);
 
-        $faqs = CourseFaq::query()
+        $query = CourseFaq::query()
             ->with('course')
             ->when(!$user || $user->role === 'student', function($q) {
                 return $q->whereHas('course', fn($q) => $q->where('status', 'published'));
@@ -27,8 +27,13 @@ class CourseFaqController extends Controller
             ->when($user && $user->role === 'instructor', function($q) use ($user) {
                 return $q->whereHas('course.instructors', fn($q) => $q->where('users.id', $user->id));
             })
-            ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
-            ->get();
+            ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id));
+
+        if ($request->has('paginate') && $request->paginate !== 'false') {
+            $faqs = $query->paginate($request->per_page ?? 5);
+        } else {
+            $faqs = $query->get();
+        }
 
         return CourseFaqResource::collection($faqs);
     }
