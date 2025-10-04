@@ -64,9 +64,7 @@ describe('course faq crud api', function () {
                             'created_at',
                             'updated_at',
                         ]
-                    ],
-                    'links',
-                    'meta'
+                    ]
                 ]);
         });
 
@@ -109,14 +107,6 @@ describe('course faq crud api', function () {
             getJson('/api/courses-faqs/99999')
                 ->assertNotFound();
         });
-
-        it('anyone can set custom per_page for pagination', function () {
-            CourseFaq::factory()->count(10)->create(['course_id' => $this->publishedCourse->id]);
-
-            getJson('/api/courses-faqs?per_page=4')
-                ->assertOk()
-                ->assertJsonCount(4, 'data');
-        });
     });
 
     describe('admin access', function () {
@@ -133,20 +123,66 @@ describe('course faq crud api', function () {
                 ->assertJsonCount(5, 'data');
         });
 
-        it('admin can create new faq', function () {
+        it('admin can create multiple faqs at once', function () {
             $faqData = [
                 'course_id' => $this->publishedCourse->id,
-                'question' => 'What is Laravel?',
-                'answer' => 'Laravel is a PHP web framework.'
+                'faqs' => [
+                    [
+                        'question' => 'What is Laravel?',
+                        'answer' => 'Laravel is a PHP web framework.'
+                    ],
+                    [
+                        'question' => 'What is PHP?',
+                        'answer' => 'PHP is a server-side scripting language.'
+                    ],
+                    [
+                        'question' => 'What is MVC?',
+                        'answer' => 'MVC is a software design pattern.'
+                    ]
+                ]
             ];
 
             postJson('/api/courses-faqs', $faqData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
-                ->assertJsonPath('message', 'FAQ created successfully')
-                ->assertJsonPath('data.question', 'What is Laravel?')
-                ->assertJsonPath('data.answer', 'Laravel is a PHP web framework.')
-                ->assertJsonPath('data.course_id', $this->publishedCourse->id);
+                ->assertJsonPath('message', 'FAQs created successfully')
+                ->assertJsonCount(3, 'data');
+
+            $this->assertDatabaseHas('course_faqs', [
+                'course_id' => $this->publishedCourse->id,
+                'question' => 'What is Laravel?',
+                'answer' => 'Laravel is a PHP web framework.'
+            ]);
+
+            $this->assertDatabaseHas('course_faqs', [
+                'course_id' => $this->publishedCourse->id,
+                'question' => 'What is PHP?',
+                'answer' => 'PHP is a server-side scripting language.'
+            ]);
+
+            $this->assertDatabaseHas('course_faqs', [
+                'course_id' => $this->publishedCourse->id,
+                'question' => 'What is MVC?',
+                'answer' => 'MVC is a software design pattern.'
+            ]);
+        });
+
+        it('admin can create single faq in array format', function () {
+            $faqData = [
+                'course_id' => $this->publishedCourse->id,
+                'faqs' => [
+                    [
+                        'question' => 'What is Laravel?',
+                        'answer' => 'Laravel is a PHP web framework.'
+                    ]
+                ]
+            ];
+
+            postJson('/api/courses-faqs', $faqData)
+                ->assertCreated()
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('message', 'FAQs created successfully')
+                ->assertJsonCount(1, 'data');
 
             $this->assertDatabaseHas('course_faqs', [
                 'course_id' => $this->publishedCourse->id,
@@ -155,10 +191,33 @@ describe('course faq crud api', function () {
             ]);
         });
 
-        it('validates required fields when creating faq', function () {
+        it('validates required fields when creating faqs', function () {
             postJson('/api/courses-faqs', [])
                 ->assertUnprocessable()
-                ->assertJsonValidationErrors(['course_id', 'question', 'answer']);
+                ->assertJsonValidationErrors(['course_id', 'faqs']);
+        });
+
+        it('validates faqs array must not be empty', function () {
+            postJson('/api/courses-faqs', [
+                'course_id' => $this->publishedCourse->id,
+                'faqs' => []
+            ])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['faqs']);
+        });
+
+        it('validates each faq must have question and answer', function () {
+            postJson('/api/courses-faqs', [
+                'course_id' => $this->publishedCourse->id,
+                'faqs' => [
+                    [
+                        'question' => 'Valid question?'
+                        // missing answer
+                    ]
+                ]
+            ])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['faqs.0.answer']);
         });
 
         it('admin can update any faq', function () {
@@ -223,19 +282,26 @@ describe('course faq crud api', function () {
                 ->assertJsonCount(5, 'data');
         });
 
-        it('instructor can create faq for their own course', function () {
+        it('instructor can create multiple faqs for their own course', function () {
             $faqData = [
                 'course_id' => $this->publishedCourse->id,
-                'question' => 'How to start with PHP?',
-                'answer' => 'Start with the basics of PHP syntax.'
+                'faqs' => [
+                    [
+                        'question' => 'How to start with PHP?',
+                        'answer' => 'Start with the basics of PHP syntax.'
+                    ],
+                    [
+                        'question' => 'What IDE should I use?',
+                        'answer' => 'You can use VS Code or PHPStorm.'
+                    ]
+                ]
             ];
 
             postJson('/api/courses-faqs', $faqData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
-                ->assertJsonPath('message', 'FAQ created successfully')
-                ->assertJsonPath('data.question', 'How to start with PHP?')
-                ->assertJsonPath('data.answer', 'Start with the basics of PHP syntax.');
+                ->assertJsonPath('message', 'FAQs created successfully')
+                ->assertJsonCount(2, 'data');
         });
 
         it('instructor can update faq from their own course', function () {
@@ -326,8 +392,12 @@ describe('course faq crud api', function () {
         it('student cannot create faq', function () {
             postJson('/api/courses-faqs', [
                 'course_id' => $this->publishedCourse->id,
-                'question' => 'Unauthorized question?',
-                'answer' => 'Unauthorized answer.'
+                'faqs' => [
+                    [
+                        'question' => 'Unauthorized question?',
+                        'answer' => 'Unauthorized answer.'
+                    ]
+                ]
             ])
                 ->assertForbidden();
         });
@@ -377,8 +447,12 @@ describe('course faq crud api', function () {
         it('guest user cannot create faq', function () {
             postJson('/api/courses-faqs', [
                 'course_id' => $this->publishedCourse->id,
-                'question' => 'Unauthorized question?',
-                'answer' => 'Unauthorized answer.'
+                'faqs' => [
+                    [
+                        'question' => 'Unauthorized question?',
+                        'answer' => 'Unauthorized answer.'
+                    ]
+                ]
             ])
                 ->assertUnauthorized();
         });

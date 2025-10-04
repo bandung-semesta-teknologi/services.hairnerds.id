@@ -40,6 +40,11 @@ class Course extends Model
         });
     }
 
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
+
     public function categories()
     {
         return $this->belongsToMany(Category::class, 'course_categories');
@@ -115,9 +120,21 @@ class Course extends Model
         return $query->where('is_highlight', true);
     }
 
+    public function scopeFree($query)
+    {
+        return $query->where(function($q) {
+            $q->where('price', 0)->orWhereNull('price');
+        });
+    }
+
+    public function scopePaid($query)
+    {
+        return $query->where('price', '>', 0);
+    }
+
     public function isFree(): bool
     {
-        return $this->price === 0;
+        return $this->price === 0 || $this->price === null;
     }
 
     public function isPaid(): bool

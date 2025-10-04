@@ -16,7 +16,7 @@ class CategoryController extends Controller
     {
         $this->authorize('viewAny', Category::class);
 
-        $categories = Category::paginate($request->per_page ?? 5);
+        $categories = Category::all();
 
         return CategoryResource::collection($categories);
     }

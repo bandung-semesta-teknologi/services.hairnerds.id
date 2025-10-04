@@ -7,13 +7,17 @@ use App\Http\Controllers\Api\BootcampController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\CourseFaqController;
+use App\Http\Controllers\Api\CourseWithFaqController;
+use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\EnrollmentController;
+use App\Http\Controllers\Api\InstructorController;
 use App\Http\Controllers\Api\LessonController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\QuestionController;
 use App\Http\Controllers\Api\QuizController;
 use App\Http\Controllers\Api\QuizLessonController;
 use App\Http\Controllers\Api\QuizResultController;
+use App\Http\Controllers\Api\CourseStudentProgressController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SectionController;
 use App\Http\Controllers\Api\PaymentController;
@@ -25,7 +29,7 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.verify');
 
 Route::get('/courses', [CourseController::class, 'index']);
-Route::get('/courses/{course}', [CourseController::class, 'show']);
+Route::get('/courses/{course:slug}', [CourseController::class, 'show']);
 
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}', [CategoryController::class, 'show']);
@@ -56,15 +60,26 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
     Route::post('/email/verification-notification', [AuthController::class, 'resendEmail'])->name('verification.send');
 
+    Route::get('/instructors', [InstructorController::class, 'index']);
+
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::put('/categories/{category}', [CategoryController::class, 'update']);
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
+    Route::get('/courses/{course:slug}/student-progress', [CourseStudentProgressController::class, 'index']);
+
     Route::post('/courses', [CourseController::class, 'store']);
-    Route::put('/courses/{course}', [CourseController::class, 'update']);
-    Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
-    Route::post('/courses/{course}/verify', [CourseController::class, 'verify']);
-    Route::post('/courses/{course}/reject', [CourseController::class, 'reject']);
+    Route::put('/courses/{course:slug}', [CourseController::class, 'update']);
+    Route::delete('/courses/{course:slug}', [CourseController::class, 'destroy']);
+    Route::post('/courses/{course:slug}/verify', [CourseController::class, 'verify']);
+    Route::post('/courses/{course:slug}/reject', [CourseController::class, 'reject']);
+
+    Route::post('/curriculum', [CurriculumController::class, 'store']);
+    Route::put('/curriculum/{section}', [CurriculumController::class, 'update']);
+    Route::post('/curriculum/{section}', [CurriculumController::class, 'updateViaPost']);
+
+    Route::post('/courses-with-faqs', [CourseWithFaqController::class, 'store']);
+    Route::put('/courses-with-faqs/{course:slug}', [CourseWithFaqController::class, 'update']);
 
     Route::post('/bootcamps', [BootcampController::class, 'store']);
     Route::put('/bootcamps/{bootcamp}', [BootcampController::class, 'update']);
@@ -75,6 +90,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/courses-faqs', [CourseFaqController::class, 'store']);
     Route::put('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'update']);
     Route::delete('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'destroy']);
+
+    Route::post('/sections/update-sequence', [SectionController::class, 'updateSequence']);
 
     Route::post('/sections', [SectionController::class, 'store']);
     Route::put('/sections/{section}', [SectionController::class, 'update']);
@@ -91,6 +108,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/attachments', [AttachmentController::class, 'index']);
     Route::post('/attachments', [AttachmentController::class, 'store']);
+    Route::post('/attachments/bulk', [AttachmentController::class, 'bulkStore']);
     Route::get('/attachments/{attachment}', [AttachmentController::class, 'show']);
     Route::post('/attachments/{attachment}', [AttachmentController::class, 'update']);
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy']);
@@ -116,6 +134,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/payments/{payment}', [PaymentController::class, 'show']);
     Route::get('/payments/{payment}/status', [PaymentController::class, 'checkStatus']);
 
-    Route::post('/courses/{course}/payment', [PaymentController::class, 'createCoursePayment']);
+    Route::post('/courses/{course:slug}/payment', [PaymentController::class, 'createCoursePayment']);
     Route::post('/bootcamps/{bootcamp}/payment', [PaymentController::class, 'createBootcampPayment']);
 });

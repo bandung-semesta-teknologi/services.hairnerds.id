@@ -220,7 +220,6 @@ class PaymentController extends Controller
 
     public function generateSignature(Request $request)
     {
-        // Hanya untuk development/testing
         if (!app()->environment(['local', 'testing'])) {
             return response()->json(['error' => 'Not allowed in production'], 403);
         }
