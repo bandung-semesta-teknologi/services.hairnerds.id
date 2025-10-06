@@ -1,15 +1,22 @@
 <?php
 
 use App\Http\Controllers\Api\AnswerBankController;
+use App\Http\Controllers\Api\AttachmentController;
 use App\Http\Controllers\Api\BootcampController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\CourseFaqController;
+use App\Http\Controllers\Api\CourseStudentProgressController;
+use App\Http\Controllers\Api\CourseWithFaqController;
+use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\EnrollmentController;
+use App\Http\Controllers\Api\InstructorController;
 use App\Http\Controllers\Api\LessonController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\QuestionController;
 use App\Http\Controllers\Api\QuizController;
+use App\Http\Controllers\Api\QuizLessonController;
 use App\Http\Controllers\Api\QuizResultController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SectionController;
@@ -34,16 +41,31 @@ Route::prefix('academy')->name('academy.')->group(function () {
     Route::get('/reviews', [ReviewController::class, 'index']);
     Route::get('/reviews/{review}', [ReviewController::class, 'show']);
 
+    Route::post('/payments/callback', [PaymentController::class, 'callback'])->name('payment.callback');
+    Route::get('/payments/finish', [PaymentController::class, 'finish'])->name('payment.finish');
+    Route::post('/payments/generate-signature', [PaymentController::class, 'generateSignature']);
+
     Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/instructors', [InstructorController::class, 'index']);
+
         Route::post('/categories', [CategoryController::class, 'store']);
         Route::put('/categories/{category}', [CategoryController::class, 'update']);
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
+        Route::get('/courses/{course:slug}/student-progress', [CourseStudentProgressController::class, 'index']);
+
         Route::post('/courses', [CourseController::class, 'store']);
-        Route::put('/courses/{course}', [CourseController::class, 'update']);
-        Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
-        Route::post('/courses/{course}/verify', [CourseController::class, 'verify']);
-        Route::post('/courses/{course}/reject', [CourseController::class, 'reject']);
+        Route::put('/courses/{course:slug}', [CourseController::class, 'update']);
+        Route::delete('/courses/{course:slug}', [CourseController::class, 'destroy']);
+        Route::post('/courses/{course:slug}/verify', [CourseController::class, 'verify']);
+        Route::post('/courses/{course:slug}/reject', [CourseController::class, 'reject']);
+
+        Route::post('/curriculum', [CurriculumController::class, 'store']);
+        Route::put('/curriculum/{section}', [CurriculumController::class, 'update']);
+        Route::post('/curriculum/{section}', [CurriculumController::class, 'updateViaPost']);
+
+        Route::post('/courses-with-faqs', [CourseWithFaqController::class, 'store']);
+        Route::put('/courses-with-faqs/{course:slug}', [CourseWithFaqController::class, 'update']);
 
         Route::post('/bootcamps', [BootcampController::class, 'store']);
         Route::put('/bootcamps/{bootcamp}', [BootcampController::class, 'update']);
@@ -55,11 +77,28 @@ Route::prefix('academy')->name('academy.')->group(function () {
         Route::put('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'update']);
         Route::delete('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'destroy']);
 
+        Route::post('/sections/update-sequence', [SectionController::class, 'updateSequence']);
+
         Route::post('/sections', [SectionController::class, 'store']);
         Route::put('/sections/{section}', [SectionController::class, 'update']);
         Route::delete('/sections/{section}', [SectionController::class, 'destroy']);
 
-        Route::apiResource('lessons', LessonController::class);
+        Route::get('/lessons', [LessonController::class, 'index']);
+        Route::post('/lessons', [LessonController::class, 'store']);
+        Route::get('/lessons/{lesson}', [LessonController::class, 'show']);
+        Route::post('/lessons/{lesson}', [LessonController::class, 'update']);
+        Route::delete('/lessons/{lesson}', [LessonController::class, 'destroy']);
+
+        Route::post('/quiz-lessons', [QuizLessonController::class, 'store']);
+        Route::put('/quiz-lessons/{lesson}', [QuizLessonController::class, 'update']);
+
+        Route::get('/attachments', [AttachmentController::class, 'index']);
+        Route::post('/attachments', [AttachmentController::class, 'store']);
+        Route::post('/attachments/bulk', [AttachmentController::class, 'bulkStore']);
+        Route::get('/attachments/{attachment}', [AttachmentController::class, 'show']);
+        Route::post('/attachments/{attachment}', [AttachmentController::class, 'update']);
+        Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy']);
+
         Route::apiResource('quizzes', QuizController::class);
         Route::apiResource('questions', QuestionController::class);
         Route::apiResource('answer-banks', AnswerBankController::class);
@@ -76,5 +115,12 @@ Route::prefix('academy')->name('academy.')->group(function () {
 
         Route::apiResource('quiz-results', QuizResultController::class);
         Route::post('/quiz-results/{quizResult}/submit', [QuizResultController::class, 'submit']);
+
+        Route::get('/payments', [PaymentController::class, 'index']);
+        Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+        Route::get('/payments/{payment}/status', [PaymentController::class, 'checkStatus']);
+
+        Route::post('/courses/{course:slug}/payment', [PaymentController::class, 'createCoursePayment']);
+        Route::post('/bootcamps/{bootcamp}/payment', [PaymentController::class, 'createBootcampPayment']);
     });
 });

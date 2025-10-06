@@ -12,11 +12,36 @@ class QuizResultResource extends JsonResource
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
-            'user' => new UserResource($this->whenLoaded('user')),
+            'user' => $this->when($this->relationLoaded('user'), function () {
+                return [
+                    'id' => $this->user->id,
+                    'name' => $this->user->name,
+                    'email' => $this->user->email,
+                ];
+            }),
             'quiz_id' => $this->quiz_id,
-            'quiz' => new QuizResource($this->whenLoaded('quiz')),
+            'quiz' => $this->when($this->relationLoaded('quiz'), function () {
+                return [
+                    'id' => $this->quiz->id,
+                    'title' => $this->quiz->title,
+                    'instruction' => $this->quiz->instruction,
+                    'duration' => $this->quiz->duration?->format('H:i:s'),
+                    'total_marks' => $this->quiz->total_marks,
+                    'pass_marks' => $this->quiz->pass_marks,
+                    'max_retakes' => $this->quiz->max_retakes,
+                ];
+            }),
             'lesson_id' => $this->lesson_id,
-            'lesson' => new LessonResource($this->whenLoaded('lesson')),
+            'lesson' => $this->when($this->relationLoaded('lesson'), function () {
+                return [
+                    'id' => $this->lesson->id,
+                    'sequence' => $this->lesson->sequence,
+                    'type' => $this->lesson->type,
+                    'title' => $this->lesson->title,
+                    'url' => $this->lesson->url,
+                    'summary' => $this->lesson->summary,
+                ];
+            }),
             'answered' => $this->answered,
             'correct_answers' => $this->correct_answers,
             'total_obtained_marks' => $this->total_obtained_marks,

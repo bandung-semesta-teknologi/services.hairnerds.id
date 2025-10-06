@@ -21,7 +21,16 @@ class CourseController extends Controller
         $this->authorize('viewAny', Course::class);
 
         $courses = Course::query()
-            ->with(['categories', 'faqs', 'sections', 'instructors', 'reviews'])
+            ->with([
+                'categories',
+                'faqs',
+                'sections.lessons',
+                'instructors',
+                'reviews.user.userProfile',
+                'enrollments'
+            ])
+            ->withCount('reviews')
+            ->withAvg('reviews', 'rating')
             ->when(!$user || $user->role === 'student', fn($q) => $q->published())
             ->when($user && $user->role === 'admin', fn($q) => $q)
             ->when($user && $user->role === 'instructor', function($q) use ($user) {
@@ -32,7 +41,28 @@ class CourseController extends Controller
             ->when($request->is_highlight !== null, fn($q) => $q->where('is_highlight', $request->boolean('is_highlight')))
             ->when($request->status && $user && $user->role === 'admin', fn($q) => $q->where('status', $request->status))
             ->when($request->search, fn($q) => $q->where('title', 'like', '%' . $request->search . '%'))
-            ->latest()
+            ->when($request->price_type === 'free', fn($q) => $q->free())
+            ->when($request->price_type === 'paid', fn($q) => $q->paid())
+            ->when($request->price_min, fn($q) => $q->where('price', '>=', $request->price_min))
+            ->when($request->price_max, fn($q) => $q->where('price', '<=', $request->price_max))
+            ->when($request->sort_by, function($q) use ($request) {
+                $sortBy = $request->sort_by;
+                $sortOrder = $request->sort_order ?? 'asc';
+
+                if (in_array($sortBy, ['title', 'price', 'created_at', 'updated_at'])) {
+                    return $q->orderBy($sortBy, $sortOrder);
+                } elseif ($sortBy === 'rating') {
+                    return $q->orderBy('reviews_avg_rating', $sortOrder);
+                } elseif ($sortBy === 'students_count') {
+                    return $q->withCount('enrollments')->orderBy('enrollments_count', $sortOrder);
+                } elseif ($sortBy === 'reviews_count') {
+                    return $q->orderBy('reviews_count', $sortOrder);
+                }
+
+                return $q;
+            }, function($q) {
+                return $q->latest();
+            })
             ->paginate($request->per_page ?? 15);
 
         return CourseResource::collection($courses);
@@ -85,7 +115,24 @@ class CourseController extends Controller
 
         $this->authorize('view', $course);
 
-        $course->load(['categories', 'faqs', 'sections', 'instructors', 'reviews']);
+        $reviewsLimit = $request->reviews_limit ?? 10;
+
+        $course->load([
+            'categories',
+            'faqs',
+            'sections.lessons',
+            'instructors',
+            'enrollments',
+            'reviews' => function($q) use ($reviewsLimit) {
+                $q->with('user.userProfile')
+                    ->where('is_visible', true)
+                    ->latest()
+                    ->limit($reviewsLimit);
+            }
+        ]);
+
+        $course->loadCount('reviews');
+        $course->loadAvg('reviews', 'rating');
 
         return new CourseResource($course);
     }

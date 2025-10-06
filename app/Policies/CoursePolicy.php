@@ -81,4 +81,21 @@ class CoursePolicy
     {
         return $user && $user->role === 'admin';
     }
+
+    public function viewStudentProgress(?User $user, Course $course): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        if ($user->role === 'instructor' && $course->instructors->contains($user)) {
+            return true;
+        }
+
+        return false;
+    }
 }

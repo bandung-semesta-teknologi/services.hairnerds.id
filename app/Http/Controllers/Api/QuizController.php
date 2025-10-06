@@ -19,7 +19,7 @@ class QuizController extends Controller
         $user = $request->user();
 
         $quizzes = Quiz::query()
-            ->with(['section', 'lesson', 'course', 'questions'])
+            ->with(['section', 'lesson', 'course', 'questions.answerBanks'])
             ->when($user->role === 'student', function($q) use ($user) {
                 return $q->whereHas('course', function($q) {
                     $q->where('status', 'published');
@@ -46,7 +46,7 @@ class QuizController extends Controller
 
         try {
             $quiz = Quiz::create($request->validated());
-            $quiz->load(['section', 'lesson', 'course']);
+            $quiz->load(['section', 'lesson', 'course', 'questions.answerBanks']);
 
             return response()->json([
                 'status' => 'success',
@@ -67,7 +67,7 @@ class QuizController extends Controller
     {
         $this->authorize('view', $quiz);
 
-        $quiz->load(['section', 'lesson', 'course', 'questions']);
+        $quiz->load(['section', 'lesson', 'course', 'questions.answerBanks']);
 
         return new QuizResource($quiz);
     }
@@ -78,7 +78,7 @@ class QuizController extends Controller
 
         try {
             $quiz->update($request->validated());
-            $quiz->load(['section', 'lesson', 'course']);
+            $quiz->load(['section', 'lesson', 'course', 'questions.answerBanks']);
 
             return response()->json([
                 'status' => 'success',
