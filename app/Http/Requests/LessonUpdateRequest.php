@@ -28,27 +28,26 @@ class LessonUpdateRequest extends FormRequest
         $type = $this->type ?? $this->route('lesson')->type;
 
         if (in_array($type, ['document', 'audio'])) {
-            $lesson = $this->route('lesson');
-            $hasExistingAttachments = $lesson && $lesson->attachments()->count() > 0;
+            $rules['attachment_ids'] = 'nullable|array';
+            $rules['attachment_ids.*'] = 'nullable|exists:attachments,id';
+            $rules['attachment_types'] = 'nullable|array';
+            $rules['attachment_types.*'] = ['required_with:attachment_types', Rule::in(['youtube', 'document', 'text', 'audio', 'live'])];
+            $rules['attachment_titles'] = 'nullable|array';
+            $rules['attachment_titles.*'] = 'required_with:attachment_titles|string|max:255';
 
-            if (!$hasExistingAttachments || $this->has('attachment_types')) {
-                $rules['attachment_types'] = 'sometimes|array|min:1';
-                $rules['attachment_types.*'] = ['required_with:attachment_types', Rule::in(['youtube', 'document', 'text', 'audio', 'live'])];
-                $rules['attachment_titles'] = 'sometimes|array|min:1';
-                $rules['attachment_titles.*'] = 'required_with:attachment_titles|string|max:255';
-
-                if ($type === 'document') {
-                    $rules['attachment_files'] = 'sometimes|array';
-                    $rules['attachment_files.*'] = 'sometimes|file|mimes:pdf,doc,docx,ppt,pptx|max:10240';
-                } elseif ($type === 'audio') {
-                    $rules['attachment_files'] = 'sometimes|array';
-                    $rules['attachment_files.*'] = 'sometimes|file|mimes:mp3,wav,ogg|max:10240';
-                }
-
-                $rules['attachment_urls'] = 'nullable|array';
-                $rules['attachment_urls.*'] = 'nullable|string|max:255';
+            if ($type === 'document') {
+                $rules['attachment_files'] = 'nullable|array';
+                $rules['attachment_files.*'] = 'nullable|file|mimes:pdf,doc,docx,ppt,pptx|max:10240';
+            } elseif ($type === 'audio') {
+                $rules['attachment_files'] = 'nullable|array';
+                $rules['attachment_files.*'] = 'nullable|file|mimes:mp3,wav,ogg|max:10240';
             }
+
+            $rules['attachment_urls'] = 'nullable|array';
+            $rules['attachment_urls.*'] = 'nullable|string|max:255';
         } else {
+            $rules['attachment_ids'] = 'nullable|array';
+            $rules['attachment_ids.*'] = 'nullable|exists:attachments,id';
             $rules['attachment_types'] = 'nullable|array';
             $rules['attachment_types.*'] = ['required_with:attachment_types', Rule::in(['youtube', 'document', 'text', 'audio', 'live'])];
             $rules['attachment_titles'] = 'nullable|array';
@@ -73,15 +72,23 @@ class LessonUpdateRequest extends FormRequest
                     $validator->errors()->add('attachments', 'Attachment types and titles count must match');
                 }
             }
+
+            if ($this->has('attachment_ids') && $this->has('attachment_types')) {
+                $idsCount = count(array_filter($this->attachment_ids ?? [], fn($id) => $id !== null));
+                $typesCount = count($this->attachment_types ?? []);
+
+                if ($idsCount > $typesCount) {
+                    $validator->errors()->add('attachments', 'Attachment IDs count cannot exceed types count');
+                }
+            }
         });
     }
 
     public function messages(): array
     {
         return [
-            'attachments.min' => 'At least one attachment is required for document or audio lesson type',
-            'attachments.*.file.max' => 'File size must not exceed 10MB',
-            'attachments.*.file.mimes' => 'Invalid file type',
+            'attachment_files.*.max' => 'File size must not exceed 10MB',
+            'attachment_files.*.mimes' => 'Invalid file type',
         ];
     }
 }

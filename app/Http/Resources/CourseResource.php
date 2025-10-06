@@ -21,6 +21,8 @@ class CourseResource extends JsonResource
             'level' => $this->level,
             'lang' => $this->lang,
             'price' => $this->price,
+            'is_free' => $this->isFree(),
+            'is_paid' => $this->isPaid(),
             'is_highlight' => $this->is_highlight,
             'status' => $this->status,
             'thumbnail' => $this->thumbnail,
@@ -62,12 +64,36 @@ class CourseResource extends JsonResource
                     return [
                         'id' => $review->id,
                         'user_id' => $review->user_id,
+                        'user_name' => $review->user?->name,
+                        'email' => $review->user?->email,
+                        'user_avatar' => $review->user?->userProfile?->avatar,
                         'comments' => $review->comments,
                         'rating' => $review->rating,
                         'is_visible' => $review->is_visible,
                         'created_at' => $review->created_at,
                     ];
                 });
+            }),
+            'reviews_summary' => $this->when($this->relationLoaded('reviews') || isset($this->reviews_count), function () {
+                $totalReviews = $this->reviews_count ?? $this->reviews->count();
+                $averageRating = $this->reviews_avg_rating ?? ($this->reviews->count() > 0 ? round($this->reviews->avg('rating'), 1) : null);
+
+                $ratingDistribution = null;
+                if ($this->relationLoaded('reviews') && $this->reviews->count() > 0) {
+                    $ratingDistribution = [
+                        '5_stars' => $this->reviews->where('rating', 5)->count(),
+                        '4_stars' => $this->reviews->where('rating', 4)->count(),
+                        '3_stars' => $this->reviews->where('rating', 3)->count(),
+                        '2_stars' => $this->reviews->where('rating', 2)->count(),
+                        '1_star' => $this->reviews->where('rating', 1)->count(),
+                    ];
+                }
+
+                return [
+                    'total_reviews' => $totalReviews,
+                    'average_rating' => $averageRating,
+                    'rating_distribution' => $ratingDistribution,
+                ];
             }),
             'sections_count' => $this->whenLoaded('sections', fn() => $this->sections->count(), 0),
             'lessons_count' => $this->whenLoaded('sections', function () {
@@ -76,13 +102,8 @@ class CourseResource extends JsonResource
                 });
             }, 0),
             'faqs_count' => $this->whenLoaded('faqs', fn() => $this->faqs->count(), 0),
-            'reviews_count' => $this->whenLoaded('reviews', fn() => $this->reviews->count(), 0),
+            'reviews_count' => $this->reviews_count ?? ($this->whenLoaded('reviews', fn() => $this->reviews->count(), 0)),
             'students_count' => $this->whenLoaded('enrollments', fn() => $this->enrollments->count(), 0),
-            'average_rating' => $this->whenLoaded('reviews', function () {
-                return $this->reviews->count() > 0
-                    ? round($this->reviews->avg('rating'), 1)
-                    : null;
-            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AttachmentStoreRequest;
 use App\Http\Requests\AttachmentUpdateRequest;
+use App\Http\Requests\AttachmentBulkStoreRequest;
 use App\Http\Resources\AttachmentResource;
 use App\Models\Attachment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -69,6 +71,60 @@ class AttachmentController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to create attachment'
+            ], 500);
+        }
+    }
+
+    public function bulkStore(AttachmentBulkStoreRequest $request)
+    {
+        $this->authorize('create', Attachment::class);
+
+        try {
+            return DB::transaction(function () use ($request) {
+                $lessonId = $request->validated()['lesson_id'];
+                $attachments = $request->validated()['attachments'];
+
+                $attachmentIds = [];
+
+                foreach ($attachments as $index => $attachmentData) {
+                    $data = [
+                        'lesson_id' => $lessonId,
+                        'type' => $attachmentData['type'],
+                        'title' => $attachmentData['title'],
+                    ];
+
+                    if ($request->hasFile("attachments.{$index}.file")) {
+                        $file = $request->file("attachments.{$index}.file");
+                        $path = $file->store('lessons/attachments', 'public');
+                        $data['url'] = $path;
+                    } elseif (!empty($attachmentData['url'])) {
+                        $data['url'] = $attachmentData['url'];
+                    } else {
+                        $data['url'] = '';
+                    }
+
+                    $attachment = Attachment::create($data);
+                    $attachmentIds[] = $attachment->id;
+                }
+
+                $createdAttachments = Attachment::with(['lesson.course'])
+                    ->whereIn('id', $attachmentIds)
+                    ->get();
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Attachments created successfully',
+                    'data' => AttachmentResource::collection($createdAttachments)
+                ], 201);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error creating attachments: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create attachments',
+                'debug' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }

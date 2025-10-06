@@ -17,6 +17,7 @@ use App\Models\Quiz;
 use App\Models\QuizResult;
 use App\Models\Review;
 use App\Models\Section;
+use App\Models\User;
 use App\Policies\AnswerBankPolicy;
 use App\Policies\AttachmentPolicy;
 use App\Policies\BootcampPolicy;
@@ -32,6 +33,7 @@ use App\Policies\QuizPolicy;
 use App\Policies\QuizResultPolicy;
 use App\Policies\ReviewPolicy;
 use App\Policies\SectionPolicy;
+use App\Policies\UserPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -52,6 +54,7 @@ class AuthServiceProvider extends ServiceProvider
         QuizResult::class => QuizResultPolicy::class,
         Review::class => ReviewPolicy::class,
         Section::class => SectionPolicy::class,
+        User::class => UserPolicy::class,
     ];
 
     public function boot(): void
