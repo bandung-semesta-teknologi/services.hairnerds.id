@@ -31,7 +31,7 @@ describe('course crud api', function () {
                 $course->categories()->attach($this->categories->random(2)->pluck('id'));
             });
 
-            getJson('/api/courses')
+            getJson('/api/public-courses')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -40,7 +40,7 @@ describe('course crud api', function () {
             $course = Course::factory()->published()->create();
             $course->categories()->attach($this->categories->take(2)->pluck('id'));
 
-            getJson("/api/courses/{$course->slug}")
+            getJson("/api/public-courses/{$course->slug}")
                 ->assertOk()
                 ->assertJsonPath('data.status', 'published');
         });
@@ -48,8 +48,8 @@ describe('course crud api', function () {
         it('guest cannot see draft course details', function () {
             $draftCourse = Course::factory()->draft()->create();
 
-            getJson("/api/courses/{$draftCourse->slug}")
-                ->assertForbidden();
+            getJson("/api/public-courses/{$draftCourse->slug}")
+                ->assertNotFound();
         });
     });
 
