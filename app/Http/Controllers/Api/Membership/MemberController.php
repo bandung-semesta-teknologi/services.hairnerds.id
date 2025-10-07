@@ -1,0 +1,133 @@
+<?php
+
+namespace App\Http\Controllers\Api\Membership;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Membership\MemberStoreRequest;
+use App\Http\Requests\Membership\MemberUpdateRequest;
+use App\Http\Resources\Membership\MemberResource;
+use App\Models\MembershipSerial;
+use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+#[Group('Member Membership API')]
+class MemberController extends Controller
+{
+    /**
+     * Member Membership Datalist
+     *
+     * Display a datalist of the member membership.
+     */
+    public function datalist()
+    {
+        //
+    }
+
+    /**
+     * Member Membership Index
+     *
+     * Display a listing of the member membership.
+     */
+    public function index()
+    {
+        //
+    }
+
+    /**
+     * Member Membership Store
+     *
+     * Store a newly created resource in storage.
+     */
+    public function store(MemberStoreRequest $request)
+    {
+        try {
+            $data = $request->validated();
+
+            DB::beginTransaction();
+            /**
+             * In the future, implement the logic to update is_member column
+             * and add validated data from in users table using the validated
+             * data from $request
+             */
+
+            /* Claim Membership Serial Number (Change is_used column to true) */
+            $membershipSerial = MembershipSerial::update([]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Member created successfully.',
+                'data' => new MemberResource(null), // Replace null with the created member instance
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating member: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create member.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Member Membership Show
+     *
+     * Display the specified resource.
+     */
+    public function show(string $id)
+    {
+        //
+    }
+
+    /**
+     * Member Membership Update
+     *
+     * Update the specified resource in storage.
+     */
+    public function update(MemberUpdateRequest $request, string $id)
+    {
+        try {
+            $data = $request->validated();
+
+            DB::beginTransaction();
+            /**
+             * In the future, implement the logic to update is_member column
+             * and add validated data from in users table using the validated
+             * data from $request
+             */
+
+            /* Claim Membership Serial Number (Change is_used column to true) */
+            $membershipSerial = MembershipSerial::update($data);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Member created successfully.',
+                'data' => new MemberResource($membershipSerial), // Replace null with the created member instance
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating member: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create member.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Member Membership Destroy
+     *
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        //
+    }
+}
