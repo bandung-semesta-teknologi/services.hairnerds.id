@@ -14,6 +14,7 @@ class BootcampResource extends JsonResource
             'user_id' => $this->user_id,
             'instructor' => new UserResource($this->whenLoaded('user')),
             'title' => $this->title,
+            'slug' => $this->slug,
             'start_at' => $this->start_at,
             'end_at' => $this->end_at,
             'seat' => $this->seat,
@@ -22,9 +23,21 @@ class BootcampResource extends JsonResource
             'seat_taken' => $this->seat - $this->seat_available - $this->seat_blocked,
             'description' => $this->description,
             'short_description' => $this->short_description,
+            'thumbnail' => $this->thumbnail,
             'categories' => CategoryResource::collection($this->whenLoaded('categories')),
+            'faqs' => $this->when($this->relationLoaded('faqs'), function () {
+                return $this->faqs->map(function ($faq) {
+                    return [
+                        'id' => $faq->id,
+                        'question' => $faq->question,
+                        'answer' => $faq->answer,
+                    ];
+                });
+            }),
             'status' => $this->status,
             'price' => $this->price,
+            'is_free' => $this->isFree(),
+            'is_paid' => $this->isPaid(),
             'location' => $this->location,
             'contact_person' => $this->contact_person,
             'url_location' => $this->url_location,

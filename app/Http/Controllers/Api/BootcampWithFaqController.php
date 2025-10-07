@@ -3,120 +3,117 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\CourseWithFaqStoreRequest;
-use App\Http\Requests\CourseWithFaqUpdateRequest;
-use App\Http\Resources\CourseResource;
-use App\Models\Course;
-use App\Models\Faq;
+use App\Http\Requests\BootcampWithFaqStoreRequest;
+use App\Http\Requests\BootcampWithFaqUpdateRequest;
+use App\Http\Resources\BootcampResource;
+use App\Models\Bootcamp;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class CourseWithFaqController extends Controller
+class BootcampWithFaqController extends Controller
 {
-    public function store(CourseWithFaqStoreRequest $request)
+    public function store(BootcampWithFaqStoreRequest $request)
     {
-        $this->authorize('create', Course::class);
+        $this->authorize('create', Bootcamp::class);
 
         try {
             return DB::transaction(function () use ($request) {
                 $data = $request->validated();
                 $categoryIds = $data['category_ids'] ?? [];
-                $instructorIds = $data['instructor_ids'] ?? [];
                 $faqs = $data['faqs'] ?? [];
 
-                unset($data['category_ids'], $data['instructor_ids'], $data['faqs']);
+                unset($data['category_ids'], $data['faqs']);
 
                 if (isset($data['title'])) {
                     $data['slug'] = Str::slug($data['title']);
                 }
 
                 if ($request->hasFile('thumbnail')) {
-                    $data['thumbnail'] = $request->file('thumbnail')->store('courses/thumbnails', 'public');
+                    $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
                 }
 
-                $course = Course::create($data);
+                if (!isset($data['user_id'])) {
+                    $data['user_id'] = $request->user()->id;
+                }
+
+                if (!isset($data['seat_available'])) {
+                    $data['seat_available'] = $data['seat'];
+                }
+
+                $bootcamp = Bootcamp::create($data);
 
                 if (!empty($categoryIds)) {
-                    $course->categories()->attach($categoryIds);
-                }
-
-                if (!empty($instructorIds)) {
-                    $course->instructors()->attach($instructorIds);
+                    $bootcamp->categories()->attach($categoryIds);
                 }
 
                 if (!empty($faqs)) {
                     foreach ($faqs as $faq) {
-                        $course->faqs()->create([
+                        $bootcamp->faqs()->create([
                             'question' => $faq['question'],
                             'answer' => $faq['answer'],
                         ]);
                     }
                 }
 
-                $course->load(['categories', 'instructors', 'faqs']);
+                $bootcamp->load(['user', 'categories', 'faqs']);
 
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Course with FAQs created successfully',
-                    'data' => new CourseResource($course)
+                    'message' => 'Bootcamp with FAQs created successfully',
+                    'data' => new BootcampResource($bootcamp)
                 ], 201);
             });
         } catch (\Exception $e) {
-            Log::error('Error creating course with FAQs: ' . $e->getMessage());
+            Log::error('Error creating bootcamp with FAQs: ' . $e->getMessage());
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to create course with FAQs'
+                'message' => 'Failed to create bootcamp with FAQs'
             ], 500);
         }
     }
 
-    public function update(CourseWithFaqUpdateRequest $request, Course $course)
+    public function update(BootcampWithFaqUpdateRequest $request, Bootcamp $bootcamp)
     {
-        $this->authorize('update', $course);
+        $this->authorize('update', $bootcamp);
 
         try {
-            return DB::transaction(function () use ($request, $course) {
+            return DB::transaction(function () use ($request, $bootcamp) {
                 $data = $request->validated();
                 $categoryIds = $data['category_ids'] ?? null;
-                $instructorIds = $data['instructor_ids'] ?? null;
                 $faqs = $data['faqs'] ?? null;
 
-                unset($data['category_ids'], $data['instructor_ids'], $data['faqs']);
+                unset($data['category_ids'], $data['faqs']);
 
                 if (isset($data['title'])) {
                     $data['slug'] = Str::slug($data['title']);
                 }
 
                 if ($request->hasFile('thumbnail')) {
-                    $data['thumbnail'] = $request->file('thumbnail')->store('courses/thumbnails', 'public');
+                    $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
                 }
 
-                if ($course->status === 'rejected' && !isset($data['status'])) {
+                if ($bootcamp->status === 'rejected' && !isset($data['status'])) {
                     $data['status'] = 'draft';
                     $data['verified_at'] = null;
                 }
 
                 if (!empty($data)) {
-                    $course->update($data);
+                    $bootcamp->update($data);
                 }
 
                 if ($categoryIds !== null) {
-                    $course->categories()->sync($categoryIds);
-                }
-
-                if ($instructorIds !== null) {
-                    $course->instructors()->sync($instructorIds);
+                    $bootcamp->categories()->sync($categoryIds);
                 }
 
                 if ($faqs !== null) {
-                    $existingFaqIds = $course->faqs()->pluck('id')->toArray();
+                    $existingFaqIds = $bootcamp->faqs()->pluck('id')->toArray();
                     $submittedFaqIds = [];
 
                     foreach ($faqs as $faqData) {
                         if (!empty($faqData['id'])) {
-                            $faq = $course->faqs()->find($faqData['id']);
+                            $faq = $bootcamp->faqs()->find($faqData['id']);
                             if ($faq) {
                                 $faq->update([
                                     'question' => $faqData['question'],
@@ -125,7 +122,7 @@ class CourseWithFaqController extends Controller
                                 $submittedFaqIds[] = $faq->id;
                             }
                         } else {
-                            $newFaq = $course->faqs()->create([
+                            $newFaq = $bootcamp->faqs()->create([
                                 'question' => $faqData['question'],
                                 'answer' => $faqData['answer'],
                             ]);
@@ -135,24 +132,24 @@ class CourseWithFaqController extends Controller
 
                     $faqsToDelete = array_diff($existingFaqIds, $submittedFaqIds);
                     if (!empty($faqsToDelete)) {
-                        $course->faqs()->whereIn('id', $faqsToDelete)->delete();
+                        $bootcamp->faqs()->whereIn('id', $faqsToDelete)->delete();
                     }
                 }
 
-                $course->load(['categories', 'instructors', 'faqs']);
+                $bootcamp->load(['user', 'categories', 'faqs']);
 
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Course with FAQs updated successfully',
-                    'data' => new CourseResource($course)
+                    'message' => 'Bootcamp with FAQs updated successfully',
+                    'data' => new BootcampResource($bootcamp)
                 ], 200);
             });
         } catch (\Exception $e) {
-            Log::error('Error updating course with FAQs: ' . $e->getMessage());
+            Log::error('Error updating bootcamp with FAQs: ' . $e->getMessage());
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to update course with FAQs'
+                'message' => 'Failed to update bootcamp with FAQs'
             ], 500);
         }
     }

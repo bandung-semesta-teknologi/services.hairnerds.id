@@ -52,7 +52,7 @@ class Course extends Model
 
     public function faqs()
     {
-        return $this->hasMany(CourseFaq::class);
+        return $this->morphMany(Faq::class, 'faqable');
     }
 
     public function sections()

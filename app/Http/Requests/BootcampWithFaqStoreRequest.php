@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class BootcampStoreRequest extends FormRequest
+class BootcampWithFaqStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -33,6 +33,10 @@ class BootcampStoreRequest extends FormRequest
             'contact_person' => 'required|string|max:255',
             'url_location' => 'nullable|string|max:255|url',
             'verified_at' => 'nullable|date',
+
+            'faqs' => 'nullable|array',
+            'faqs.*.question' => 'required|string|max:500',
+            'faqs.*.answer' => 'required|string|max:2000',
         ];
     }
 
@@ -42,6 +46,10 @@ class BootcampStoreRequest extends FormRequest
             'start_at.after' => 'Start date must be in the future',
             'end_at.after' => 'End date must be after start date',
             'seat_available.lte' => 'Available seats cannot exceed total seats',
+            'faqs.*.question.required' => 'Question is required for all FAQs',
+            'faqs.*.answer.required' => 'Answer is required for all FAQs',
+            'faqs.*.question.max' => 'Question cannot exceed 500 characters',
+            'faqs.*.answer.max' => 'Answer cannot exceed 2000 characters',
         ];
     }
 
