@@ -11,7 +11,6 @@ class BootcampResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'user_id' => $this->user_id,
             'instructor' => new UserResource($this->whenLoaded('user')),
             'title' => $this->title,
             'slug' => $this->slug,

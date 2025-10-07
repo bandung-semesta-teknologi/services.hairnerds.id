@@ -15,7 +15,7 @@ class BootcampWithFaqUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => 'sometimes|required|exists:users,id',
+            'instructor_id' => 'sometimes|required|exists:users,id',
             'title' => 'sometimes|required|string|max:255',
             'start_at' => 'sometimes|required|date',
             'end_at' => 'sometimes|required|date|after:start_at',
@@ -33,7 +33,6 @@ class BootcampWithFaqUpdateRequest extends FormRequest
             'contact_person' => 'sometimes|required|string|max:255',
             'url_location' => 'nullable|string|max:255|url',
             'verified_at' => 'nullable|date',
-
             'faqs' => 'nullable|array',
             'faqs.*.id' => 'nullable|exists:faqs,id',
             'faqs.*.question' => 'required|string|max:500',

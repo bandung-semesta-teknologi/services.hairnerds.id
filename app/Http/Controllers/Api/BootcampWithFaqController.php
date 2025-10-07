@@ -25,21 +25,21 @@ class BootcampWithFaqController extends Controller
 
                 unset($data['category_ids'], $data['faqs']);
 
-                if (isset($data['title'])) {
-                    $data['slug'] = Str::slug($data['title']);
-                }
+                $data['slug'] = Str::slug($data['title']);
 
                 if ($request->hasFile('thumbnail')) {
                     $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
                 }
 
-                if (!isset($data['user_id'])) {
-                    $data['user_id'] = $request->user()->id;
+                $user = $request->user();
+                if ($user->role === 'admin' && isset($data['instructor_id'])) {
+                    $data['user_id'] = $data['instructor_id'];
+                } else {
+                    $data['user_id'] = $user->id;
                 }
+                unset($data['instructor_id']);
 
-                if (!isset($data['seat_available'])) {
-                    $data['seat_available'] = $data['seat'];
-                }
+                $data['seat_available'] = $data['seat_available'] ?? $data['seat'];
 
                 $bootcamp = Bootcamp::create($data);
 
@@ -47,13 +47,11 @@ class BootcampWithFaqController extends Controller
                     $bootcamp->categories()->attach($categoryIds);
                 }
 
-                if (!empty($faqs)) {
-                    foreach ($faqs as $faq) {
-                        $bootcamp->faqs()->create([
-                            'question' => $faq['question'],
-                            'answer' => $faq['answer'],
-                        ]);
-                    }
+                foreach ($faqs as $faq) {
+                    $bootcamp->faqs()->create([
+                        'question' => $faq['question'],
+                        'answer' => $faq['answer'],
+                    ]);
                 }
 
                 $bootcamp->load(['user', 'categories', 'faqs']);
@@ -93,6 +91,14 @@ class BootcampWithFaqController extends Controller
                 if ($request->hasFile('thumbnail')) {
                     $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
                 }
+
+                $user = $request->user();
+                if ($user->role === 'admin' && isset($data['instructor_id'])) {
+                    $data['user_id'] = $data['instructor_id'];
+                } elseif (isset($data['instructor_id'])) {
+                    unset($data['instructor_id']);
+                }
+                unset($data['instructor_id']);
 
                 if ($bootcamp->status === 'rejected' && !isset($data['status'])) {
                     $data['status'] = 'draft';
