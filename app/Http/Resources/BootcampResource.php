@@ -43,6 +43,24 @@ class BootcampResource extends JsonResource
             'verified_at' => $this->verified_at,
             'is_available' => $this->isAvailable(),
             'duration_days' => $this->start_at->diffInDays($this->end_at) + 1,
+            'enrolled_students_count' => $this->when(
+                $this->relationLoaded('payments'),
+                function () {
+                    return $this->payments()
+                        ->where('status', 'paid')
+                        ->count();
+                },
+                0
+            ),
+            'total_revenue' => $this->when(
+                $this->relationLoaded('payments'),
+                function () {
+                    return $this->payments()
+                        ->where('status', 'paid')
+                        ->sum('total');
+                },
+                0
+            ),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

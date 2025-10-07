@@ -95,6 +95,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bootcamps-with-faqs', [BootcampWithFaqController::class, 'store']);
     Route::post('/bootcamps-with-faqs/{bootcamp}', [BootcampWithFaqController::class, 'update']);
 
+    Route::get('/bootcamps/{bootcamp}/enrolled-students', [BootcampController::class, 'enrolledStudents']);
+    Route::get('/bootcamps/{bootcamp}/enrolled-students/stats', [BootcampController::class, 'enrolledStudentsStats']);
+
     Route::post('/faqs', [FaqController::class, 'store']);
     Route::put('/faqs/{faq}', [FaqController::class, 'update']);
     Route::delete('/faqs/{faq}', [FaqController::class, 'destroy']);

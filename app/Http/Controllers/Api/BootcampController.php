@@ -7,6 +7,8 @@ use App\Http\Requests\BootcampStoreRequest;
 use App\Http\Requests\BootcampUpdateRequest;
 use App\Http\Requests\BootcampVerificationRequest;
 use App\Http\Resources\BootcampResource;
+use App\Http\Resources\BootcampEnrollmentResource;
+use App\Models\Payment;
 use App\Models\Bootcamp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -229,6 +231,82 @@ class BootcampController extends Controller
                 'message' => 'Failed to delete bootcamp'
             ], 500);
         }
+    }
+
+    public function enrolledStudents(Request $request, Bootcamp $bootcamp)
+    {
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('view', $bootcamp);
+
+        $enrollments = Payment::query()
+            ->with(['user.userProfile', 'payable'])
+            ->where('payable_type', Bootcamp::class)
+            ->where('payable_id', $bootcamp->id)
+            ->where('status', 'paid')
+            ->when($request->search, function($q) use ($request) {
+                return $q->where(function($query) use ($request) {
+                    $query->where('user_name', 'like', '%' . $request->search . '%')
+                        ->orWhereHas('user', function($q) use ($request) {
+                            $q->where('email', 'like', '%' . $request->search . '%');
+                        });
+                });
+            })
+            ->when($request->ticket_status, function($q) use ($request, $bootcamp) {
+                $status = $request->ticket_status;
+                $now = now();
+
+                if ($status === 'used' && $bootcamp->end_at < $now) {
+                    return $q;
+                } elseif ($status === 'not_used' && $bootcamp->start_at > $now) {
+                    return $q;
+                } elseif ($status === 'ongoing' && $bootcamp->start_at <= $now && $bootcamp->end_at >= $now) {
+                    return $q;
+                } else {
+                    return $q->whereRaw('1 = 0');
+                }
+            })
+            ->orderBy('paid_at', 'desc')
+            ->paginate($request->per_page ?? 15);
+
+        return BootcampEnrollmentResource::collection($enrollments);
+    }
+
+    public function enrolledStudentsStats(Bootcamp $bootcamp)
+    {
+        $this->authorize('view', $bootcamp);
+
+        $totalEnrolled = Payment::where('payable_type', Bootcamp::class)
+            ->where('payable_id', $bootcamp->id)
+            ->where('status', 'paid')
+            ->count();
+
+        $now = now();
+        $usedTickets = 0;
+        $notUsedTickets = 0;
+        $ongoingTickets = 0;
+
+        if ($bootcamp->end_at < $now) {
+            $usedTickets = $totalEnrolled;
+        } elseif ($bootcamp->start_at > $now) {
+            $notUsedTickets = $totalEnrolled;
+        } else {
+            $ongoingTickets = $totalEnrolled;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'total_enrolled' => $totalEnrolled,
+                'used_tickets' => $usedTickets,
+                'not_used_tickets' => $notUsedTickets,
+                'ongoing_tickets' => $ongoingTickets,
+                'revenue' => Payment::where('payable_type', Bootcamp::class)
+                    ->where('payable_id', $bootcamp->id)
+                    ->where('status', 'paid')
+                    ->sum('total'),
+            ]
+        ]);
     }
 
     private function resolveOptionalUser(Request $request)
