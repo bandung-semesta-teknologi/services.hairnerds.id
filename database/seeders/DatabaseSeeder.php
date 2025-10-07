@@ -162,7 +162,7 @@ class DatabaseSeeder extends Seeder
     private function callRelatedSeeders(): void
     {
         $this->call([
-            CourseFaqSeeder::class,
+            FaqSeeder::class,
             SectionSeeder::class,
             LessonSeeder::class,
             ReviewSeeder::class,

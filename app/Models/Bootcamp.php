@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Bootcamp extends Model
 {
@@ -34,6 +35,11 @@ class Bootcamp extends Model
     public function categories()
     {
         return $this->belongsToMany(Category::class, 'bootcamp_categories');
+    }
+
+    public function faqs()
+    {
+        return $this->morphMany(Faq::class, 'faqable');
     }
 
     public function payments()
@@ -66,6 +72,18 @@ class Bootcamp extends Model
         return $query->whereNotNull('verified_at');
     }
 
+    public function scopeFree($query)
+    {
+        return $query->where(function($q) {
+            $q->where('price', 0)->orWhereNull('price');
+        });
+    }
+
+    public function scopePaid($query)
+    {
+        return $query->where('price', '>', 0);
+    }
+
     public function isAvailable()
     {
         return $this->seat_available > 0;
@@ -84,5 +102,45 @@ class Bootcamp extends Model
     public function hasAvailableSeats(): bool
     {
         return $this->seat_available > 0;
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($bootcamp) {
+            if (empty($bootcamp->slug) && !empty($bootcamp->title)) {
+                $bootcamp->slug = static::generateUniqueSlug($bootcamp->title);
+            }
+        });
+
+        static::updating(function ($bootcamp) {
+            if ($bootcamp->isDirty('title') && !empty($bootcamp->title)) {
+                $bootcamp->slug = static::generateUniqueSlug($bootcamp->title, $bootcamp->id);
+            }
+        });
+    }
+
+    public static function generateUniqueSlug($title, $excludeId = null)
+    {
+        $slug = Str::slug($title);
+        $originalSlug = $slug;
+        $counter = 1;
+
+        while (static::where('slug', $slug)
+            ->when($excludeId, function($query) use ($excludeId) {
+                return $query->where('id', '!=', $excludeId);
+            })
+            ->exists()) {
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
     }
 }

@@ -7,7 +7,7 @@ use App\Models\Attachment;
 use App\Models\Bootcamp;
 use App\Models\Category;
 use App\Models\Course;
-use App\Models\CourseFaq;
+use App\Models\Faq;
 use App\Models\Enrollment;
 use App\Models\Lesson;
 use App\Models\Payment;
@@ -22,7 +22,7 @@ use App\Policies\AnswerBankPolicy;
 use App\Policies\AttachmentPolicy;
 use App\Policies\BootcampPolicy;
 use App\Policies\CategoryPolicy;
-use App\Policies\CourseFaqPolicy;
+use App\Policies\FaqPolicy;
 use App\Policies\CoursePolicy;
 use App\Policies\EnrollmentPolicy;
 use App\Policies\LessonPolicy;
@@ -44,7 +44,7 @@ class AuthServiceProvider extends ServiceProvider
         Bootcamp::class => BootcampPolicy::class,
         Category::class => CategoryPolicy::class,
         Course::class => CoursePolicy::class,
-        CourseFaq::class => CourseFaqPolicy::class,
+        Faq::class => FaqPolicy::class,
         Enrollment::class => EnrollmentPolicy::class,
         Lesson::class => LessonPolicy::class,
         Payment::class => PaymentPolicy::class,

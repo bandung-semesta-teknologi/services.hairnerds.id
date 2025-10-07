@@ -7,9 +7,10 @@ use App\Http\Requests\CourseWithFaqStoreRequest;
 use App\Http\Requests\CourseWithFaqUpdateRequest;
 use App\Http\Resources\CourseResource;
 use App\Models\Course;
-use App\Models\CourseFaq;
+use App\Models\Faq;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CourseWithFaqController extends Controller
 {

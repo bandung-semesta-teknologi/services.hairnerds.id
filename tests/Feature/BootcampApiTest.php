@@ -40,7 +40,7 @@ describe('bootcamp crud api', function () {
             $bootcamp = Bootcamp::factory()->published()->create();
             $bootcamp->categories()->attach($this->categories->take(2)->pluck('id'));
 
-            getJson("/api/bootcamps/{$bootcamp->id}")
+            getJson("/api/bootcamps/{$bootcamp->slug}")
                 ->assertOk()
                 ->assertJsonPath('data.status', 'publish');
         });
@@ -48,7 +48,7 @@ describe('bootcamp crud api', function () {
         it('guest cannot see draft bootcamp details', function () {
             $draftBootcamp = Bootcamp::factory()->draft()->create();
 
-            getJson("/api/bootcamps/{$draftBootcamp->id}")
+            getJson("/api/bootcamps/{$draftBootcamp->slug}")
                 ->assertForbidden();
         });
     });
@@ -136,7 +136,7 @@ describe('bootcamp crud api', function () {
         it('admin can verify draft bootcamp', function () {
             $draftBootcamp = Bootcamp::factory()->draft()->create(['verified_at' => null]);
 
-            postJson("/api/bootcamps/{$draftBootcamp->id}/verify", [
+            postJson("/api/bootcamps/{$draftBootcamp->slug}/verify", [
                 'status' => 'publish'
             ])
                 ->assertOk()
@@ -198,7 +198,7 @@ describe('bootcamp crud api', function () {
             ]);
             $bootcamp->categories()->attach($this->categories->first()->id);
 
-            putJson("/api/bootcamps/{$bootcamp->id}", [
+            putJson("/api/bootcamps/{$bootcamp->slug}", [
                 'title' => 'Updated Bootcamp'
             ])
                 ->assertOk()
@@ -212,7 +212,7 @@ describe('bootcamp crud api', function () {
             ]);
             $bootcamp->categories()->attach($this->categories->first()->id);
 
-            putJson("/api/bootcamps/{$bootcamp->id}", ['title' => 'Updated Title'])
+            putJson("/api/bootcamps/{$bootcamp->slug}", ['title' => 'Updated Title'])
                 ->assertForbidden();
         });
 
@@ -221,7 +221,7 @@ describe('bootcamp crud api', function () {
                 'user_id' => $this->instructor->id
             ]);
 
-            postJson("/api/bootcamps/{$draftBootcamp->id}/verify", [
+            postJson("/api/bootcamps/{$draftBootcamp->slug}/verify", [
                 'status' => 'publish'
             ])
                 ->assertForbidden();
@@ -263,7 +263,7 @@ describe('bootcamp crud api', function () {
         it('student cannot update bootcamp', function () {
             $bootcamp = Bootcamp::factory()->published()->create();
 
-            putJson("/api/bootcamps/{$bootcamp->id}", ['title' => 'Updated'])
+            putJson("/api/bootcamps/{$bootcamp->slug}", ['title' => 'Updated'])
                 ->assertForbidden();
         });
     });

@@ -4,23 +4,26 @@ use App\Http\Controllers\Api\AnswerBankController;
 use App\Http\Controllers\Api\AttachmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BootcampController;
+use App\Http\Controllers\Api\BootcampWithFaqController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CourseController;
-use App\Http\Controllers\Api\CourseFaqController;
+use App\Http\Controllers\Api\CourseStudentProgressController;
 use App\Http\Controllers\Api\CourseWithFaqController;
 use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\EnrollmentController;
+use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\InstructorController;
+use App\Http\Controllers\Api\InstructorManagementController;
 use App\Http\Controllers\Api\LessonController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\QuestionController;
 use App\Http\Controllers\Api\QuizController;
 use App\Http\Controllers\Api\QuizLessonController;
 use App\Http\Controllers\Api\QuizResultController;
-use App\Http\Controllers\Api\CourseStudentProgressController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SectionController;
-use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\StudentManagementController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -28,14 +31,14 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('password.forgot');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.verify');
 
-Route::get('/courses', [CourseController::class, 'index']);
-Route::get('/courses/{course:slug}', [CourseController::class, 'show']);
+Route::get('/public-courses', [CourseController::class, 'indexPublic']);
+Route::get('/public-courses/{course:slug}', [CourseController::class, 'showPublic']);
 
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}', [CategoryController::class, 'show']);
 
-Route::get('/courses-faqs', [CourseFaqController::class, 'index']);
-Route::get('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'show']);
+Route::get('/faqs', [FaqController::class, 'index']);
+Route::get('/faqs/{faq}', [FaqController::class, 'show']);
 
 Route::get('/sections', [SectionController::class, 'index']);
 Route::get('/sections/{section}', [SectionController::class, 'show']);
@@ -68,6 +71,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/courses/{course:slug}/student-progress', [CourseStudentProgressController::class, 'index']);
 
+    Route::get('/courses', [CourseController::class, 'index']);
+    Route::get('/courses/{course:slug}', [CourseController::class, 'show']);
     Route::post('/courses', [CourseController::class, 'store']);
     Route::put('/courses/{course:slug}', [CourseController::class, 'update']);
     Route::delete('/courses/{course:slug}', [CourseController::class, 'destroy']);
@@ -79,7 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/curriculum/{section}', [CurriculumController::class, 'updateViaPost']);
 
     Route::post('/courses-with-faqs', [CourseWithFaqController::class, 'store']);
-    Route::put('/courses-with-faqs/{course:slug}', [CourseWithFaqController::class, 'update']);
+    Route::post('/courses-with-faqs/{course:slug}', [CourseWithFaqController::class, 'update']);
 
     Route::post('/bootcamps', [BootcampController::class, 'store']);
     Route::put('/bootcamps/{bootcamp}', [BootcampController::class, 'update']);
@@ -87,9 +92,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bootcamps/{bootcamp}/verify', [BootcampController::class, 'verify']);
     Route::post('/bootcamps/{bootcamp}/reject', [BootcampController::class, 'reject']);
 
-    Route::post('/courses-faqs', [CourseFaqController::class, 'store']);
-    Route::put('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'update']);
-    Route::delete('/courses-faqs/{coursesFaq}', [CourseFaqController::class, 'destroy']);
+    Route::post('/bootcamps-with-faqs', [BootcampWithFaqController::class, 'store']);
+    Route::post('/bootcamps-with-faqs/{bootcamp}', [BootcampWithFaqController::class, 'update']);
+
+    Route::post('/faqs', [FaqController::class, 'store']);
+    Route::put('/faqs/{faq}', [FaqController::class, 'update']);
+    Route::delete('/faqs/{faq}', [FaqController::class, 'destroy']);
 
     Route::post('/sections/update-sequence', [SectionController::class, 'updateSequence']);
 
@@ -136,4 +144,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/courses/{course:slug}/payment', [PaymentController::class, 'createCoursePayment']);
     Route::post('/bootcamps/{bootcamp}/payment', [PaymentController::class, 'createBootcampPayment']);
+
+    Route::get('/instructor-management', [InstructorManagementController::class, 'index']);
+    Route::post('/instructor-management', [InstructorManagementController::class, 'store']);
+    Route::get('/instructor-management/{instructor}', [InstructorManagementController::class, 'show']);
+    Route::put('/instructor-management/{instructor}', [InstructorManagementController::class, 'update']);
+    Route::post('/instructor-management/{instructor}/reset-password', [InstructorManagementController::class, 'resetPassword']);
+    Route::delete('/instructor-management/{instructor}', [InstructorManagementController::class, 'destroy']);
+
+    Route::get('/student-management', [StudentManagementController::class, 'index']);
+    Route::get('/student-management/{student}', [StudentManagementController::class, 'show']);
+    Route::put('/student-management/{student}', [StudentManagementController::class, 'update']);
+    Route::post('/student-management/{student}/reset-password', [StudentManagementController::class, 'resetPassword']);
+    Route::delete('/student-management/{student}', [StudentManagementController::class, 'destroy']);
 });

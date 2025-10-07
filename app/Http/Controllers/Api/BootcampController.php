@@ -10,6 +10,7 @@ use App\Http\Resources\BootcampResource;
 use App\Models\Bootcamp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class BootcampController extends Controller
 {
@@ -20,7 +21,7 @@ class BootcampController extends Controller
         $this->authorize('viewAny', Bootcamp::class);
 
         $bootcamps = Bootcamp::query()
-            ->with(['user', 'categories'])
+            ->with(['user', 'categories', 'faqs'])
             ->when($user && $user->role === 'instructor', function($q) use ($user) {
                 return $q->where('user_id', $user->id);
             })
@@ -35,6 +36,8 @@ class BootcampController extends Controller
                     : $q->where('seat_available', '=', 0);
             })
             ->when($request->search, fn($q) => $q->where('title', 'like', '%' . $request->search . '%'))
+            ->when($request->price_type === 'free', fn($q) => $q->free())
+            ->when($request->price_type === 'paid', fn($q) => $q->paid())
             ->when($request->price_min, fn($q) => $q->where('price', '>=', $request->price_min))
             ->when($request->price_max, fn($q) => $q->where('price', '<=', $request->price_max))
             ->latest()
@@ -51,6 +54,10 @@ class BootcampController extends Controller
             $data = $request->validated();
             $categoryIds = $data['category_ids'] ?? [];
             unset($data['category_ids']);
+
+            if ($request->hasFile('thumbnail')) {
+                $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
+            }
 
             if (!isset($data['user_id'])) {
                 $data['user_id'] = $request->user()->id;
@@ -89,7 +96,7 @@ class BootcampController extends Controller
 
         $this->authorize('view', $bootcamp);
 
-        $bootcamp->load(['user', 'categories']);
+        $bootcamp->load(['user', 'categories', 'faqs']);
 
         return new BootcampResource($bootcamp);
     }
@@ -102,6 +109,10 @@ class BootcampController extends Controller
             $data = $request->validated();
             $categoryIds = $data['category_ids'] ?? null;
             unset($data['category_ids']);
+
+            if ($request->hasFile('thumbnail')) {
+                $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
+            }
 
             if ($bootcamp->status === 'rejected' && !isset($data['status'])) {
                 $data['status'] = 'draft';
