@@ -28,16 +28,34 @@ class Course extends Model
         parent::boot();
 
         static::creating(function ($course) {
-            if (empty($course->slug)) {
-                $course->slug = Str::slug($course->title);
+            if (empty($course->slug) && !empty($course->title)) {
+                $course->slug = static::generateUniqueSlug($course->title);
             }
         });
 
         static::updating(function ($course) {
-            if ($course->isDirty('title')) {
-                $course->slug = Str::slug($course->title);
+            if ($course->isDirty('title') && !empty($course->title)) {
+                $course->slug = static::generateUniqueSlug($course->title, $course->id);
             }
         });
+    }
+
+    public static function generateUniqueSlug($title, $excludeId = null)
+    {
+        $slug = Str::slug($title);
+        $originalSlug = $slug;
+        $counter = 1;
+
+        while (static::where('slug', $slug)
+            ->when($excludeId, function($query) use ($excludeId) {
+                return $query->where('id', '!=', $excludeId);
+            })
+            ->exists()) {
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
     }
 
     public function getRouteKeyName()

@@ -27,10 +27,6 @@ class CourseWithFaqController extends Controller
 
                 unset($data['category_ids'], $data['instructor_ids'], $data['faqs']);
 
-                if (isset($data['title'])) {
-                    $data['slug'] = Str::slug($data['title']);
-                }
-
                 if ($request->hasFile('thumbnail')) {
                     $data['thumbnail'] = $request->file('thumbnail')->store('courses/thumbnails', 'public');
                 }
@@ -84,10 +80,6 @@ class CourseWithFaqController extends Controller
                 $faqs = $data['faqs'] ?? null;
 
                 unset($data['category_ids'], $data['instructor_ids'], $data['faqs']);
-
-                if (isset($data['title'])) {
-                    $data['slug'] = Str::slug($data['title']);
-                }
 
                 if ($request->hasFile('thumbnail')) {
                     $data['thumbnail'] = $request->file('thumbnail')->store('courses/thumbnails', 'public');

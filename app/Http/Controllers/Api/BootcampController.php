@@ -55,10 +55,6 @@ class BootcampController extends Controller
             $categoryIds = $data['category_ids'] ?? [];
             unset($data['category_ids']);
 
-            if (isset($data['title'])) {
-                $data['slug'] = Str::slug($data['title']);
-            }
-
             if ($request->hasFile('thumbnail')) {
                 $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
             }
@@ -113,10 +109,6 @@ class BootcampController extends Controller
             $data = $request->validated();
             $categoryIds = $data['category_ids'] ?? null;
             unset($data['category_ids']);
-
-            if (isset($data['title'])) {
-                $data['slug'] = Str::slug($data['title']);
-            }
 
             if ($request->hasFile('thumbnail')) {
                 $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');

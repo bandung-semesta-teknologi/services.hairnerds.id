@@ -115,14 +115,32 @@ class Bootcamp extends Model
 
         static::creating(function ($bootcamp) {
             if (empty($bootcamp->slug) && !empty($bootcamp->title)) {
-                $bootcamp->slug = Str::slug($bootcamp->title);
+                $bootcamp->slug = static::generateUniqueSlug($bootcamp->title);
             }
         });
 
         static::updating(function ($bootcamp) {
             if ($bootcamp->isDirty('title') && !empty($bootcamp->title)) {
-                $bootcamp->slug = Str::slug($bootcamp->title);
+                $bootcamp->slug = static::generateUniqueSlug($bootcamp->title, $bootcamp->id);
             }
         });
+    }
+
+    public static function generateUniqueSlug($title, $excludeId = null)
+    {
+        $slug = Str::slug($title);
+        $originalSlug = $slug;
+        $counter = 1;
+
+        while (static::where('slug', $slug)
+            ->when($excludeId, function($query) use ($excludeId) {
+                return $query->where('id', '!=', $excludeId);
+            })
+            ->exists()) {
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
     }
 }

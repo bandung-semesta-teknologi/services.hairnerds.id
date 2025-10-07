@@ -179,10 +179,6 @@ class CourseController extends Controller
             $instructorIds = $data['instructor_ids'] ?? [];
             unset($data['category_ids'], $data['instructor_ids']);
 
-            if (isset($data['title'])) {
-                $data['slug'] = Str::slug($data['title']);
-            }
-
             if ($request->hasFile('thumbnail')) {
                 $data['thumbnail'] = $request->file('thumbnail')->store('courses/thumbnails', 'public');
             }
@@ -223,10 +219,6 @@ class CourseController extends Controller
             $categoryIds = $data['category_ids'] ?? null;
             $instructorIds = $data['instructor_ids'] ?? null;
             unset($data['category_ids'], $data['instructor_ids']);
-
-            if (isset($data['title'])) {
-                $data['slug'] = Str::slug($data['title']);
-            }
 
             if ($request->hasFile('thumbnail')) {
                 $data['thumbnail'] = $request->file('thumbnail')->store('courses/thumbnails', 'public');

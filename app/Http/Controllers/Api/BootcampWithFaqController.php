@@ -25,8 +25,6 @@ class BootcampWithFaqController extends Controller
 
                 unset($data['category_ids'], $data['faqs']);
 
-                $data['slug'] = Str::slug($data['title']);
-
                 if ($request->hasFile('thumbnail')) {
                     $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
                 }
@@ -83,10 +81,6 @@ class BootcampWithFaqController extends Controller
                 $faqs = $data['faqs'] ?? null;
 
                 unset($data['category_ids'], $data['faqs']);
-
-                if (isset($data['title'])) {
-                    $data['slug'] = Str::slug($data['title']);
-                }
 
                 if ($request->hasFile('thumbnail')) {
                     $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
