@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Bootcamp;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class BootcampFactory extends Factory
@@ -42,7 +41,6 @@ class BootcampFactory extends Factory
         $availableSeat = $totalSeat - $blockedSeat;
 
         return [
-            'user_id' => User::factory(),
             'title' => $this->faker->randomElement($titles),
             'start_at' => $startDate,
             'end_at' => $endDate,

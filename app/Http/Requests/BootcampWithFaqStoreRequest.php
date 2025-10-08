@@ -15,7 +15,8 @@ class BootcampWithFaqStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'instructor_id' => 'nullable|exists:users,id',
+            'instructor_ids' => 'required|array',
+            'instructor_ids.*' => 'exists:users,id',
             'title' => 'required|string|max:255',
             'start_at' => 'required|date|after:now',
             'end_at' => 'required|date|after:start_at',

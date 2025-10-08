@@ -67,6 +67,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(Course::class, 'course_instructures');
     }
 
+    public function bootcampInstructors()
+    {
+        return $this->belongsToMany(Bootcamp::class, 'bootcamp_instructors');
+    }
+
     public function reviews()
     {
         return $this->hasMany(Review::class);
@@ -85,11 +90,6 @@ class User extends Authenticatable implements MustVerifyEmail
     public function quizResults()
     {
         return $this->hasMany(QuizResult::class);
-    }
-
-    public function bootcamps()
-    {
-        return $this->hasMany(Bootcamp::class);
     }
 
     public function payments()

@@ -11,7 +11,6 @@ class BootcampResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'instructor' => new UserResource($this->whenLoaded('user')),
             'title' => $this->title,
             'slug' => $this->slug,
             'start_at' => $this->start_at,
@@ -23,6 +22,7 @@ class BootcampResource extends JsonResource
             'description' => $this->description,
             'short_description' => $this->short_description,
             'thumbnail' => $this->thumbnail,
+            'instructors' => UserResource::collection($this->whenLoaded('instructors')),
             'categories' => CategoryResource::collection($this->whenLoaded('categories')),
             'faqs' => $this->when($this->relationLoaded('faqs'), function () {
                 return $this->faqs->map(function ($faq) {

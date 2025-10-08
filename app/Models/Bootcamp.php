@@ -27,9 +27,9 @@ class Bootcamp extends Model
         'price' => 0,
     ];
 
-    public function user()
+    public function instructors()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsToMany(User::class, 'bootcamp_instructors');
     }
 
     public function categories()
