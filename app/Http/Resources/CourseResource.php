@@ -76,7 +76,7 @@ class CourseResource extends JsonResource
             }),
             'reviews_summary' => $this->when($this->relationLoaded('reviews') || isset($this->reviews_count), function () {
                 $totalReviews = $this->reviews_count ?? $this->reviews->count();
-                $averageRating = $this->reviews_avg_rating ?? ($this->reviews->count() > 0 ? round($this->reviews->avg('rating'), 1) : null);
+                $averageRating = (float) $this->reviews_avg_rating ?? ($this->reviews->count() > 0 ? $this->reviews->avg('rating') : null);
 
                 $ratingDistribution = null;
                 if ($this->relationLoaded('reviews') && $this->reviews->count() > 0) {
