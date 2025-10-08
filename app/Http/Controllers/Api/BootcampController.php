@@ -8,6 +8,7 @@ use App\Http\Requests\BootcampUpdateRequest;
 use App\Http\Requests\BootcampVerificationRequest;
 use App\Http\Resources\BootcampResource;
 use App\Http\Resources\BootcampEnrollmentResource;
+use Illuminate\Support\Facades\Gate;
 use App\Models\Payment;
 use App\Models\Bootcamp;
 use Illuminate\Http\Request;
@@ -96,7 +97,9 @@ class BootcampController extends Controller
     {
         $user = $this->resolveOptionalUser($request);
 
-        $this->authorize('view', $bootcamp);
+        if (!\Gate::forUser($user)->allows('view', $bootcamp)) {
+            abort(403, 'This action is unauthorized.');
+        }
 
         $bootcamp->load(['user', 'categories', 'faqs']);
 
