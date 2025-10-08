@@ -16,4 +16,9 @@ class MembershipSerial extends Model
     protected $casts = [
         'type' => MembershipType::class,
     ];
+
+    public function getRouteKeyName(): string
+    {
+        return 'serial_number';
+    }
 }
