@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Membership\MemberController;
 use App\Http\Controllers\Api\Membership\TransactionController;
 use Illuminate\Support\Facades\Route;
 
