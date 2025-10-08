@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Bootcamp;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class BootcampFactory extends Factory
 {
@@ -11,54 +12,54 @@ class BootcampFactory extends Factory
 
     public function definition(): array
     {
-        $titles = [
+        $title = fake()->randomElement([
             'Professional Barbering Intensive Course',
+            'Advanced Clipper Techniques',
+            'Hair Color & Highlights Training',
+            'Beard Grooming & Styling Bootcamp',
+            'Men\'s Hair Styling Bootcamp',
             'Classic Scissor Cutting Masterclass',
             'Modern Fade Techniques Workshop',
-            'Beard Grooming & Styling Bootcamp',
-            'Hair Color & Highlights Training',
-            'Advanced Clipper Techniques',
             'Traditional Wet Shaving Workshop',
-            'Men\'s Hair Styling Bootcamp',
             'Barbershop Business Management',
-            'Complete Barber Certification Program'
-        ];
+            'Complete Barber Certification Program',
+        ]);
 
-        $locations = [
+        $location = fake()->randomElement([
             'Hairnerds Academy Jakarta',
-            'Hairnerds Studio Bandung',
             'Hairnerds Training Center Surabaya',
-            'Hairnerds Workshop Yogyakarta',
             'Hairnerds Institute Medan',
-            'Hairnerds Flagship Store, Kemang'
-        ];
+            'Hairnerds Studio Bandung',
+            'Hairnerds Workshop Yogyakarta',
+            'Hairnerds Flagship Store, Kemang',
+        ]);
 
-        $startDate = $this->faker->dateTimeBetween('now', '+6 months');
-        $endDate = $this->faker->dateTimeBetween($startDate, $startDate->format('Y-m-d H:i:s') . ' +7 days');
+        $startAt = fake()->dateTimeBetween('now', '+6 months');
+        $endAt = fake()->dateTimeBetween($startAt, $startAt->format('Y-m-d H:i:s').' +7 days');
 
-        $totalSeat = $this->faker->numberBetween(10, 30);
-        $blockedSeat = $this->faker->numberBetween(0, 3);
-        $availableSeat = $totalSeat - $blockedSeat;
+        $seat = fake()->numberBetween(10, 30);
+        $seatBlocked = fake()->numberBetween(0, 3);
 
         return [
-            'title' => $this->faker->randomElement($titles),
-            'start_at' => $startDate,
-            'end_at' => $endDate,
-            'seat' => $totalSeat,
-            'seat_available' => $availableSeat,
-            'seat_blocked' => $blockedSeat,
-            'description' => $this->faker->paragraphs(3, true),
-            'short_description' => $this->faker->paragraph(2),
-            'status' => $this->faker->randomElement(['draft', 'publish', 'unpublish', 'rejected']),
-            'price' => $this->faker->numberBetween(1000000, 15000000),
-            'location' => $this->faker->randomElement($locations),
-            'contact_person' => $this->faker->name(),
-            'url_location' => $this->faker->optional(0.7)->url(),
+            'title' => $title,
+            'slug' => Str::slug($title),
+            'description' => fake()->paragraphs(3, true),
+            'short_description' => fake()->sentence(15),
+            'location' => $location,
+            'start_at' => $startAt,
+            'end_at' => $endAt,
+            'price' => fake()->numberBetween(1000000, 15000000),
+            'seat' => $seat,
+            'seat_available' => $seat - $seatBlocked - fake()->numberBetween(0, 3),
+            'seat_blocked' => $seatBlocked,
+            'contact_person' => fake()->name(),
+            'url_location' => fake()->optional()->url(),
+            'status' => 'draft',
             'verified_at' => null,
         ];
     }
 
-    public function published()
+    public function published(): static
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'publish',
@@ -66,7 +67,7 @@ class BootcampFactory extends Factory
         ]);
     }
 
-    public function draft()
+    public function draft(): static
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'draft',
@@ -74,26 +75,11 @@ class BootcampFactory extends Factory
         ]);
     }
 
-    public function unpublished()
-    {
-        return $this->state(fn (array $attributes) => [
-            'status' => 'unpublish',
-            'verified_at' => now(),
-        ]);
-    }
-
-    public function rejected()
+    public function rejected(): static
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'rejected',
-            'verified_at' => now(),
-        ]);
-    }
-
-    public function verified()
-    {
-        return $this->state(fn (array $attributes) => [
-            'verified_at' => now(),
+            'verified_at' => null,
         ]);
     }
 }
