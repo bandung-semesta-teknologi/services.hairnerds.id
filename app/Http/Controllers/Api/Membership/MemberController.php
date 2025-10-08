@@ -88,27 +88,35 @@ class MemberController extends Controller
      *
      * Update the specified resource in storage.
      */
-    public function update(MemberUpdateRequest $request, string $id)
+    public function update(MemberUpdateRequest $request, MembershipSerial $member)
     {
         try {
             $data = $request->validated();
+            $data['is_used'] = true;
+            $data['used_at'] = now();
 
             DB::beginTransaction();
+
             /**
              * In the future, implement the logic to update is_member column
              * and add validated data from in users table using the validated
              * data from $request
              */
 
+            /* Check if user is already a member */
+            if ($member->is_used) {
+                throw new \Exception('Membership serial number is already used.');
+            }
+
             /* Claim Membership Serial Number (Change is_used column to true) */
-            $membershipSerial = MembershipSerial::update($data);
+            $member->update($data);
 
             DB::commit();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Member created successfully.',
-                'data' => new MemberResource($membershipSerial), // Replace null with the created member instance
+                'message' => 'Member updated successfully.',
+                'data' => new MemberResource($member), // Replace null with the created member instance
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -116,7 +124,7 @@ class MemberController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to create member.',
+                'message' => 'Failed to create member: ' . $e->getMessage(),
             ], 500);
         }
     }
