@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class BootcampUpdateRequest extends FormRequest
+class BootcampWithFaqUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -15,7 +15,7 @@ class BootcampUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => 'sometimes|required|exists:users,id',
+            'instructor_id' => 'sometimes|required|exists:users,id',
             'title' => 'sometimes|required|string|max:255',
             'start_at' => 'sometimes|required|date',
             'end_at' => 'sometimes|required|date|after:start_at',
@@ -33,6 +33,10 @@ class BootcampUpdateRequest extends FormRequest
             'contact_person' => 'sometimes|required|string|max:255',
             'url_location' => 'nullable|string|max:255|url',
             'verified_at' => 'nullable|date',
+            'faqs' => 'nullable|array',
+            'faqs.*.id' => 'nullable|exists:faqs,id',
+            'faqs.*.question' => 'required|string|max:500',
+            'faqs.*.answer' => 'required|string|max:2000',
         ];
     }
 
@@ -40,6 +44,10 @@ class BootcampUpdateRequest extends FormRequest
     {
         return [
             'end_at.after' => 'End date must be after start date',
+            'faqs.*.question.required' => 'Question is required for all FAQs',
+            'faqs.*.answer.required' => 'Answer is required for all FAQs',
+            'faqs.*.question.max' => 'Question cannot exceed 500 characters',
+            'faqs.*.answer.max' => 'Answer cannot exceed 2000 characters',
         ];
     }
 

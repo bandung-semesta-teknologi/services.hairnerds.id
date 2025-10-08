@@ -31,7 +31,7 @@ class CourseWithFaqUpdateRequest extends FormRequest
             'thumbnail' => 'nullable|image|max:2048',
 
             'faqs' => 'nullable|array',
-            'faqs.*.id' => 'nullable|exists:course_faqs,id',
+			'faqs.*.id' => 'nullable|exists:faqs,id',
             'faqs.*.question' => 'required|string|max:500',
             'faqs.*.answer' => 'required|string|max:2000',
         ];

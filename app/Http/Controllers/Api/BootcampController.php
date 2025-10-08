@@ -7,9 +7,13 @@ use App\Http\Requests\BootcampStoreRequest;
 use App\Http\Requests\BootcampUpdateRequest;
 use App\Http\Requests\BootcampVerificationRequest;
 use App\Http\Resources\BootcampResource;
+use App\Http\Resources\BootcampEnrollmentResource;
+use Illuminate\Support\Facades\Gate;
+use App\Models\Payment;
 use App\Models\Bootcamp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class BootcampController extends Controller
 {
@@ -20,7 +24,7 @@ class BootcampController extends Controller
         $this->authorize('viewAny', Bootcamp::class);
 
         $bootcamps = Bootcamp::query()
-            ->with(['user', 'categories'])
+            ->with(['user', 'categories', 'faqs'])
             ->when($user && $user->role === 'instructor', function($q) use ($user) {
                 return $q->where('user_id', $user->id);
             })
@@ -35,6 +39,8 @@ class BootcampController extends Controller
                     : $q->where('seat_available', '=', 0);
             })
             ->when($request->search, fn($q) => $q->where('title', 'like', '%' . $request->search . '%'))
+            ->when($request->price_type === 'free', fn($q) => $q->free())
+            ->when($request->price_type === 'paid', fn($q) => $q->paid())
             ->when($request->price_min, fn($q) => $q->where('price', '>=', $request->price_min))
             ->when($request->price_max, fn($q) => $q->where('price', '<=', $request->price_max))
             ->latest()
@@ -51,6 +57,10 @@ class BootcampController extends Controller
             $data = $request->validated();
             $categoryIds = $data['category_ids'] ?? [];
             unset($data['category_ids']);
+
+            if ($request->hasFile('thumbnail')) {
+                $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
+            }
 
             if (!isset($data['user_id'])) {
                 $data['user_id'] = $request->user()->id;
@@ -87,9 +97,11 @@ class BootcampController extends Controller
     {
         $user = $this->resolveOptionalUser($request);
 
-        $this->authorize('view', $bootcamp);
+        if (!\Gate::forUser($user)->allows('view', $bootcamp)) {
+            abort(403, 'This action is unauthorized.');
+        }
 
-        $bootcamp->load(['user', 'categories']);
+        $bootcamp->load(['user', 'categories', 'faqs']);
 
         return new BootcampResource($bootcamp);
     }
@@ -102,6 +114,10 @@ class BootcampController extends Controller
             $data = $request->validated();
             $categoryIds = $data['category_ids'] ?? null;
             unset($data['category_ids']);
+
+            if ($request->hasFile('thumbnail')) {
+                $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
+            }
 
             if ($bootcamp->status === 'rejected' && !isset($data['status'])) {
                 $data['status'] = 'draft';
@@ -218,6 +234,82 @@ class BootcampController extends Controller
                 'message' => 'Failed to delete bootcamp'
             ], 500);
         }
+    }
+
+    public function enrolledStudents(Request $request, Bootcamp $bootcamp)
+    {
+        $user = $this->resolveOptionalUser($request);
+
+        $this->authorize('view', $bootcamp);
+
+        $enrollments = Payment::query()
+            ->with(['user.userProfile', 'payable'])
+            ->where('payable_type', Bootcamp::class)
+            ->where('payable_id', $bootcamp->id)
+            ->where('status', 'paid')
+            ->when($request->search, function($q) use ($request) {
+                return $q->where(function($query) use ($request) {
+                    $query->where('user_name', 'like', '%' . $request->search . '%')
+                        ->orWhereHas('user', function($q) use ($request) {
+                            $q->where('email', 'like', '%' . $request->search . '%');
+                        });
+                });
+            })
+            ->when($request->ticket_status, function($q) use ($request, $bootcamp) {
+                $status = $request->ticket_status;
+                $now = now();
+
+                if ($status === 'used' && $bootcamp->end_at < $now) {
+                    return $q;
+                } elseif ($status === 'not_used' && $bootcamp->start_at > $now) {
+                    return $q;
+                } elseif ($status === 'ongoing' && $bootcamp->start_at <= $now && $bootcamp->end_at >= $now) {
+                    return $q;
+                } else {
+                    return $q->whereRaw('1 = 0');
+                }
+            })
+            ->orderBy('paid_at', 'desc')
+            ->paginate($request->per_page ?? 15);
+
+        return BootcampEnrollmentResource::collection($enrollments);
+    }
+
+    public function enrolledStudentsStats(Bootcamp $bootcamp)
+    {
+        $this->authorize('view', $bootcamp);
+
+        $totalEnrolled = Payment::where('payable_type', Bootcamp::class)
+            ->where('payable_id', $bootcamp->id)
+            ->where('status', 'paid')
+            ->count();
+
+        $now = now();
+        $usedTickets = 0;
+        $notUsedTickets = 0;
+        $ongoingTickets = 0;
+
+        if ($bootcamp->end_at < $now) {
+            $usedTickets = $totalEnrolled;
+        } elseif ($bootcamp->start_at > $now) {
+            $notUsedTickets = $totalEnrolled;
+        } else {
+            $ongoingTickets = $totalEnrolled;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'total_enrolled' => $totalEnrolled,
+                'used_tickets' => $usedTickets,
+                'not_used_tickets' => $notUsedTickets,
+                'ongoing_tickets' => $ongoingTickets,
+                'revenue' => Payment::where('payable_type', Bootcamp::class)
+                    ->where('payable_id', $bootcamp->id)
+                    ->where('status', 'paid')
+                    ->sum('total'),
+            ]
+        ]);
     }
 
     private function resolveOptionalUser(Request $request)
