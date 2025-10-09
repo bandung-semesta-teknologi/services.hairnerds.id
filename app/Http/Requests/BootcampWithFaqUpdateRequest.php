@@ -31,7 +31,7 @@ class BootcampWithFaqUpdateRequest extends FormRequest
             'price' => 'nullable|integer|min:0',
             'location' => 'sometimes|required|string|max:255',
             'contact_person' => 'sometimes|required|string|max:255',
-            'url_location' => 'nullable|string|max:255|url',
+            'url_location' => 'nullable|string|url',
             'verified_at' => 'nullable|date',
             'faqs' => 'nullable|array',
             'faqs.*.id' => 'nullable|exists:faqs,id',
