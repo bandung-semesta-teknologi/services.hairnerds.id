@@ -36,6 +36,12 @@ class CourseController extends Controller
             ->when($request->price_type === 'paid', fn($q) => $q->paid())
             ->when($request->price_min, fn($q) => $q->where('price', '>=', $request->price_min))
             ->when($request->price_max, fn($q) => $q->where('price', '<=', $request->price_max))
+            ->when($request->rating, function($q) use ($request) {
+                $rating = (float) $request->rating;
+                return $q->having('reviews_avg_rating', '>=', $rating)->having('reviews_avg_rating', '<', $rating + 1);
+            })
+            ->when($request->rating_min, fn($q) => $q->having('reviews_avg_rating', '>=', $request->rating_min))
+            ->when($request->rating_max, fn($q) => $q->having('reviews_avg_rating', '<=', $request->rating_max))
             ->when($request->sort_by, function($q) use ($request) {
                 $sortBy = $request->sort_by;
                 $sortOrder = $request->sort_order ?? 'asc';
@@ -89,6 +95,12 @@ class CourseController extends Controller
             ->when($request->price_type === 'paid', fn($q) => $q->paid())
             ->when($request->price_min, fn($q) => $q->where('price', '>=', $request->price_min))
             ->when($request->price_max, fn($q) => $q->where('price', '<=', $request->price_max))
+            ->when($request->rating, function($q) use ($request) {
+                $rating = (int) $request->rating;
+                return $q->having('reviews_avg_rating', '>=', $rating)
+                        ->having('reviews_avg_rating', '<', $rating + 1);
+            })
+
             ->when($request->sort_by, function($q) use ($request) {
                 $sortBy = $request->sort_by;
                 $sortOrder = $request->sort_order ?? 'asc';

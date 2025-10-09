@@ -45,20 +45,17 @@ describe('faq crud api', function () {
         $this->otherCourse->categories()->attach($this->categories->first()->id);
         $this->otherCourse->instructors()->attach($this->otherInstructor->id);
 
-        $this->publishedBootcamp = Bootcamp::factory()->published()->create([
-            'user_id' => $this->instructor->id
-        ]);
+        $this->publishedBootcamp = Bootcamp::factory()->published()->create();
         $this->publishedBootcamp->categories()->attach($this->categories->first()->id);
+        $this->publishedBootcamp->instructors()->attach($this->instructor->id);
 
-        $this->draftBootcamp = Bootcamp::factory()->draft()->create([
-            'user_id' => $this->instructor->id
-        ]);
+        $this->draftBootcamp = Bootcamp::factory()->draft()->create();
         $this->draftBootcamp->categories()->attach($this->categories->last()->id);
+        $this->draftBootcamp->instructors()->attach($this->instructor->id);
 
-        $this->otherBootcamp = Bootcamp::factory()->published()->create([
-            'user_id' => $this->otherInstructor->id
-        ]);
+        $this->otherBootcamp = Bootcamp::factory()->published()->create();
         $this->otherBootcamp->categories()->attach($this->categories->first()->id);
+        $this->otherBootcamp->instructors()->attach($this->otherInstructor->id);
     });
 
     describe('guest access', function () {
@@ -455,6 +452,11 @@ describe('faq crud api', function () {
         });
 
         it('instructor can update faq from their own bootcamp', function () {
+            $this->assertDatabaseHas('bootcamp_instructors', [
+                'bootcamp_id' => $this->publishedBootcamp->id,
+                'user_id' => $this->instructor->id,
+            ]);
+
             $faq = Faq::factory()->create([
                 'faqable_type' => Bootcamp::class,
                 'faqable_id' => $this->publishedBootcamp->id
@@ -480,6 +482,11 @@ describe('faq crud api', function () {
         });
 
         it('instructor can delete faq from their own bootcamp', function () {
+            $this->assertDatabaseHas('bootcamp_instructors', [
+                'bootcamp_id' => $this->publishedBootcamp->id,
+                'user_id' => $this->instructor->id,
+            ]);
+
             $faq = Faq::factory()->create([
                 'faqable_type' => Bootcamp::class,
                 'faqable_id' => $this->publishedBootcamp->id

@@ -9,7 +9,6 @@ use App\Http\Resources\BootcampResource;
 use App\Models\Bootcamp;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class BootcampWithFaqController extends Controller
 {
@@ -21,21 +20,14 @@ class BootcampWithFaqController extends Controller
             return DB::transaction(function () use ($request) {
                 $data = $request->validated();
                 $categoryIds = $data['category_ids'] ?? [];
+                $instructorIds = $data['instructor_ids'] ?? [];
                 $faqs = $data['faqs'] ?? [];
 
-                unset($data['category_ids'], $data['faqs']);
+                unset($data['category_ids'], $data['instructor_ids'], $data['faqs']);
 
                 if ($request->hasFile('thumbnail')) {
                     $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
                 }
-
-                $user = $request->user();
-                if ($user->role === 'admin' && isset($data['instructor_id'])) {
-                    $data['user_id'] = $data['instructor_id'];
-                } else {
-                    $data['user_id'] = $user->id;
-                }
-                unset($data['instructor_id']);
 
                 $data['seat_available'] = $data['seat_available'] ?? $data['seat'];
 
@@ -45,6 +37,10 @@ class BootcampWithFaqController extends Controller
                     $bootcamp->categories()->attach($categoryIds);
                 }
 
+                if (!empty($instructorIds)) {
+                    $bootcamp->instructors()->attach($instructorIds);
+                }
+
                 foreach ($faqs as $faq) {
                     $bootcamp->faqs()->create([
                         'question' => $faq['question'],
@@ -52,7 +48,7 @@ class BootcampWithFaqController extends Controller
                     ]);
                 }
 
-                $bootcamp->load(['user', 'categories', 'faqs']);
+                $bootcamp->load(['instructors', 'categories', 'faqs']);
 
                 return response()->json([
                     'status' => 'success',
@@ -78,21 +74,14 @@ class BootcampWithFaqController extends Controller
             return DB::transaction(function () use ($request, $bootcamp) {
                 $data = $request->validated();
                 $categoryIds = $data['category_ids'] ?? null;
+                $instructorIds = $data['instructor_ids'] ?? null;
                 $faqs = $data['faqs'] ?? null;
 
-                unset($data['category_ids'], $data['faqs']);
+                unset($data['category_ids'], $data['instructor_ids'], $data['faqs']);
 
                 if ($request->hasFile('thumbnail')) {
                     $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
                 }
-
-                $user = $request->user();
-                if ($user->role === 'admin' && isset($data['instructor_id'])) {
-                    $data['user_id'] = $data['instructor_id'];
-                } elseif (isset($data['instructor_id'])) {
-                    unset($data['instructor_id']);
-                }
-                unset($data['instructor_id']);
 
                 if ($bootcamp->status === 'rejected' && !isset($data['status'])) {
                     $data['status'] = 'draft';
@@ -105,6 +94,10 @@ class BootcampWithFaqController extends Controller
 
                 if ($categoryIds !== null) {
                     $bootcamp->categories()->sync($categoryIds);
+                }
+
+                if ($instructorIds !== null) {
+                    $bootcamp->instructors()->sync($instructorIds);
                 }
 
                 if ($faqs !== null) {
@@ -136,7 +129,7 @@ class BootcampWithFaqController extends Controller
                     }
                 }
 
-                $bootcamp->load(['user', 'categories', 'faqs']);
+                $bootcamp->load(['instructors', 'categories', 'faqs']);
 
                 return response()->json([
                     'status' => 'success',
