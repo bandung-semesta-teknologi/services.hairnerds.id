@@ -7,12 +7,20 @@ use App\Http\Requests\BootcampWithFaqStoreRequest;
 use App\Http\Requests\BootcampWithFaqUpdateRequest;
 use App\Http\Resources\BootcampResource;
 use App\Models\Bootcamp;
+use App\Services\CategoryService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class BootcampWithFaqController extends Controller
 {
+    protected $categoryService;
+
+    public function __construct(CategoryService $categoryService)
+    {
+        $this->categoryService = $categoryService;
+    }
+
     public function store(BootcampWithFaqStoreRequest $request)
     {
         $this->authorize('create', Bootcamp::class);
@@ -20,7 +28,7 @@ class BootcampWithFaqController extends Controller
         try {
             return DB::transaction(function () use ($request) {
                 $data = $request->validated();
-                $categoryIds = $data['category_ids'] ?? [];
+                $categories = $data['category_ids'] ?? [];
                 $faqs = $data['faqs'] ?? [];
 
                 unset($data['category_ids'], $data['faqs']);
@@ -41,7 +49,8 @@ class BootcampWithFaqController extends Controller
 
                 $bootcamp = Bootcamp::create($data);
 
-                if (!empty($categoryIds)) {
+                if (!empty($categories)) {
+                    $categoryIds = $this->categoryService->resolveCategoryIds($categories);
                     $bootcamp->categories()->attach($categoryIds);
                 }
 
@@ -77,7 +86,7 @@ class BootcampWithFaqController extends Controller
         try {
             return DB::transaction(function () use ($request, $bootcamp) {
                 $data = $request->validated();
-                $categoryIds = $data['category_ids'] ?? null;
+                $categories = $data['category_ids'] ?? null;
                 $faqs = $data['faqs'] ?? null;
 
                 unset($data['category_ids'], $data['faqs']);
@@ -103,7 +112,8 @@ class BootcampWithFaqController extends Controller
                     $bootcamp->update($data);
                 }
 
-                if ($categoryIds !== null) {
+                if ($categories !== null) {
+                    $categoryIds = $this->categoryService->resolveCategoryIds($categories);
                     $bootcamp->categories()->sync($categoryIds);
                 }
 

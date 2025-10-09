@@ -15,7 +15,6 @@ class BootcampUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => 'sometimes|required|exists:users,id',
             'title' => 'sometimes|required|string|max:255',
             'start_at' => 'sometimes|required|date',
             'end_at' => 'sometimes|required|date|after:start_at',
@@ -26,7 +25,7 @@ class BootcampUpdateRequest extends FormRequest
             'short_description' => 'nullable|string|max:500',
             'thumbnail' => 'nullable|image|max:2048',
             'category_ids' => 'sometimes|array',
-            'category_ids.*' => 'exists:categories,id',
+            'category_ids.*' => 'required',
             'status' => ['sometimes', Rule::in(['draft', 'publish', 'unpublish', 'rejected'])],
             'price' => 'nullable|integer|min:0',
             'location' => 'sometimes|required|string|max:255',
@@ -56,6 +55,31 @@ class BootcampUpdateRequest extends FormRequest
                 $totalUsed = ($this->seat_available ?? 0) + ($this->seat_blocked ?? 0);
                 if ($totalUsed > $this->seat) {
                     $validator->errors()->add('seat_blocked', 'Total available and blocked seats cannot exceed total seats');
+                }
+            }
+
+            if ($this->has('category_ids')) {
+                foreach ($this->category_ids as $key => $category) {
+                    if (!is_numeric($category) && !is_string($category)) {
+                        $validator->errors()->add(
+                            "category_ids.{$key}",
+                            'Category must be either an ID or a name'
+                        );
+                    }
+
+                    if (is_string($category) && strlen(trim($category)) === 0) {
+                        $validator->errors()->add(
+                            "category_ids.{$key}",
+                            'Category name cannot be empty'
+                        );
+                    }
+
+                    if (is_string($category) && strlen($category) > 255) {
+                        $validator->errors()->add(
+                            "category_ids.{$key}",
+                            'Category name cannot exceed 255 characters'
+                        );
+                    }
                 }
             }
         });
