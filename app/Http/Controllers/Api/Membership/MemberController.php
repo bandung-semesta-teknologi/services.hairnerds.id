@@ -7,9 +7,12 @@ use App\Http\Requests\Membership\MemberStoreRequest;
 use App\Http\Requests\Membership\MemberUpdateRequest;
 use App\Http\Resources\Membership\MemberResource;
 use App\Models\MembershipSerial;
+use App\Models\User;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 #[Group('Member Membership API')]
@@ -78,9 +81,11 @@ class MemberController extends Controller
      *
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(MembershipSerial $member)
     {
-        //
+        $member->load('membershipType');
+
+        return new MemberResource($member);
     }
 
     /**
@@ -103,6 +108,34 @@ class MemberController extends Controller
              * data from $request
              */
 
+            /* Check if email or phone already exists */
+
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make("password"),
+                'role' => 'student',
+            ]);
+
+            $user->userCredentials()->create([
+                'type' => 'email',
+                'identifier' => $user->email,
+            ]);
+
+            $user->userCredentials()->create([
+                'type' => 'phone',
+                'identifier' => $data['phone_number'],
+            ]);
+
+            $user->userProfile()->create([
+                'address' => $data['address'] ?? null,
+                'user_uuid_supabase' => $data['used_by'],
+                'serial_number' => $data['serial_number'],
+                'card_number' => $data['card_no'],
+            ]);
+
+            event(new Registered($user));
+
             /* Check if user is already a member */
             if ($member->is_used) {
                 throw new \Exception('Membership serial number is already used.');
@@ -116,7 +149,7 @@ class MemberController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Member updated successfully.',
-                'data' => new MemberResource($member), // Replace null with the created member instance
+                'data' => new MemberResource($member),
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -124,7 +157,7 @@ class MemberController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to create member: ' . $e->getMessage(),
+                'message' =>  $e->getMessage(),
             ], 500);
         }
     }
