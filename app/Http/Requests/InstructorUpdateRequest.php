@@ -13,7 +13,8 @@ class InstructorUpdateRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->route('instructor');
+        $instructor = $this->route('instructor');
+        $userId = $instructor ? $instructor->id : null;
 
         return [
             'name' => 'sometimes|required|string|max:255',

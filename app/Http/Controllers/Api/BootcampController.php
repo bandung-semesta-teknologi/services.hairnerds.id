@@ -14,7 +14,6 @@ use App\Models\Payment;
 use App\Models\Bootcamp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class BootcampController extends Controller
 {
@@ -32,14 +31,14 @@ class BootcampController extends Controller
         $this->authorize('viewAny', Bootcamp::class);
 
         $bootcamps = Bootcamp::query()
-            ->with(['user', 'categories', 'faqs'])
+            ->with(['instructors', 'categories', 'faqs'])
             ->when($user && $user->role === 'instructor', function($q) use ($user) {
-                return $q->where('user_id', $user->id);
+                return $q->whereHas('instructors', fn($q) => $q->where('users.id', $user->id));
             })
             ->when(!$user || $user->role === 'student', fn($q) => $q->published())
             ->when($request->category_id, fn($q) => $q->whereHas('categories', fn($q) => $q->where('categories.id', $request->category_id)))
             ->when($request->status && $user && $user->role === 'admin', fn($q) => $q->where('status', $request->status))
-            ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
+            ->when($request->instructor_id, fn($q) => $q->whereHas('instructors', fn($q) => $q->where('users.id', $request->instructor_id)))
             ->when($request->location, fn($q) => $q->where('location', 'like', '%' . $request->location . '%'))
             ->when($request->available !== null, function($q) use ($request) {
                 return $request->boolean('available')
@@ -63,15 +62,12 @@ class BootcampController extends Controller
 
         try {
             $data = $request->validated();
-            $categories = $data['category_ids'] ?? [];
-            unset($data['category_ids']);
+            $categoryIds = $data['category_ids'] ?? [];
+            $instructorIds = $data['instructor_ids'] ?? [];
+            unset($data['category_ids'], $data['instructor_ids']);
 
             if ($request->hasFile('thumbnail')) {
                 $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
-            }
-
-            if (!isset($data['user_id'])) {
-                $data['user_id'] = $request->user()->id;
             }
 
             if (!isset($data['seat_available'])) {
@@ -85,7 +81,11 @@ class BootcampController extends Controller
                 $bootcamp->categories()->attach($categoryIds);
             }
 
-            $bootcamp->load(['user', 'categories']);
+            if (!empty($instructorIds)) {
+                $bootcamp->instructors()->attach($instructorIds);
+            }
+
+            $bootcamp->load(['instructors', 'categories']);
 
             return response()->json([
                 'status' => 'success',
@@ -110,7 +110,7 @@ class BootcampController extends Controller
             abort(403, 'This action is unauthorized.');
         }
 
-        $bootcamp->load(['user', 'categories', 'faqs']);
+        $bootcamp->load(['instructors', 'categories', 'faqs']);
 
         return new BootcampResource($bootcamp);
     }
@@ -121,8 +121,9 @@ class BootcampController extends Controller
 
         try {
             $data = $request->validated();
-            $categories = $data['category_ids'] ?? null;
-            unset($data['category_ids']);
+            $categoryIds = $data['category_ids'] ?? null;
+            $instructorIds = $data['instructor_ids'] ?? null;
+            unset($data['category_ids'], $data['instructor_ids']);
 
             if ($request->hasFile('thumbnail')) {
                 $data['thumbnail'] = $request->file('thumbnail')->store('bootcamps/thumbnails', 'public');
@@ -140,7 +141,11 @@ class BootcampController extends Controller
                 $bootcamp->categories()->sync($categoryIds);
             }
 
-            $bootcamp->load(['user', 'categories']);
+            if ($instructorIds !== null) {
+                $bootcamp->instructors()->sync($instructorIds);
+            }
+
+            $bootcamp->load(['instructors', 'categories']);
 
             return response()->json([
                 'status' => 'success',
@@ -174,7 +179,7 @@ class BootcampController extends Controller
                 'verified_at' => now(),
             ]);
 
-            $bootcamp->load(['user', 'categories']);
+            $bootcamp->load(['instructors', 'categories']);
 
             return response()->json([
                 'status' => 'success',
@@ -208,7 +213,7 @@ class BootcampController extends Controller
                 'verified_at' => now(),
             ]);
 
-            $bootcamp->load(['user', 'categories']);
+            $bootcamp->load(['instructors', 'categories']);
 
             return response()->json([
                 'status' => 'success',
