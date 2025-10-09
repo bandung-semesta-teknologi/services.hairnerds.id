@@ -22,9 +22,13 @@ class MemberUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'serial_number' => 'required|string|max:100|unique:membership_serials,serial_number',
+            'serial_number' => 'required|string|max:100',
             'card_no' => 'required|string|max:50|unique:membership_serials,card_no',
             'used_by' => 'required|string',
+            'email' => 'required|email|max:255|unique:users,email',
+            'phone_number' => 'required|string',
+            'name' => 'required|string|max:50',
+            'address' => 'nullable|string|max:255',
         ];
     }
 }
