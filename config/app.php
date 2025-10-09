@@ -124,4 +124,18 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Supabase Configuration
+    |--------------------------------------------------------------------------
+    |
+    | This value is your Supabase JWT secret key, which is used to verify and
+    | decode JSON Web Tokens issued by your Supabase Auth service. Set this
+    | value in your environment file to enable proper authentication.
+    |
+    */
+
+    'supabase' => [
+        'jwt_secret' => (string) env('SUPABASE_JWT_SECRET', ''),
+    ],
 ];
