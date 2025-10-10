@@ -11,6 +11,6 @@ Route::prefix('membership')->middleware('membership.auth')->name('membership.')-
 
     Route::get('member/datalist', [MemberController::class, 'datalist'])->name('member.datalist');
     Route::get('member/show-user/{user}', [MemberController::class, 'showUser'])->name('member.showUser');
-    Route::post('member/unbind/{user}', [MemberController::class, 'unbind'])->name('member.unbind');
+    Route::post('member/unbind/{serial_number}', [MemberController::class, 'unbind'])->name('member.unbind');
     Route::apiResource('member', MemberController::class);
 });
