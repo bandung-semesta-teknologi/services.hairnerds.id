@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\CourseStudentProgressController;
 use App\Http\Controllers\Api\CourseWithFaqController;
+use App\Http\Controllers\Api\CoursesBootcampsController;
 use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\EnrollmentController;
 use App\Http\Controllers\Api\FaqController;
@@ -45,6 +46,8 @@ Route::get('/sections/{section}', [SectionController::class, 'show']);
 
 Route::get('/bootcamps', [BootcampController::class, 'index']);
 Route::get('/bootcamps/{bootcamp}', [BootcampController::class, 'show']);
+
+Route::get('/courses-bootcamps', [CoursesBootcampsController::class, 'index']);
 
 Route::get('/reviews', [ReviewController::class, 'index']);
 Route::get('/reviews/{review}', [ReviewController::class, 'show']);
