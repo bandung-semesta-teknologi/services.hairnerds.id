@@ -70,22 +70,31 @@ class StudentManagementController extends Controller
 
         try {
             return DB::transaction(function () use ($request, $student) {
-                $data = $request->validated();
+                $validated = $request->validated();
 
-                $student->update($data);
+                $updateData = [];
 
-                if (isset($data['email']) && $student->email !== $data['email']) {
-                    $credential = UserCredential::where('user_id', $student->id)
-                        ->where('type', 'email')
-                        ->first();
-
-                    if ($credential) {
-                        $credential->update([
-                            'identifier' => $data['email'],
-                        ]);
-                    }
+                if (isset($validated['name'])) {
+                    $updateData['name'] = $validated['name'];
                 }
 
+                if (isset($validated['email'])) {
+                    $updateData['email'] = $validated['email'];
+                }
+
+                if (!empty($updateData)) {
+                    $student->update($updateData);
+                }
+
+                if (isset($validated['email']) && $validated['email'] !== $student->getOriginal('email')) {
+                    UserCredential::where('user_id', $student->id)
+                        ->where('type', 'email')
+                        ->update([
+                            'identifier' => $validated['email'],
+                        ]);
+                }
+
+                $student->refresh();
                 $student->loadCount('enrollments');
 
                 return response()->json([
@@ -95,11 +104,16 @@ class StudentManagementController extends Controller
                 ], 200);
             });
         } catch (\Exception $e) {
-            Log::error('Error updating student: ' . $e->getMessage());
+            Log::error('Error updating student', [
+                'student_id' => $student->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to update student'
+                'message' => 'Failed to update student',
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -130,11 +144,15 @@ class StudentManagementController extends Controller
                 ]
             ], 200);
         } catch (\Exception $e) {
-            Log::error('Error resetting student password: ' . $e->getMessage());
+            Log::error('Error resetting student password', [
+                'student_id' => $student->id,
+                'error' => $e->getMessage()
+            ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to reset password'
+                'message' => 'Failed to reset password',
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -151,27 +169,39 @@ class StudentManagementController extends Controller
         }
 
         try {
-            $enrollmentsCount = $student->enrollments()->count();
+            return DB::transaction(function () use ($student) {
+                $student->quizResults()->delete();
 
-            if ($enrollmentsCount > 0) {
+                $student->progress()->delete();
+
+                $student->reviews()->delete();
+
+                $student->payments()->delete();
+
+                $student->enrollments()->delete();
+
+                $student->userCredentials()->delete();
+
+                $student->userProfile()->delete();
+
+                $student->delete();
+
                 return response()->json([
-                    'status' => 'error',
-                    'message' => 'Cannot delete student with existing enrollments. Please remove enrollments first.'
-                ], 422);
-            }
-
-            $student->delete();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Student deleted successfully'
-            ], 200);
+                    'status' => 'success',
+                    'message' => 'Student and all related data deleted successfully'
+                ], 200);
+            });
         } catch (\Exception $e) {
-            Log::error('Error deleting student: ' . $e->getMessage());
+            Log::error('Error deleting student', [
+                'student_id' => $student->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to delete student'
+                'message' => 'Failed to delete student',
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }

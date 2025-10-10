@@ -8,12 +8,20 @@ use App\Http\Requests\CourseWithFaqUpdateRequest;
 use App\Http\Resources\CourseResource;
 use App\Models\Course;
 use App\Models\Faq;
+use App\Services\CategoryService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CourseWithFaqController extends Controller
 {
+    protected $categoryService;
+
+    public function __construct(CategoryService $categoryService)
+    {
+        $this->categoryService = $categoryService;
+    }
+
     public function store(CourseWithFaqStoreRequest $request)
     {
         $this->authorize('create', Course::class);
@@ -21,7 +29,7 @@ class CourseWithFaqController extends Controller
         try {
             return DB::transaction(function () use ($request) {
                 $data = $request->validated();
-                $categoryIds = $data['category_ids'] ?? [];
+                $categories = $data['category_ids'] ?? [];
                 $instructorIds = $data['instructor_ids'] ?? [];
                 $faqs = $data['faqs'] ?? [];
 
@@ -33,7 +41,8 @@ class CourseWithFaqController extends Controller
 
                 $course = Course::create($data);
 
-                if (!empty($categoryIds)) {
+                if (!empty($categories)) {
+                    $categoryIds = $this->categoryService->resolveCategoryIds($categories);
                     $course->categories()->attach($categoryIds);
                 }
 
@@ -75,7 +84,7 @@ class CourseWithFaqController extends Controller
         try {
             return DB::transaction(function () use ($request, $course) {
                 $data = $request->validated();
-                $categoryIds = $data['category_ids'] ?? null;
+                $categories = $data['category_ids'] ?? null;
                 $instructorIds = $data['instructor_ids'] ?? null;
                 $faqs = $data['faqs'] ?? null;
 
@@ -94,7 +103,8 @@ class CourseWithFaqController extends Controller
                     $course->update($data);
                 }
 
-                if ($categoryIds !== null) {
+                if ($categories !== null) {
+                    $categoryIds = $this->categoryService->resolveCategoryIds($categories);
                     $course->categories()->sync($categoryIds);
                 }
 

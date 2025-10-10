@@ -204,16 +204,13 @@ describe('bootcamp crud api', function () {
             $bootcamp->categories()->attach($this->categories->first()->id);
             $bootcamp->instructors()->attach($this->instructor->id);
 
-            $this->assertDatabaseHas('bootcamp_instructors', [
-                'bootcamp_id' => $bootcamp->id,
-                'user_id' => $this->instructor->id,
-            ]);
-
             putJson("/api/bootcamps/{$bootcamp->slug}", [
-                'title' => 'Updated Bootcamp'
+                'title' => 'Updated Bootcamp',
+                'location' => 'Bandung',
             ])
                 ->assertOk()
-                ->assertJsonPath('data.title', 'Updated Bootcamp');
+                ->assertJsonPath('data.title', 'Updated Bootcamp')
+                ->assertJsonPath('data.location', 'Bandung');
         });
 
         it('instructor cannot update other instructor bootcamp', function () {

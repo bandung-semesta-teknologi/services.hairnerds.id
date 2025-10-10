@@ -6,18 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class UserProfile extends Model
+class Social extends Model
 {
     use HasFactory;
 
     protected $guarded = ['id'];
-
-    protected function casts(): array
-    {
-        return [
-            'skills' => 'array',
-        ];
-    }
 
     public function user(): BelongsTo
     {

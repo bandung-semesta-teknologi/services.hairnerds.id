@@ -159,35 +159,129 @@ class AuthController extends Controller
             return response()->json(['error' => 'User not authenticated'], 401);
         }
 
-        $user->load(['userProfile', 'userCredentials']);
+        $user->load(['userProfile', 'userCredentials', 'socials']);
 
         return response()->json(new UserResource($user), 200);
     }
 
     public function updateUser(AuthUpdateRequest $request)
     {
-        $user = $request->user();
+        return DB::transaction(function () use ($request) {
+            $user = $request->user();
 
-        $user->update([
-            'name' => $request->name ?? $user->name,
-        ]);
+            $userData = [];
 
-        $user->userProfile()->update([
-            'address' => $request->address ?? $user->userProfile->address,
-            'date_of_birth' => $request->date_of_birth ?? $user->userProfile->date_of_birth,
-        ]);
+            if ($request->filled('name')) {
+                $userData['name'] = $request->name;
+            }
 
-        $status = 200;
+            if ($request->filled('email') && $request->email !== $user->email) {
+                $userData['email'] = $request->email;
+                $userData['email_verified_at'] = null;
 
-        if ($request->hasFile('avatar')) {
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $user->userProfile()->update(['avatar' => $path]);
-            $status = 204;
-        }
+                $emailCredential = $user->userCredentials()
+                    ->where('type', 'email')
+                    ->first();
 
-        return response()->json([
-            'message' => 'User Profile updated successfully',
-            'user' => new UserResource($user),
-        ], $status);
+                if ($emailCredential) {
+                    $emailCredential->update([
+                        'identifier' => $request->email,
+                        'verified_at' => null,
+                    ]);
+                } else {
+                    $user->userCredentials()->create([
+                        'type' => 'email',
+                        'identifier' => $request->email,
+                        'verified_at' => null,
+                    ]);
+                }
+            }
+
+            if (!empty($userData)) {
+                $user->update($userData);
+            }
+
+            if ($request->filled('phone')) {
+                $phoneCredential = $user->userCredentials()
+                    ->where('type', 'phone')
+                    ->first();
+
+                if ($phoneCredential) {
+                    $phoneCredential->update([
+                        'identifier' => $request->phone,
+                    ]);
+                } else {
+                    $user->userCredentials()->create([
+                        'type' => 'phone',
+                        'identifier' => $request->phone,
+                    ]);
+                }
+            }
+
+            $profileData = [];
+
+            if ($request->filled('address')) {
+                $profileData['address'] = $request->address;
+            }
+
+            if ($request->filled('date_of_birth')) {
+                $profileData['date_of_birth'] = $request->date_of_birth;
+            }
+
+            if ($request->filled('short_biography')) {
+                $profileData['short_biography'] = $request->short_biography;
+            }
+
+            if ($request->filled('biography')) {
+                $profileData['biography'] = $request->biography;
+            }
+
+            if ($request->filled('skills')) {
+                $profileData['skills'] = $request->skills;
+            }
+
+            if ($request->hasFile('avatar')) {
+                $path = $request->file('avatar')->store('avatars', 'public');
+                $profileData['avatar'] = $path;
+            }
+
+            if (!empty($profileData)) {
+                if ($user->userProfile) {
+                    $user->userProfile()->update($profileData);
+                } else {
+                    $user->userProfile()->create($profileData);
+                }
+            }
+
+            if ($request->has('socials')) {
+                $existingSocialIds = collect($request->socials)
+                    ->pluck('id')
+                    ->filter()
+                    ->toArray();
+
+                $user->socials()->whereNotIn('id', $existingSocialIds)->delete();
+
+                foreach ($request->socials as $socialData) {
+                    if (isset($socialData['id'])) {
+                        $user->socials()->where('id', $socialData['id'])->update([
+                            'type' => $socialData['type'],
+                            'url' => $socialData['url'],
+                        ]);
+                    } else {
+                        $user->socials()->create([
+                            'type' => $socialData['type'],
+                            'url' => $socialData['url'],
+                        ]);
+                    }
+                }
+            }
+
+            $user->load(['userProfile', 'userCredentials', 'socials']);
+
+            return response()->json([
+                'message' => 'User Profile updated successfully',
+                'user' => new UserResource($user),
+            ], 200);
+        });
     }
 }

@@ -8,12 +8,20 @@ use App\Http\Requests\CourseUpdateRequest;
 use App\Http\Requests\CourseVerificationRequest;
 use App\Http\Resources\CourseResource;
 use App\Models\Course;
+use App\Services\CategoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CourseController extends Controller
 {
+    protected $categoryService;
+
+    public function __construct(CategoryService $categoryService)
+    {
+        $this->categoryService = $categoryService;
+    }
+
     public function indexPublic(Request $request)
     {
         $courses = Course::query()
@@ -187,7 +195,7 @@ class CourseController extends Controller
 
         try {
             $data = $request->validated();
-            $categoryIds = $data['category_ids'] ?? [];
+            $categories = $data['category_ids'] ?? [];
             $instructorIds = $data['instructor_ids'] ?? [];
             unset($data['category_ids'], $data['instructor_ids']);
 
@@ -197,7 +205,8 @@ class CourseController extends Controller
 
             $course = Course::create($data);
 
-            if (!empty($categoryIds)) {
+            if (!empty($categories)) {
+                $categoryIds = $this->categoryService->resolveCategoryIds($categories);
                 $course->categories()->attach($categoryIds);
             }
 
@@ -228,7 +237,7 @@ class CourseController extends Controller
 
         try {
             $data = $request->validated();
-            $categoryIds = $data['category_ids'] ?? null;
+            $categories = $data['category_ids'] ?? null;
             $instructorIds = $data['instructor_ids'] ?? null;
             unset($data['category_ids'], $data['instructor_ids']);
 
@@ -243,7 +252,8 @@ class CourseController extends Controller
 
             $course->update($data);
 
-            if ($categoryIds !== null) {
+            if ($categories !== null) {
+                $categoryIds = $this->categoryService->resolveCategoryIds($categories);
                 $course->categories()->sync($categoryIds);
             }
 
