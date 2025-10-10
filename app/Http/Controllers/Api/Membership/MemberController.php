@@ -143,7 +143,7 @@ class MemberController extends Controller
                 'address' => $data['address'] ?? null,
                 'user_uuid_supabase' => $data['used_by'],
                 'serial_number' => $data['serial_number'],
-                'card_number' => $data['card_no'],
+                'card_number' => $data['card_number'],
             ]);
 
             event(new Registered($user));
