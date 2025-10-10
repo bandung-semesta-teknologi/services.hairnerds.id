@@ -23,6 +23,28 @@ class DatabaseSeeder extends Seeder
 
     private function createBaseUsers(): void
     {
+        $superAdmin = User::create([
+            'name' => 'Super Administrator',
+            'email' => 'superadmin@mail.com',
+            'password' => Hash::make('password'),
+            'role' => 'super_admin',
+            'email_verified_at' => now(),
+        ]);
+
+        UserProfile::create([
+            'user_id' => $superAdmin->id,
+            'address' => null,
+            'avatar' => null,
+            'date_of_birth' => null,
+        ]);
+
+        UserCredential::create([
+            'user_id' => $superAdmin->id,
+            'type' => 'email',
+            'identifier' => $superAdmin->email,
+            'verified_at' => now(),
+        ]);
+
         $admin = User::create([
             'name' => 'Admin',
             'email' => 'admin@mail.com',

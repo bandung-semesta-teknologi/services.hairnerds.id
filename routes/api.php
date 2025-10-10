@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AdministratorManagementController;
 use App\Http\Controllers\Api\AnswerBankController;
 use App\Http\Controllers\Api\AttachmentController;
 use App\Http\Controllers\Api\AuthController;
@@ -150,6 +151,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/courses/{course:slug}/payment', [PaymentController::class, 'createCoursePayment']);
     Route::post('/bootcamps/{bootcamp}/payment', [PaymentController::class, 'createBootcampPayment']);
+
+    Route::get('/administrator-management', [AdministratorManagementController::class, 'index']);
+    Route::post('/administrator-management', [AdministratorManagementController::class, 'store']);
+    Route::get('/administrator-management/{administrator}', [AdministratorManagementController::class, 'show']);
+    Route::post('/administrator-management/{administrator}', [AdministratorManagementController::class, 'update']);
+    Route::post('/administrator-management/{administrator}/reset-password', [AdministratorManagementController::class, 'resetPassword']);
+    Route::delete('/administrator-management/{administrator}', [AdministratorManagementController::class, 'destroy']);
 
     Route::get('/instructor-management', [InstructorManagementController::class, 'index']);
     Route::post('/instructor-management', [InstructorManagementController::class, 'store']);
