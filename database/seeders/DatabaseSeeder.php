@@ -44,6 +44,12 @@ class DatabaseSeeder extends Seeder
             'verified_at' => now(),
         ]);
 
+        $admin->socials()->createMany([
+            ['type' => 'instagram', 'url' => 'https://instagram.com/admin_hairnerds'],
+            ['type' => 'facebook', 'url' => 'https://facebook.com/admin.hairnerds'],
+            ['type' => 'twitter', 'url' => 'https://twitter.com/admin_hairnerds'],
+        ]);
+
         $instructor = User::create([
             'name' => 'Instructor John',
             'email' => 'instructor@mail.com',
@@ -63,6 +69,12 @@ class DatabaseSeeder extends Seeder
             'type' => 'email',
             'identifier' => $instructor->email,
             'verified_at' => now(),
+        ]);
+
+        $instructor->socials()->createMany([
+            ['type' => 'instagram', 'url' => 'https://instagram.com/instructor_john'],
+            ['type' => 'linkedin', 'url' => 'https://linkedin.com/in/instructor-john'],
+            ['type' => 'youtube', 'url' => 'https://youtube.com/@instructorjohn'],
         ]);
 
         $instructor2 = User::create([
@@ -86,6 +98,11 @@ class DatabaseSeeder extends Seeder
             'verified_at' => now(),
         ]);
 
+        $instructor2->socials()->createMany([
+            ['type' => 'facebook', 'url' => 'https://facebook.com/instructor.jane'],
+            ['type' => 'tiktok', 'url' => 'https://tiktok.com/@instructorjane'],
+        ]);
+
         $instructor3 = User::create([
             'name' => 'Master Barber Mike',
             'email' => 'instructor3@mail.com',
@@ -107,10 +124,19 @@ class DatabaseSeeder extends Seeder
             'verified_at' => now(),
         ]);
 
+        $instructor3->socials()->createMany([
+            ['type' => 'instagram', 'url' => 'https://instagram.com/masterbarber_mike'],
+            ['type' => 'facebook', 'url' => 'https://facebook.com/masterbarber.mike'],
+            ['type' => 'youtube', 'url' => 'https://youtube.com/@masterbarbermike'],
+            ['type' => 'twitter', 'url' => 'https://twitter.com/barber_mike'],
+        ]);
+
         User::factory(4)->create()->each(function ($user) {
             UserProfile::factory()->for($user)->create();
             UserCredential::factory()->for($user)->emailCredential($user->email)->create();
             UserCredential::factory()->for($user)->phoneCredential()->create();
+
+            \App\Models\Social::factory(rand(2, 4))->for($user)->create();
         });
     }
 

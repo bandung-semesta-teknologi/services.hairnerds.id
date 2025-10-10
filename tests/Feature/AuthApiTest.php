@@ -244,7 +244,7 @@ describe('restful api authentication flow', function () {
                 'address' => 'Rumah Baru',
                 'date_of_birth' => now()->subYears(20)->toDateString(),
                 'avatar' => $file
-            ])->assertStatus(204);
+            ])->assertStatus(200);
 
         $user->refresh();
 
