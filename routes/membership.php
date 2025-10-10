@@ -10,5 +10,7 @@ Route::prefix('membership')->middleware('membership.auth')->name('membership.')-
     Route::apiResource('transaction', TransactionController::class);
 
     Route::get('member/datalist', [MemberController::class, 'datalist'])->name('member.datalist');
+    Route::get('member/show-user/{user}', [MemberController::class, 'showUser'])->name('member.showUser');
+    Route::post('member/unbind/{user}', [MemberController::class, 'unbind'])->name('member.unbind');
     Route::apiResource('member', MemberController::class);
 });
