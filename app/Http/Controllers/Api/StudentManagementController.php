@@ -169,25 +169,33 @@ class StudentManagementController extends Controller
         }
 
         try {
-            $enrollmentsCount = $student->enrollments()->count();
+            return DB::transaction(function () use ($student) {
+                $student->quizResults()->delete();
 
-            if ($enrollmentsCount > 0) {
+                $student->progress()->delete();
+
+                $student->reviews()->delete();
+
+                $student->payments()->delete();
+
+                $student->enrollments()->delete();
+
+                $student->userCredentials()->delete();
+
+                $student->userProfile()->delete();
+
+                $student->delete();
+
                 return response()->json([
-                    'status' => 'error',
-                    'message' => 'Cannot delete student with existing enrollments. Please remove enrollments first.'
-                ], 422);
-            }
-
-            $student->delete();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Student deleted successfully'
-            ], 200);
+                    'status' => 'success',
+                    'message' => 'Student and all related data deleted successfully'
+                ], 200);
+            });
         } catch (\Exception $e) {
             Log::error('Error deleting student', [
                 'student_id' => $student->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([

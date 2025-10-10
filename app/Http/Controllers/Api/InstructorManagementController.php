@@ -80,8 +80,10 @@ class InstructorManagementController extends Controller
                 ], 201);
             });
         } catch (\Exception $e) {
-            Log::error('Error creating instructor: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
+            Log::error('Error creating instructor', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'status' => 'error',
@@ -120,22 +122,31 @@ class InstructorManagementController extends Controller
 
         try {
             return DB::transaction(function () use ($request, $instructor) {
-                $data = $request->validated();
+                $validated = $request->validated();
 
-                $instructor->update($data);
+                $updateData = [];
 
-                if (isset($data['email']) && $instructor->email !== $data['email']) {
-                    $credential = UserCredential::where('user_id', $instructor->id)
-                        ->where('type', 'email')
-                        ->first();
-
-                    if ($credential) {
-                        $credential->update([
-                            'identifier' => $data['email'],
-                        ]);
-                    }
+                if (isset($validated['name'])) {
+                    $updateData['name'] = $validated['name'];
                 }
 
+                if (isset($validated['email'])) {
+                    $updateData['email'] = $validated['email'];
+                }
+
+                if (!empty($updateData)) {
+                    $instructor->update($updateData);
+                }
+
+                if (isset($validated['email']) && $validated['email'] !== $instructor->getOriginal('email')) {
+                    UserCredential::where('user_id', $instructor->id)
+                        ->where('type', 'email')
+                        ->update([
+                            'identifier' => $validated['email'],
+                        ]);
+                }
+
+                $instructor->refresh();
                 $instructor->loadCount('courseInstructures');
 
                 return response()->json([
@@ -145,11 +156,16 @@ class InstructorManagementController extends Controller
                 ], 200);
             });
         } catch (\Exception $e) {
-            Log::error('Error updating instructor: ' . $e->getMessage());
+            Log::error('Error updating instructor', [
+                'instructor_id' => $instructor->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to update instructor'
+                'message' => 'Failed to update instructor',
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -180,11 +196,15 @@ class InstructorManagementController extends Controller
                 ]
             ], 200);
         } catch (\Exception $e) {
-            Log::error('Error resetting instructor password: ' . $e->getMessage());
+            Log::error('Error resetting instructor password', [
+                'instructor_id' => $instructor->id,
+                'error' => $e->getMessage()
+            ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to reset password'
+                'message' => 'Failed to reset password',
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -201,27 +221,35 @@ class InstructorManagementController extends Controller
         }
 
         try {
-            $coursesCount = $instructor->courseInstructures()->count();
+            return DB::transaction(function () use ($instructor) {
+                $instructor->reviews()->delete();
 
-            if ($coursesCount > 0) {
+                $instructor->courseInstructures()->detach();
+
+                $instructor->bootcampInstructors()->detach();
+
+                $instructor->userCredentials()->delete();
+
+                $instructor->userProfile()->delete();
+
+                $instructor->delete();
+
                 return response()->json([
-                    'status' => 'error',
-                    'message' => 'Cannot delete instructor with existing courses. Please reassign or remove courses first.'
-                ], 422);
-            }
-
-            $instructor->delete();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Instructor deleted successfully'
-            ], 200);
+                    'status' => 'success',
+                    'message' => 'Instructor and all related data deleted successfully'
+                ], 200);
+            });
         } catch (\Exception $e) {
-            Log::error('Error deleting instructor: ' . $e->getMessage());
+            Log::error('Error deleting instructor', [
+                'instructor_id' => $instructor->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to delete instructor'
+                'message' => 'Failed to delete instructor',
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
