@@ -151,13 +151,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/instructor-management', [InstructorManagementController::class, 'index']);
     Route::post('/instructor-management', [InstructorManagementController::class, 'store']);
     Route::get('/instructor-management/{instructor}', [InstructorManagementController::class, 'show']);
-    Route::put('/instructor-management/{instructor}', [InstructorManagementController::class, 'update']);
+    Route::post('/instructor-management/{instructor}', [InstructorManagementController::class, 'update']);
     Route::post('/instructor-management/{instructor}/reset-password', [InstructorManagementController::class, 'resetPassword']);
     Route::delete('/instructor-management/{instructor}', [InstructorManagementController::class, 'destroy']);
 
     Route::get('/student-management', [StudentManagementController::class, 'index']);
     Route::get('/student-management/{student}', [StudentManagementController::class, 'show']);
-    Route::put('/student-management/{student}', [StudentManagementController::class, 'update']);
+    Route::post('/student-management/{student}', [StudentManagementController::class, 'update']);
     Route::post('/student-management/{student}/reset-password', [StudentManagementController::class, 'resetPassword']);
     Route::delete('/student-management/{student}', [StudentManagementController::class, 'destroy']);
 });

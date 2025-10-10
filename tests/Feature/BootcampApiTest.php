@@ -24,11 +24,15 @@ describe('bootcamp crud api', function () {
 
     describe('guest access', function () {
         it('guest can only see published bootcamps', function () {
-            Bootcamp::factory()->count(3)->published()->create()->each(function ($bootcamp) {
+            $instructor = User::factory()->instructor()->create();
+
+            Bootcamp::factory()->count(3)->published()->create()->each(function ($bootcamp) use ($instructor) {
                 $bootcamp->categories()->attach($this->categories->random(2)->pluck('id'));
+                $bootcamp->instructors()->attach($instructor->id);
             });
-            Bootcamp::factory()->count(2)->draft()->create()->each(function ($bootcamp) {
+            Bootcamp::factory()->count(2)->draft()->create()->each(function ($bootcamp) use ($instructor) {
                 $bootcamp->categories()->attach($this->categories->random(2)->pluck('id'));
+                $bootcamp->instructors()->attach($instructor->id);
             });
 
             getJson('/api/bootcamps')
@@ -37,8 +41,10 @@ describe('bootcamp crud api', function () {
         });
 
         it('guest can get published bootcamp details', function () {
+            $instructor = User::factory()->instructor()->create();
             $bootcamp = Bootcamp::factory()->published()->create();
             $bootcamp->categories()->attach($this->categories->take(2)->pluck('id'));
+            $bootcamp->instructors()->attach($instructor->id);
 
             getJson("/api/bootcamps/{$bootcamp->slug}")
                 ->assertOk()
@@ -46,7 +52,9 @@ describe('bootcamp crud api', function () {
         });
 
         it('guest cannot see draft bootcamp details', function () {
+            $instructor = User::factory()->instructor()->create();
             $draftBootcamp = Bootcamp::factory()->draft()->create();
+            $draftBootcamp->instructors()->attach($instructor->id);
 
             getJson("/api/bootcamps/{$draftBootcamp->slug}")
                 ->assertForbidden();
@@ -62,22 +70,19 @@ describe('bootcamp crud api', function () {
         it('admin can see all bootcamps regardless of status', function () {
             $instructor = User::factory()->instructor()->create();
 
-            Bootcamp::factory()->count(2)->published()->create([
-                'user_id' => $instructor->id
-            ])->each(function ($bootcamp) {
+            Bootcamp::factory()->count(2)->published()->create()->each(function ($bootcamp) use ($instructor) {
                 $bootcamp->categories()->attach($this->categories->first()->id);
+                $bootcamp->instructors()->attach($instructor->id);
             });
 
-            Bootcamp::factory()->count(2)->draft()->create([
-                'user_id' => $instructor->id
-            ])->each(function ($bootcamp) {
+            Bootcamp::factory()->count(2)->draft()->create()->each(function ($bootcamp) use ($instructor) {
                 $bootcamp->categories()->attach($this->categories->first()->id);
+                $bootcamp->instructors()->attach($instructor->id);
             });
 
-            Bootcamp::factory()->count(1)->rejected()->create([
-                'user_id' => $instructor->id
-            ])->each(function ($bootcamp) {
+            Bootcamp::factory()->count(1)->rejected()->create()->each(function ($bootcamp) use ($instructor) {
                 $bootcamp->categories()->attach($this->categories->first()->id);
+                $bootcamp->instructors()->attach($instructor->id);
             });
 
             expect(Bootcamp::count())->toBe(5);
@@ -90,16 +95,14 @@ describe('bootcamp crud api', function () {
         it('admin can filter bootcamps by status', function () {
             $instructor = User::factory()->instructor()->create();
 
-            Bootcamp::factory()->count(2)->published()->create([
-                'user_id' => $instructor->id
-            ])->each(function ($bootcamp) {
+            Bootcamp::factory()->count(2)->published()->create()->each(function ($bootcamp) use ($instructor) {
                 $bootcamp->categories()->attach($this->categories->first()->id);
+                $bootcamp->instructors()->attach($instructor->id);
             });
 
-            Bootcamp::factory()->count(3)->draft()->create([
-                'user_id' => $instructor->id
-            ])->each(function ($bootcamp) {
+            Bootcamp::factory()->count(3)->draft()->create()->each(function ($bootcamp) use ($instructor) {
                 $bootcamp->categories()->attach($this->categories->first()->id);
+                $bootcamp->instructors()->attach($instructor->id);
             });
 
             expect(Bootcamp::count())->toBe(5);
@@ -116,6 +119,8 @@ describe('bootcamp crud api', function () {
         });
 
         it('admin can create bootcamp', function () {
+            $instructor = User::factory()->instructor()->create();
+
             $bootcampData = [
                 'title' => 'Test Bootcamp',
                 'description' => 'This is a test bootcamp',
@@ -126,6 +131,7 @@ describe('bootcamp crud api', function () {
                 'seat' => 20,
                 'contact_person' => 'Admin Test',
                 'category_ids' => [$this->categories->first()->id],
+                'instructor_ids' => [$instructor->id],
             ];
 
             postJson('/api/bootcamps', $bootcampData)
@@ -134,7 +140,9 @@ describe('bootcamp crud api', function () {
         });
 
         it('admin can verify draft bootcamp', function () {
+            $instructor = User::factory()->instructor()->create();
             $draftBootcamp = Bootcamp::factory()->draft()->create(['verified_at' => null]);
+            $draftBootcamp->instructors()->attach($instructor->id);
 
             postJson("/api/bootcamps/{$draftBootcamp->slug}/verify", [
                 'status' => 'publish'
@@ -153,20 +161,18 @@ describe('bootcamp crud api', function () {
         it('instructor can see only their own bootcamps', function () {
             $otherInstructor = User::factory()->instructor()->create();
 
-            Bootcamp::factory()->count(2)->published()->create([
-                'user_id' => $this->instructor->id
-            ])->each(function ($bootcamp) {
+            Bootcamp::factory()->count(2)->published()->create()->each(function ($bootcamp) {
                 $bootcamp->categories()->attach($this->categories->first()->id);
+                $bootcamp->instructors()->attach($this->instructor->id);
             });
 
-            Bootcamp::factory()->count(3)->published()->create([
-                'user_id' => $otherInstructor->id
-            ])->each(function ($bootcamp) {
+            Bootcamp::factory()->count(3)->published()->create()->each(function ($bootcamp) use ($otherInstructor) {
                 $bootcamp->categories()->attach($this->categories->first()->id);
+                $bootcamp->instructors()->attach($otherInstructor->id);
             });
 
             expect(Bootcamp::count())->toBe(5);
-            expect(Bootcamp::where('user_id', $this->instructor->id)->count())->toBe(2);
+            expect(Bootcamp::whereHas('instructors', fn($q) => $q->where('users.id', $this->instructor->id))->count())->toBe(2);
 
             getJson('/api/bootcamps')
                 ->assertOk()
@@ -184,6 +190,7 @@ describe('bootcamp crud api', function () {
                 'seat' => 15,
                 'contact_person' => 'Instructor Test',
                 'category_ids' => [$this->categories->first()->id],
+                'instructor_ids' => [$this->instructor->id],
             ];
 
             postJson('/api/bootcamps', $bootcampData)
@@ -205,6 +212,12 @@ describe('bootcamp crud api', function () {
                 'price' => 1000000,
             ]);
             $bootcamp->categories()->attach($this->categories->first()->id);
+            $bootcamp->instructors()->attach($this->instructor->id);
+
+            $this->assertDatabaseHas('bootcamp_instructors', [
+                'bootcamp_id' => $bootcamp->id,
+                'user_id' => $this->instructor->id,
+            ]);
 
             $response = putJson("/api/bootcamps/{$bootcamp->slug}", [
                 'title' => 'Updated Bootcamp',
@@ -225,19 +238,17 @@ describe('bootcamp crud api', function () {
 
         it('instructor cannot update other instructor bootcamp', function () {
             $otherInstructor = User::factory()->instructor()->create();
-            $bootcamp = Bootcamp::factory()->draft()->create([
-                'user_id' => $otherInstructor->id
-            ]);
+            $bootcamp = Bootcamp::factory()->draft()->create();
             $bootcamp->categories()->attach($this->categories->first()->id);
+            $bootcamp->instructors()->attach($otherInstructor->id);
 
             putJson("/api/bootcamps/{$bootcamp->slug}", ['title' => 'Updated Title'])
                 ->assertForbidden();
         });
 
         it('instructor cannot verify bootcamp', function () {
-            $draftBootcamp = Bootcamp::factory()->draft()->create([
-                'user_id' => $this->instructor->id
-            ]);
+            $draftBootcamp = Bootcamp::factory()->draft()->create();
+            $draftBootcamp->instructors()->attach($this->instructor->id);
 
             postJson("/api/bootcamps/{$draftBootcamp->slug}/verify", [
                 'status' => 'publish'
@@ -252,11 +263,15 @@ describe('bootcamp crud api', function () {
         });
 
         it('student can only see published bootcamps', function () {
-            Bootcamp::factory()->count(2)->published()->create()->each(function ($bootcamp) {
+            $instructor = User::factory()->instructor()->create();
+
+            Bootcamp::factory()->count(2)->published()->create()->each(function ($bootcamp) use ($instructor) {
                 $bootcamp->categories()->attach($this->categories->first()->id);
+                $bootcamp->instructors()->attach($instructor->id);
             });
-            Bootcamp::factory()->count(1)->draft()->create()->each(function ($bootcamp) {
+            Bootcamp::factory()->count(1)->draft()->create()->each(function ($bootcamp) use ($instructor) {
                 $bootcamp->categories()->attach($this->categories->first()->id);
+                $bootcamp->instructors()->attach($instructor->id);
             });
 
             getJson('/api/bootcamps')
@@ -268,6 +283,7 @@ describe('bootcamp crud api', function () {
             postJson('/api/bootcamps', [
                 'title' => 'Test Bootcamp',
                 'category_ids' => [$this->categories->first()->id],
+                'instructor_ids' => [User::factory()->instructor()->create()->id],
                 'location' => 'Jakarta',
                 'start_at' => now()->addMonth()->format('Y-m-d H:i:s'),
                 'end_at' => now()->addMonth()->addDays(5)->format('Y-m-d H:i:s'),
@@ -279,7 +295,9 @@ describe('bootcamp crud api', function () {
         });
 
         it('student cannot update bootcamp', function () {
+            $instructor = User::factory()->instructor()->create();
             $bootcamp = Bootcamp::factory()->published()->create();
+            $bootcamp->instructors()->attach($instructor->id);
 
             putJson("/api/bootcamps/{$bootcamp->slug}", ['title' => 'Updated'])
                 ->assertForbidden();
