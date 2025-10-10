@@ -148,11 +148,17 @@ class BootcampController extends Controller
                 'data' => new BootcampResource($bootcamp)
             ], 200);
         } catch (\Exception $e) {
-            Log::error('Error updating bootcamp: ' . $e->getMessage());
+            Log::error('Error updating bootcamp: ' . $e->getMessage(), [
+                'bootcamp_id' => $bootcamp->id,
+                'user_id' => $request->user()?->id,
+                'data' => $request->validated(),
+                'exception' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to update bootcamp'
+                'message' => 'Failed to update bootcamp',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
     }
