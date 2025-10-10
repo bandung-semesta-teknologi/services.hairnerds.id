@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Membership\MemberStoreRequest;
 use App\Http\Requests\Membership\MemberUpdateRequest;
 use App\Http\Resources\Membership\MemberResource;
+use App\Http\Resources\Membership\MembershipUserResource;
 use App\Models\MembershipSerial;
 use App\Models\User;
 use Dedoc\Scramble\Attributes\Group;
@@ -83,6 +84,20 @@ class MemberController extends Controller
     public function show(MembershipSerial $member)
     {
         return new MemberResource($member);
+    }
+
+    /**
+     * Member Membership Show User
+     *
+     * Show membership user information.
+     */
+    public function showUser(string $member)
+    {
+        $user = User::whereHas('userProfile', function ($query) use ($member) {
+            $query->where('user_uuid_supabase', $member);
+        })->with(['membershipSerial'])->firstOrFail();
+
+        return new MembershipUserResource($user);
     }
 
     /**
