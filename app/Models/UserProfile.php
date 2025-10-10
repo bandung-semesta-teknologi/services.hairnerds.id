@@ -16,4 +16,9 @@ class UserProfile extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function membershipSerial()
+    {
+        return $this->hasOne(MembershipSerial::class, 'used_by', 'user_uuid_supabase');
+    }
 }

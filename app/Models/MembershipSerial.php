@@ -21,4 +21,9 @@ class MembershipSerial extends Model
     {
         return 'serial_number';
     }
+
+    public function userProfile()
+    {
+        return $this->belongsTo(UserProfile::class, 'used_by', 'user_uuid_supabase');
+    }
 }

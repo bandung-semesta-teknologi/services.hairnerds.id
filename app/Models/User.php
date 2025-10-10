@@ -96,4 +96,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function membershipSerial()
+    {
+        return $this->hasOneThrough(MembershipSerial::class, UserProfile::class, 'user_id', 'used_by', 'id', 'user_uuid_supabase');
+    }
 }
