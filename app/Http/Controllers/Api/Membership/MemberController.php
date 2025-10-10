@@ -10,7 +10,6 @@ use App\Models\MembershipSerial;
 use App\Models\User;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -83,8 +82,6 @@ class MemberController extends Controller
      */
     public function show(MembershipSerial $member)
     {
-        $member->load('membershipType');
-
         return new MemberResource($member);
     }
 
