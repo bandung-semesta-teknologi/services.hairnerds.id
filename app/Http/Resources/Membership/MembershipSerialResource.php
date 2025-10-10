@@ -5,7 +5,7 @@ namespace App\Http\Resources\Membership;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class MemberResource extends JsonResource
+class MembershipSerialResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
