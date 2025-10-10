@@ -23,7 +23,7 @@ class MemberUpdateRequest extends FormRequest
     {
         return [
             'serial_number' => 'required|string|max:100',
-            'card_no' => 'required|string|max:50|unique:membership_serials,card_no',
+            'card_number' => 'required|string|max:50|unique:membership_serials,card_number',
             'used_by' => 'required|string',
             'email' => 'required|email|max:255|unique:users,email',
             'phone_number' => 'required|string',
