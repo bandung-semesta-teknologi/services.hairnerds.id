@@ -136,9 +136,9 @@ class BootcampController extends Controller
 
             $bootcamp->update($data);
 
-            if ($categories !== null) {
-                $categoryIds = $this->categoryService->resolveCategoryIds($categories);
-                $bootcamp->categories()->sync($categoryIds);
+            if ($categoryIds !== null) {
+                $resolvedCategoryIds = $this->categoryService->resolveCategoryIds($categoryIds);
+                $bootcamp->categories()->sync($resolvedCategoryIds);
             }
 
             if ($instructorIds !== null) {

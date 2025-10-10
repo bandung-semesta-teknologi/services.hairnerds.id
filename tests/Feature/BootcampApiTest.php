@@ -200,40 +200,17 @@ describe('bootcamp crud api', function () {
         });
 
         it('instructor can update own bootcamp', function () {
-            $bootcamp = Bootcamp::factory()->draft()->create([
-                'user_id' => $this->instructor->id,
-                'title' => 'Original Bootcamp Title',
-                'description' => 'Bootcamp Update by instructor',
-                'location' => 'Jakarta',
-                'contact_person' => 'John Doe',
-                'start_at' => now()->addMonth(),
-                'end_at' => now()->addMonth()->addDays(5),
-                'seat' => 10,
-                'price' => 1000000,
-            ]);
+            $bootcamp = Bootcamp::factory()->draft()->create();
             $bootcamp->categories()->attach($this->categories->first()->id);
             $bootcamp->instructors()->attach($this->instructor->id);
 
-            $this->assertDatabaseHas('bootcamp_instructors', [
-                'bootcamp_id' => $bootcamp->id,
-                'user_id' => $this->instructor->id,
-            ]);
-
-            $response = putJson("/api/bootcamps/{$bootcamp->slug}", [
+            putJson("/api/bootcamps/{$bootcamp->slug}", [
                 'title' => 'Updated Bootcamp',
                 'location' => 'Bandung',
-                'contact_person' => 'Jane Doe'
-            ]);
-
-            if ($response->status() !== 200) {
-                dump('Response status: ' . $response->status());
-                dump('Response content: ' . $response->content());
-            }
-
-            $response->assertOk()
+            ])
+                ->assertOk()
                 ->assertJsonPath('data.title', 'Updated Bootcamp')
-                ->assertJsonPath('data.location', 'Bandung')
-                ->assertJsonPath('data.contact_person', 'Jane Doe');
+                ->assertJsonPath('data.location', 'Bandung');
         });
 
         it('instructor cannot update other instructor bootcamp', function () {

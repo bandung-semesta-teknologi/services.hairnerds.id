@@ -63,6 +63,12 @@ class BootcampFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'publish',
+        ]);
+    }
+
+    public function verified(): static
+    {
+        return $this->state(fn (array $attributes) => [
             'verified_at' => now(),
         ]);
     }
@@ -80,6 +86,13 @@ class BootcampFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'status' => 'rejected',
             'verified_at' => null,
+        ]);
+    }
+
+    public function unpublished(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'unpublish',
         ]);
     }
 }
