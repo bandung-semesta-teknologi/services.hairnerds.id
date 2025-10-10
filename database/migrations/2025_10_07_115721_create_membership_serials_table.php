@@ -15,7 +15,7 @@ return new class extends Migration
         Schema::create('membership_serials', function (Blueprint $table) {
             $table->id();
             $table->string('serial_number')->unique();
-            $table->string('card_no')->nullable();
+            $table->string('card_number')->nullable();
             $table->string('type')->default(MembershipType::Regular->value); // premium, reguler
             $table->tinyInteger('is_used')->default(0); // 0 = not used, 1 = used
             $table->uuid('used_by')->nullable();
