@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Membership;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Membership\MemberStoreRequest;
+use App\Http\Requests\Membership\MemberUnbindRequest;
 use App\Http\Requests\Membership\MemberUpdateRequest;
 use App\Http\Resources\Membership\MemberResource;
 use App\Http\Resources\Membership\MembershipUserResource;
@@ -182,5 +183,62 @@ class MemberController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    /**
+     * Member Membership Unbind
+     *
+     * Unbind the specified resource in storage.
+     */
+    public function unbind(MemberUnbindRequest $request, MembershipSerial $serial_number)
+    {
+        try {
+            $data = $request->validated();
+            $data['is_used'] = true;
+            $data['used_at'] = now();
+
+            DB::beginTransaction();
+
+            /**
+             * In the future, implement the logic to update is_member column
+             * and add validated data from in users table using the validated
+             * data from $request
+             */
+
+            /* Check if email exists */
+            $user = User::where('email', $data['email'])->first();
+            if (!$user) {
+                throw new \Exception('Email does not exist.');
+            }
+
+            $user->userProfile()->update([
+                'serial_number' => $data['serial_number'],
+                'card_number' => $data['card_number'],
+            ]);
+
+            /* Check if user is already a member */
+            if ($serial_number->is_used) {
+                throw new \Exception('Membership serial number is already used.');
+            }
+
+            /* Claim Membership Serial Number (Change is_used column to true) */
+            $serial_number->update($data);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Member updated successfully.',
+                'data' => new MemberResource($serial_number),
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating member: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' =>  $e->getMessage(),
+            ], 500);
+        }
     }
 }
