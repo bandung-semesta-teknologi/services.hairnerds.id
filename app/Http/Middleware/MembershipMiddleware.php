@@ -46,6 +46,8 @@ class MembershipMiddleware
             throw new \Exception('JWT secret is not configured.');
         }
 
+        JWT::$leeway = 90; // 1:30 minute leeway to account for clock skew
+
         return JWT::decode($token, new Key($jwtSecret, 'HS256'));
     }
 }
