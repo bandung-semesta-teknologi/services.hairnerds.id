@@ -142,20 +142,19 @@ class DatabaseSeeder extends Seeder
 
         Course::factory()->count(3)->published()->verified()->create()->each(function ($course) use ($categories, $instructors) {
             $course->categories()->attach($categories->random(rand(1, 2))->pluck('id'));
-            $course->instructors()->attach($instructors->random(1)->pluck('id'));
+            $course->instructors()->attach($instructors->random(rand(1, 2))->pluck('id'));
         });
     }
 
     private function createBootcamps(): void
     {
         $categories = Category::all();
-        $instructor = User::where('role', 'instructor')->first();
+        $instructors = User::where('role', 'instructor')->get();
 
-        if ($instructor) {
-            \App\Models\Bootcamp::factory()->count(1)->published()->verified()->create([
-                'user_id' => $instructor->id
-            ])->each(function ($bootcamp) use ($categories) {
+        if ($instructors->isNotEmpty()) {
+            \App\Models\Bootcamp::factory()->count(1)->published()->verified()->create()->each(function ($bootcamp) use ($categories, $instructors) {
                 $bootcamp->categories()->attach($categories->random(1)->pluck('id'));
+                $bootcamp->instructors()->attach($instructors->random(rand(1, 2))->pluck('id'));
             });
         }
     }

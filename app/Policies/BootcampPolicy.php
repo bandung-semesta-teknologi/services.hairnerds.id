@@ -22,7 +22,7 @@ class BootcampPolicy
             return true;
         }
 
-        if ($user->role === 'instructor' && $bootcamp->user_id === $user->id) {
+        if ($user->role === 'instructor' && $bootcamp->instructors->contains($user)) {
             return true;
         }
 
@@ -48,7 +48,7 @@ class BootcampPolicy
             return true;
         }
 
-        if ($user->role === 'instructor' && $bootcamp->user_id === $user->id) {
+        if ($user->role === 'instructor' && $bootcamp->instructors->contains($user)) {
             return true;
         }
 
@@ -65,7 +65,7 @@ class BootcampPolicy
             return true;
         }
 
-        if ($user->role === 'instructor' && $bootcamp->user_id === $user->id) {
+        if ($user->role === 'instructor' && $bootcamp->instructors->contains($user)) {
             return true;
         }
 

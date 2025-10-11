@@ -104,7 +104,7 @@ class StudentManagementController extends Controller
         }
     }
 
-    public function resetPassword(StudentResetPasswordRequest $request, User $student)
+    public function resetPassword(User $student)
     {
         $this->authorize('resetPassword', $student);
 

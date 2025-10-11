@@ -15,7 +15,8 @@ class BootcampWithFaqUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'instructor_id' => 'sometimes|required|exists:users,id',
+            'instructor_ids' => 'sometimes|array',
+            'instructor_ids.*' => 'exists:users,id',
             'title' => 'sometimes|required|string|max:255',
             'start_at' => 'sometimes|required|date',
             'end_at' => 'sometimes|required|date|after:start_at',

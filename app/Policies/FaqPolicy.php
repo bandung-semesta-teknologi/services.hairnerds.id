@@ -40,7 +40,7 @@ class FaqPolicy
             }
 
             if ($faqableType === 'Bootcamp') {
-                return $faq->faqable && $faq->faqable->user_id === $user->id;
+                return $faq->faqable && $faq->faqable->instructors->contains($user);
             }
         }
 
@@ -84,7 +84,7 @@ class FaqPolicy
             }
 
             if ($faqableType === 'Bootcamp') {
-                return $faq->faqable && $faq->faqable->user_id === $user->id;
+                return $faq->faqable && $faq->faqable->instructors->contains($user);
             }
         }
 
@@ -109,7 +109,7 @@ class FaqPolicy
             }
 
             if ($faqableType === 'Bootcamp') {
-                return $faq->faqable && $faq->faqable->user_id === $user->id;
+                return $faq->faqable && $faq->faqable->instructors->contains($user);
             }
         }
 
