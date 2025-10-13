@@ -14,7 +14,9 @@ return new class extends Migration
         Schema::table('membership_transactions', function (Blueprint $table) {
             $table->dropColumn(['tenant_id', 'transaction_general_id', 'membership_code']);
             $table->string('merchant_id')->after('id');
-            $table->unsignedBigInteger('user_id')->after('merchant_id');
+            $table->string('merchant_name')->after('merchant_id');
+            $table->string('merchant_email')->after('merchant_name');
+            $table->unsignedBigInteger('user_id')->after('merchant_email');
             $table->uuid('user_uuid_supabase')->after('user_id');
             $table->string('serial_number')->after('user_uuid_supabase');
             $table->string('card_number')->after('serial_number');
@@ -32,7 +34,7 @@ return new class extends Migration
             $table->unsignedBigInteger('tenant_id')->after('transaction_general_id');
             $table->string('membership_code')->after('tenant_id');
             $table->string('address')->nullable(false)->change();
-            $table->dropColumn(['merchant_id', 'user_id', 'user_uuid_supabase', 'serial_number', 'card_number']);
+            $table->dropColumn(['merchant_id', 'user_id', 'user_uuid_supabase', 'serial_number', 'card_number', 'merchant_name', 'merchant_email']);
         });
     }
 };
