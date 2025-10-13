@@ -43,6 +43,7 @@ class PaymentResource extends JsonResource
             'amount' => $this->amount,
             'tax' => $this->tax,
             'discount' => $this->discount,
+            'discount_type' => $this->discount_type,
             'total' => $this->total,
             'status' => $this->status,
             'midtrans_transaction_id' => $this->midtrans_transaction_id,
