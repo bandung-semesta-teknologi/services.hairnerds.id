@@ -3,8 +3,14 @@
 namespace App\Http\Controllers\Api\Membership;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Membership\TransactionStoreRequest;
+use App\Models\MembershipTransaction;
+use App\Models\Payment;
+use App\Models\User;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 #[Group('Transaction Membership API')]
 class TransactionController extends Controller
@@ -30,13 +36,87 @@ class TransactionController extends Controller
     }
 
     /**
-     *  Transaction Membership Store
+     * Transaction Membership Store
      *
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(TransactionStoreRequest $request)
     {
-        //
+        try {
+            DB::beginTransaction();
+
+            $data = $request->validated();
+
+            // Get User by Card UUID
+            // $user = User::where('card_uuid', $request->card_number)->firstOrFail();
+            $user = User::whereHas('userProfile', function ($query) use ($request) {
+                $query->where('card_number', $request->card_number);
+            })->firstOrFail();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User not found with the provided card number.',
+                ], 404);
+            }
+
+            // Store Membership Transaction
+            $membershipTransaction = MembershipTransaction::create([
+                'merchant_id' => $data['merchant_id'],
+                'user_id' => $user->id,
+                'user_uuid_supabase' => $user->userProfile->user_uuid_supabase,
+                'serial_number' => $user->userProfile->serial_number,
+                'card_number' => $user->userProfile->card_number,
+                'name' => $user->name,
+                'email' => $user->email,
+                'address' => $user->userProfile->address,
+                'phone_number' => $user->phoneNumberCredential->identifier,
+                'total_amount' => $data['total'],
+            ]);
+
+            // Store Payment
+            $payment = Payment::create([
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'payable_type' => MembershipTransaction::class,
+                'payable_id' => $membershipTransaction->id,
+                'payment_method' => 'manual',
+                'amount' => $data['amount'],
+                'discount' => $data['discount'],
+                'discount_type' => $data['discount_type'],
+                'total' => $data['total'],
+                'merchant_id' => $data['merchant_id'],
+                'status' => 'paid',
+                'paid_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Transaction created successfully.',
+                'data' => [
+                    'user_id' => $user->userProfile->user_uuid_supabase,
+                    'user_name' => $user->name,
+                    'payment_code' => $payment->payment_code,
+                    'amount' => $payment->amount,
+                    'discount' => $payment->discount,
+                    'discount_type' => $payment->discount_type,
+                    'total' => $payment->total,
+                    'merchant_id' => $payment->payable->merchant_id,
+                    'status' => $payment->status,
+                    'paid_at' => $payment->paid_at,
+                ],
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating transaction: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create transaction.' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
