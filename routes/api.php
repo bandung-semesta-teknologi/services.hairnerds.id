@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\InstructorController;
 use App\Http\Controllers\Api\InstructorManagementController;
 use App\Http\Controllers\Api\LessonController;
+use App\Http\Controllers\Api\MyBootcampController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\QuestionController;
@@ -101,6 +102,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/bootcamps/{bootcamp}/enrolled-students', [BootcampController::class, 'enrolledStudents']);
     Route::get('/bootcamps/{bootcamp}/enrolled-students/stats', [BootcampController::class, 'enrolledStudentsStats']);
+
+    Route::get('/my-bootcamps', [MyBootcampController::class, 'index']);
+    Route::get('/my-bootcamps/{bootcamp:slug}', [MyBootcampController::class, 'show']);
+    Route::get('/my-bootcamps/{bootcamp:slug}/ticket', [MyBootcampController::class, 'ticket']);
 
     Route::post('/faqs', [FaqController::class, 'store']);
     Route::put('/faqs/{faq}', [FaqController::class, 'update']);
