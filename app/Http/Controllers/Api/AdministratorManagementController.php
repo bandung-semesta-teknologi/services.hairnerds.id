@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\InstructorStoreRequest;
-use App\Http\Requests\InstructorUpdateRequest;
-use App\Http\Resources\InstructorManagementResource;
+use App\Http\Requests\AdministratorStoreRequest;
+use App\Http\Requests\AdministratorUpdateRequest;
+use App\Http\Resources\AdministratorManagementResource;
 use App\Models\User;
 use App\Models\UserCredential;
 use App\Models\UserProfile;
@@ -15,15 +15,14 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class InstructorManagementController extends Controller
+class AdministratorManagementController extends Controller
 {
     public function index(Request $request)
     {
-        $this->authorize('viewAny', User::class);
+        $this->authorize('viewAnyAdmin', User::class);
 
-        $instructors = User::query()
-            ->where('role', 'instructor')
-            ->withCount('courseInstructures')
+        $administrators = User::query()
+            ->where('role', 'admin')
             ->when($request->search, function($q) use ($request) {
                 $q->where(function($query) use ($request) {
                     $query->where('name', 'like', '%' . $request->search . '%')
@@ -40,88 +39,84 @@ class InstructorManagementController extends Controller
             ->latest()
             ->paginate($request->per_page ?? 15);
 
-        return InstructorManagementResource::collection($instructors);
+        return AdministratorManagementResource::collection($administrators);
     }
 
-    public function store(InstructorStoreRequest $request)
+    public function store(AdministratorStoreRequest $request)
     {
-        $this->authorize('create', User::class);
+        $this->authorize('createAdmin', User::class);
 
         try {
             return DB::transaction(function () use ($request) {
-                $instructor = User::create([
+                $administrator = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
                     'password' => Hash::make($request->password),
-                    'role' => 'instructor',
+                    'role' => 'admin',
                     'email_verified_at' => now(),
                 ]);
 
                 UserProfile::create([
-                    'user_id' => $instructor->id,
+                    'user_id' => $administrator->id,
                     'address' => null,
                     'avatar' => null,
                     'date_of_birth' => null,
                 ]);
 
                 UserCredential::create([
-                    'user_id' => $instructor->id,
+                    'user_id' => $administrator->id,
                     'type' => 'email',
-                    'identifier' => $instructor->email,
+                    'identifier' => $administrator->email,
                     'verified_at' => now(),
                 ]);
 
-                $instructor->loadCount('courseInstructures');
-
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Instructor created successfully',
-                    'data' => new InstructorManagementResource($instructor)
+                    'message' => 'Administrator created successfully',
+                    'data' => new AdministratorManagementResource($administrator)
                 ], 201);
             });
         } catch (\Exception $e) {
-            Log::error('Error creating instructor', [
+            Log::error('Error creating administrator', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to create instructor',
+                'message' => 'Failed to create administrator',
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
 
-    public function show(User $instructor)
+    public function show(User $administrator)
     {
-        $this->authorize('view', $instructor);
+        $this->authorize('viewAdmin', [$administrator, $administrator]);
 
-        if ($instructor->role !== 'instructor') {
+        if ($administrator->role !== 'admin') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'User is not an instructor'
+                'message' => 'User is not an administrator'
             ], 404);
         }
 
-        $instructor->loadCount('courseInstructures');
-
-        return new InstructorManagementResource($instructor);
+        return new AdministratorManagementResource($administrator);
     }
 
-    public function update(InstructorUpdateRequest $request, User $instructor)
+    public function update(AdministratorUpdateRequest $request, User $administrator)
     {
-        $this->authorize('update', $instructor);
+        $this->authorize('updateAdmin', [$administrator, $administrator]);
 
-        if ($instructor->role !== 'instructor') {
+        if ($administrator->role !== 'admin') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'User is not an instructor'
+                'message' => 'User is not an administrator'
             ], 404);
         }
 
         try {
-            return DB::transaction(function () use ($request, $instructor) {
+            return DB::transaction(function () use ($request, $administrator) {
                 $validated = $request->validated();
 
                 $updateData = [];
@@ -135,56 +130,55 @@ class InstructorManagementController extends Controller
                 }
 
                 if (!empty($updateData)) {
-                    $instructor->update($updateData);
+                    $administrator->update($updateData);
                 }
 
-                if (isset($validated['email']) && $validated['email'] !== $instructor->getOriginal('email')) {
-                    UserCredential::where('user_id', $instructor->id)
+                if (isset($validated['email']) && $validated['email'] !== $administrator->getOriginal('email')) {
+                    UserCredential::where('user_id', $administrator->id)
                         ->where('type', 'email')
                         ->update([
                             'identifier' => $validated['email'],
                         ]);
                 }
 
-                $instructor->refresh();
-                $instructor->loadCount('courseInstructures');
+                $administrator->refresh();
 
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Instructor updated successfully',
-                    'data' => new InstructorManagementResource($instructor)
+                    'message' => 'Administrator updated successfully',
+                    'data' => new AdministratorManagementResource($administrator)
                 ], 200);
             });
         } catch (\Exception $e) {
-            Log::error('Error updating instructor', [
-                'instructor_id' => $instructor->id,
+            Log::error('Error updating administrator', [
+                'administrator_id' => $administrator->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to update instructor',
+                'message' => 'Failed to update administrator',
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
 
-    public function resetPassword(User $instructor)
+    public function resetPassword(User $administrator)
     {
-        $this->authorize('resetPassword', $instructor);
+        $this->authorize('resetPasswordAdmin', [$administrator, $administrator]);
 
-        if ($instructor->role !== 'instructor') {
+        if ($administrator->role !== 'admin') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'User is not an instructor'
+                'message' => 'User is not an administrator'
             ], 404);
         }
 
         try {
             $newPassword = Str::random(16);
 
-            $instructor->update([
+            $administrator->update([
                 'password' => Hash::make($newPassword),
             ]);
 
@@ -196,8 +190,8 @@ class InstructorManagementController extends Controller
                 ]
             ], 200);
         } catch (\Exception $e) {
-            Log::error('Error resetting instructor password', [
-                'instructor_id' => $instructor->id,
+            Log::error('Error resetting administrator password', [
+                'administrator_id' => $administrator->id,
                 'error' => $e->getMessage()
             ]);
 
@@ -209,46 +203,40 @@ class InstructorManagementController extends Controller
         }
     }
 
-    public function destroy(User $instructor)
+    public function destroy(User $administrator)
     {
-        $this->authorize('delete', $instructor);
+        $this->authorize('deleteAdmin', [$administrator, $administrator]);
 
-        if ($instructor->role !== 'instructor') {
+        if ($administrator->role !== 'admin') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'User is not an instructor'
+                'message' => 'User is not an administrator'
             ], 404);
         }
 
         try {
-            return DB::transaction(function () use ($instructor) {
-                $instructor->reviews()->delete();
+            return DB::transaction(function () use ($administrator) {
+                $administrator->userCredentials()->delete();
 
-                $instructor->courseInstructures()->detach();
+                $administrator->userProfile()->delete();
 
-                $instructor->bootcampInstructors()->detach();
-
-                $instructor->userCredentials()->delete();
-
-                $instructor->userProfile()->delete();
-
-                $instructor->delete();
+                $administrator->delete();
 
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Instructor and all related data deleted successfully'
+                    'message' => 'Administrator and all related data deleted successfully'
                 ], 200);
             });
         } catch (\Exception $e) {
-            Log::error('Error deleting instructor', [
-                'instructor_id' => $instructor->id,
+            Log::error('Error deleting administrator', [
+                'administrator_id' => $administrator->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to delete instructor',
+                'message' => 'Failed to delete administrator',
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }

@@ -239,12 +239,12 @@ describe('restful api authentication flow', function () {
         $file = UploadedFile::fake()->image('avatar.jpg');
 
         withHeader('Authorization', 'Bearer ' . $token)
-            ->putJson('/api/user', [
+            ->postJson('/api/user', [
                 'name' => 'John Doe',
                 'address' => 'Rumah Baru',
                 'date_of_birth' => now()->subYears(20)->toDateString(),
                 'avatar' => $file
-            ])->assertStatus(204);
+            ])->assertStatus(200);
 
         $user->refresh();
 
