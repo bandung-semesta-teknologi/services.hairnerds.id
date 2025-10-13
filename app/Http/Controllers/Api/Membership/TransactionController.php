@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Membership;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Membership\TransactionStoreRequest;
+use App\Http\Resources\Membership\TransactionResource;
 use App\Models\MembershipTransaction;
 use App\Models\Payment;
 use App\Models\User;
@@ -20,9 +21,38 @@ class TransactionController extends Controller
      *
      * Display a datalist of the transaction membership.
      */
-    public function datalist()
+    public function datalist(Request $request)
     {
-        //
+        $perPage = (int) ($request->input('per_page', 5));
+        $search = $request->input('search');
+        $merchantId = $request->input('merchant_id');
+
+        $payments = Payment::query()
+            ->where('payable_type', MembershipTransaction::class)
+            ->with(['payable'])
+            ->when($merchantId, function ($query, $merchantId) {
+                // Filter berdasarkan merchant_id yang ada di MembershipTransaction
+                $query->whereHas('payable', function ($q) use ($merchantId) {
+                    $q->where('merchant_id', $merchantId);
+                });
+            })
+            ->when($search, function ($query, $search) {
+                // Pencarian fleksibel di Payment atau MembershipTransaction
+                $query->where(function ($q) use ($search) {
+                    $q->where('reference', 'like', "%{$search}%")
+                        ->orWhereHas('payable', function ($sub) use ($search) {
+                            $sub->where('transaction_code', 'like', "%{$search}%")
+                                ->orWhere('member_name', 'like', "%{$search}%")
+                                ->orWhere('member_email', 'like', "%{$search}%")
+                                ->orWhere('merchant_name', 'like', "%{$search}%")
+                                ->orWhere('merchant_email', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->latest()
+            ->paginate($perPage);
+
+        return TransactionResource::collection($payments);
     }
 
     /**
@@ -33,6 +63,29 @@ class TransactionController extends Controller
     public function index()
     {
         //
+    }
+
+    /**
+     * Transaction Membership Index
+     *
+     * Display a listing of the transaction membership.
+     */
+    public function latestTransaction(Request $request)
+    {
+        $limit = $request->limit ?? 3;
+
+        $payments = Payment::query()
+            ->where('payable_type', MembershipTransaction::class)
+            ->with(['payable'])
+            ->limit($limit)
+            ->latest()
+            ->get();
+
+        return [
+            'status' => 'success',
+            'data' => TransactionResource::collection($payments),
+            'message' => 'Latest transaction retrieved successfully.',
+        ];
     }
 
     /**
@@ -63,6 +116,8 @@ class TransactionController extends Controller
             // Store Membership Transaction
             $membershipTransaction = MembershipTransaction::create([
                 'merchant_id' => $data['merchant_id'],
+                'merchant_name' => $data['merchant_name'],
+                'merchant_email' => $data['merchant_email'],
                 'user_id' => $user->id,
                 'user_uuid_supabase' => $user->userProfile->user_uuid_supabase,
                 'serial_number' => $user->userProfile->serial_number,

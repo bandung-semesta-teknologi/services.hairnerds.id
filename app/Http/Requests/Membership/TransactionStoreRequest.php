@@ -28,6 +28,8 @@ class TransactionStoreRequest extends FormRequest
             'discount_type' => 'required|string|in:fixed,percentage',
             'total' => 'required|numeric|min:0',
             'merchant_id' => 'required|string|max:50',
+            'merchant_name' => 'required|string|max:100',
+            'merchant_email' => 'required|email|max:100',
         ];
     }
 }
