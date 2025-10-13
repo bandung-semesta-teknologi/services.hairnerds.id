@@ -24,6 +24,19 @@ class MembershipSerial extends Model
 
     public function userProfile()
     {
-        return $this->belongsTo(UserProfile::class, 'used_by', 'user_uuid_supabase');
+        return $this->belongsTo(
+            UserProfile::class,
+            'used_by',
+            'user_uuid_supabase'
+        );
+    }
+
+    public function membershipTransactions()
+    {
+        return $this->hasMany(
+            MembershipTransaction::class,
+            'serial_number',
+            'serial_number'
+        );
     }
 }
