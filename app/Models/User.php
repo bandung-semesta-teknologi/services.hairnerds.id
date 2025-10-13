@@ -107,6 +107,18 @@ class User extends Authenticatable implements MustVerifyEmail
             'id',
             'user_uuid_supabase'
         )
-            ->latest('updated_at');
+            ->latest('used_at');
+    }
+
+    public function phoneNumberCredential()
+    {
+        return $this->hasOne(UserCredential::class)
+            ->where('type', 'phone');
+    }
+
+    public function emailCredential()
+    {
+        return $this->hasOne(UserCredential::class)
+            ->where('type', 'email');
     }
 }
