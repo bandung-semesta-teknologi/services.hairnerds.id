@@ -37,6 +37,27 @@ class CoursesBootcampsResource extends JsonResource
                     });
                 }, 0),
                 'reviews_count' => $this->reviews_count ?? ($this->whenLoaded('reviews', fn() => $this->reviews->count(), 0)),
+                'reviews_summary' => $this->when($this->relationLoaded('reviews') || isset($this->reviews_count), function () {
+                    $totalReviews = $this->reviews_count ?? $this->reviews->count();
+                    $averageRating = (float) $this->reviews_avg_rating ?? ($this->reviews->count() > 0 ? $this->reviews->avg('rating') : null);
+
+                    $ratingDistribution = null;
+                    if ($this->relationLoaded('reviews') && $this->reviews->count() > 0) {
+                        $ratingDistribution = [
+                            '5_stars' => $this->reviews->where('rating', 5)->count(),
+                            '4_stars' => $this->reviews->where('rating', 4)->count(),
+                            '3_stars' => $this->reviews->where('rating', 3)->count(),
+                            '2_stars' => $this->reviews->where('rating', 2)->count(),
+                            '1_star' => $this->reviews->where('rating', 1)->count(),
+                        ];
+                    }
+
+                    return [
+                        'total_reviews' => $totalReviews,
+                        'average_rating' => $averageRating,
+                        'rating_distribution' => $ratingDistribution,
+                    ];
+                }),
                 'students_count' => $this->enrollments_count ?? 0,
                 'average_rating' => $this->reviews_avg_rating ? (float) $this->reviews_avg_rating : null,
             ]);
