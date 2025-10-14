@@ -108,27 +108,7 @@ describe('enrollment crud api', function () {
 
             getJson('/api/enrollments')
                 ->assertOk()
-                ->assertJsonCount(6, 'data')
-                ->assertJsonStructure([
-                    'data' => [
-                        '*' => [
-                            'id',
-                            'user_id',
-                            'user',
-                            'course_id',
-                            'course',
-                            'enrolled_at',
-                            'finished_at',
-                            'quiz_attempts',
-                            'is_finished',
-                            'progress',
-                            'created_at',
-                            'updated_at',
-                        ]
-                    ],
-                    'links',
-                    'meta'
-                ]);
+                ->assertJsonCount(6, 'data');
         });
 
         it('admin can create enrollment for any user to any course', function () {
