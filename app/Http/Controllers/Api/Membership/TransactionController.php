@@ -8,6 +8,7 @@ use App\Http\Resources\Membership\TransactionResource;
 use App\Models\MembershipTransaction;
 use App\Models\Payment;
 use App\Models\User;
+use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,18 @@ class TransactionController extends Controller
         $perPage = (int) ($request->input('per_page', 5));
         $search = $request->input('search');
         $merchantId = $request->input('merchant_id');
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+
+        if ($dateFrom) {
+            $dateFrom = Carbon::parse($dateFrom)->startOfDay(); // 00:00:00
+        }
+
+        if ($dateTo) {
+            $dateTo = Carbon::parse($dateTo)->endOfDay(); // 23:59:59
+        }
+
+        DB::enableQueryLog();
 
         $payments = Payment::query()
             ->where('payable_type', MembershipTransaction::class)
@@ -34,6 +47,9 @@ class TransactionController extends Controller
                 $query->whereHas('payable', function ($q) use ($merchantId) {
                     $q->where('merchant_id', $merchantId);
                 });
+            })
+            ->when($dateFrom && $dateTo, function ($query) use ($dateFrom, $dateTo) {
+                $query->whereBetween('paid_at', [$dateFrom, $dateTo]);
             })
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
@@ -53,6 +69,8 @@ class TransactionController extends Controller
             ->latest()
             ->paginate($perPage);
 
+        // dd(DB::getQueryLog());
+
         return TransactionResource::collection($payments);
     }
 
@@ -61,12 +79,25 @@ class TransactionController extends Controller
         $perPage = (int) ($request->input('per_page', 5));
         $search = $request->input('search');
         $merchantId = $request->input('merchant_id');
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+
+        if ($dateFrom) {
+            $dateFrom = Carbon::parse($dateFrom)->startOfDay(); // 00:00:00
+        }
+
+        if ($dateTo) {
+            $dateTo = Carbon::parse($dateTo)->endOfDay(); // 23:59:59
+        }
 
         $payments = Payment::query()
             ->where('payable_type', MembershipTransaction::class)
             ->with(['payable'])
             ->whereRelation('payable', function ($query) use ($member_id) {
                 $query->where('user_uuid_supabase', $member_id);
+            })
+            ->when($dateFrom && $dateTo, function ($query) use ($dateFrom, $dateTo) {
+                $query->whereBetween('paid_at', [$dateFrom, $dateTo]);
             })
             ->when($merchantId, function ($query, $merchantId) {
                 $query->whereHas('payable', function ($q) use ($merchantId) {
@@ -161,6 +192,7 @@ class TransactionController extends Controller
             // Store Membership Transaction
             $membershipTransaction = MembershipTransaction::create([
                 'merchant_id' => $data['merchant_id'],
+                'merchant_user_id' => $data['merchant_user_id'],
                 'merchant_name' => $data['merchant_name'],
                 'merchant_email' => $data['merchant_email'],
                 'user_id' => $user->id,
@@ -185,7 +217,6 @@ class TransactionController extends Controller
                 'discount' => $data['discount'],
                 'discount_type' => $data['discount_type'],
                 'total' => $data['total'],
-                'merchant_id' => $data['merchant_id'],
                 'status' => 'paid',
                 'paid_at' => now(),
             ]);
@@ -203,7 +234,7 @@ class TransactionController extends Controller
                     'discount' => $payment->discount,
                     'discount_type' => $payment->discount_type,
                     'total' => $payment->total,
-                    'merchant_id' => $payment->payable->merchant_id,
+                    'merchant_user_id' => $payment->payable->merchant_user_id,
                     'status' => $payment->status,
                     'paid_at' => $payment->paid_at,
                 ],
