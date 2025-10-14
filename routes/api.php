@@ -1,5 +1,7 @@
 <?php
 
+require __DIR__ . '/membership.php';
+
 use App\Http\Controllers\Api\AdministratorManagementController;
 use App\Http\Controllers\Api\AnswerBankController;
 use App\Http\Controllers\Api\AttachmentController;

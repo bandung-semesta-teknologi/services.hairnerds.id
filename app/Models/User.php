@@ -85,4 +85,29 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function membershipSerial()
+    {
+        return $this->hasOneThrough(
+            MembershipSerial::class,
+            UserProfile::class,
+            'user_id',
+            'used_by',
+            'id',
+            'user_uuid_supabase'
+        )
+            ->latest('used_at');
+    }
+
+    public function phoneNumberCredential()
+    {
+        return $this->hasOne(UserCredential::class)
+            ->where('type', 'phone');
+    }
+
+    public function emailCredential()
+    {
+        return $this->hasOne(UserCredential::class)
+            ->where('type', 'email');
+    }
 }
