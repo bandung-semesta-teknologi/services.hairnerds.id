@@ -2,6 +2,7 @@
 
 require __DIR__ . '/membership.php';
 
+use App\Http\Controllers\Api\AdministratorManagementController;
 use App\Http\Controllers\Api\AnswerBankController;
 use App\Http\Controllers\Api\AttachmentController;
 use App\Http\Controllers\Api\AuthController;
@@ -11,12 +12,14 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\CourseStudentProgressController;
 use App\Http\Controllers\Api\CourseWithFaqController;
+use App\Http\Controllers\Api\CoursesBootcampsController;
 use App\Http\Controllers\Api\CurriculumController;
 use App\Http\Controllers\Api\EnrollmentController;
 use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\InstructorController;
 use App\Http\Controllers\Api\InstructorManagementController;
 use App\Http\Controllers\Api\LessonController;
+use App\Http\Controllers\Api\MyBootcampController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\QuestionController;
@@ -48,6 +51,8 @@ Route::get('/sections/{section}', [SectionController::class, 'show']);
 Route::get('/bootcamps', [BootcampController::class, 'index']);
 Route::get('/bootcamps/{bootcamp}', [BootcampController::class, 'show']);
 
+Route::get('/courses-bootcamps', [CoursesBootcampsController::class, 'index']);
+
 Route::get('/reviews', [ReviewController::class, 'index']);
 Route::get('/reviews/{review}', [ReviewController::class, 'show']);
 
@@ -60,7 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
 
     Route::get('/user', [AuthController::class, 'user']);
-    Route::put('/user', [AuthController::class, 'updateUser']);
+    Route::post('/user', [AuthController::class, 'updateUser']);
 
     Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
     Route::post('/email/verification-notification', [AuthController::class, 'resendEmail'])->name('verification.send');
@@ -99,6 +104,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/bootcamps/{bootcamp}/enrolled-students', [BootcampController::class, 'enrolledStudents']);
     Route::get('/bootcamps/{bootcamp}/enrolled-students/stats', [BootcampController::class, 'enrolledStudentsStats']);
+
+    Route::get('/my-bootcamps', [MyBootcampController::class, 'index']);
+    Route::get('/my-bootcamps/{bootcamp:slug}', [MyBootcampController::class, 'show']);
+    Route::get('/my-bootcamps/{bootcamp:slug}/ticket', [MyBootcampController::class, 'ticket']);
 
     Route::post('/faqs', [FaqController::class, 'store']);
     Route::put('/faqs/{faq}', [FaqController::class, 'update']);
@@ -149,6 +158,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/courses/{course:slug}/payment', [PaymentController::class, 'createCoursePayment']);
     Route::post('/bootcamps/{bootcamp}/payment', [PaymentController::class, 'createBootcampPayment']);
+
+    Route::get('/administrator-management', [AdministratorManagementController::class, 'index']);
+    Route::post('/administrator-management', [AdministratorManagementController::class, 'store']);
+    Route::get('/administrator-management/{administrator}', [AdministratorManagementController::class, 'show']);
+    Route::post('/administrator-management/{administrator}', [AdministratorManagementController::class, 'update']);
+    Route::post('/administrator-management/{administrator}/reset-password', [AdministratorManagementController::class, 'resetPassword']);
+    Route::delete('/administrator-management/{administrator}', [AdministratorManagementController::class, 'destroy']);
 
     Route::get('/instructor-management', [InstructorManagementController::class, 'index']);
     Route::post('/instructor-management', [InstructorManagementController::class, 'store']);

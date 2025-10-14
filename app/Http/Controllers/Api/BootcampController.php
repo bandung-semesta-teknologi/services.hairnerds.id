@@ -8,6 +8,7 @@ use App\Http\Requests\BootcampUpdateRequest;
 use App\Http\Requests\BootcampVerificationRequest;
 use App\Http\Resources\BootcampResource;
 use App\Http\Resources\BootcampEnrollmentResource;
+use App\Services\CategoryService;
 use Illuminate\Support\Facades\Gate;
 use App\Models\Payment;
 use App\Models\Bootcamp;
@@ -16,6 +17,13 @@ use Illuminate\Support\Facades\Log;
 
 class BootcampController extends Controller
 {
+    protected $categoryService;
+
+    public function __construct(CategoryService $categoryService)
+    {
+        $this->categoryService = $categoryService;
+    }
+
     public function index(Request $request)
     {
         $user = $this->resolveOptionalUser($request);
@@ -68,7 +76,8 @@ class BootcampController extends Controller
 
             $bootcamp = Bootcamp::create($data);
 
-            if (!empty($categoryIds)) {
+            if (!empty($categories)) {
+                $categoryIds = $this->categoryService->resolveCategoryIds($categories);
                 $bootcamp->categories()->attach($categoryIds);
             }
 
@@ -128,7 +137,8 @@ class BootcampController extends Controller
             $bootcamp->update($data);
 
             if ($categoryIds !== null) {
-                $bootcamp->categories()->sync($categoryIds);
+                $resolvedCategoryIds = $this->categoryService->resolveCategoryIds($categoryIds);
+                $bootcamp->categories()->sync($resolvedCategoryIds);
             }
 
             if ($instructorIds !== null) {
@@ -143,11 +153,17 @@ class BootcampController extends Controller
                 'data' => new BootcampResource($bootcamp)
             ], 200);
         } catch (\Exception $e) {
-            Log::error('Error updating bootcamp: ' . $e->getMessage());
+            Log::error('Error updating bootcamp: ' . $e->getMessage(), [
+                'bootcamp_id' => $bootcamp->id,
+                'user_id' => $request->user()?->id,
+                'data' => $request->validated(),
+                'exception' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to update bootcamp'
+                'message' => 'Failed to update bootcamp',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
     }
@@ -275,6 +291,7 @@ class BootcampController extends Controller
                 }
             })
             ->orderBy('paid_at', 'desc')
+
             ->paginate($request->per_page ?? 15);
 
         return BootcampEnrollmentResource::collection($enrollments);
