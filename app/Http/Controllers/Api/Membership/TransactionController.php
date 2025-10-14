@@ -26,9 +26,14 @@ class TransactionController extends Controller
     {
         $perPage = (int) ($request->input('per_page', 5));
         $search = $request->input('search');
+        $merchantParam = $request->input('merchant');
         $merchantId = $request->input('merchant_id');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
+
+        $merchantIds = $merchantParam
+            ? array_filter(explode(',', $merchantParam))
+            : [];
 
         if ($dateFrom) {
             $dateFrom = Carbon::parse($dateFrom)->startOfDay(); // 00:00:00
@@ -43,6 +48,11 @@ class TransactionController extends Controller
         $payments = Payment::query()
             ->where('payable_type', MembershipTransaction::class)
             ->with(['payable'])
+            ->when(!empty($merchantIds), function ($query) use ($merchantIds) {
+                $query->whereHas('payable', function ($q) use ($merchantIds) {
+                    $q->whereIn('merchant_id', $merchantIds);
+                });
+            })
             ->when($merchantId, function ($query, $merchantId) {
                 $query->whereHas('payable', function ($q) use ($merchantId) {
                     $q->where('merchant_id', $merchantId);
@@ -79,8 +89,13 @@ class TransactionController extends Controller
         $perPage = (int) ($request->input('per_page', 5));
         $search = $request->input('search');
         $merchantId = $request->input('merchant_id');
+        $merchantParam = $request->input('merchant');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
+
+        $merchantIds = $merchantParam
+            ? array_filter(explode(',', $merchantParam))
+            : [];
 
         if ($dateFrom) {
             $dateFrom = Carbon::parse($dateFrom)->startOfDay(); // 00:00:00
@@ -95,6 +110,11 @@ class TransactionController extends Controller
             ->with(['payable'])
             ->whereRelation('payable', function ($query) use ($member_id) {
                 $query->where('user_uuid_supabase', $member_id);
+            })
+            ->when(!empty($merchantIds), function ($query) use ($merchantIds) {
+                $query->whereHas('payable', function ($q) use ($merchantIds) {
+                    $q->whereIn('merchant_id', $merchantIds);
+                });
             })
             ->when($dateFrom && $dateTo, function ($query) use ($dateFrom, $dateTo) {
                 $query->whereBetween('paid_at', [$dateFrom, $dateTo]);
@@ -123,6 +143,19 @@ class TransactionController extends Controller
             ->paginate($perPage);
 
         return TransactionResource::collection($payments);
+    }
+
+    public function countTransaction()
+    {
+        $count = Payment::where('payable_type', MembershipTransaction::class)->count();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'total_transactions' => $count,
+            ],
+            'message' => 'Total transactions retrieved successfully.',
+        ]);
     }
 
     /**

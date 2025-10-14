@@ -9,6 +9,7 @@ Route::prefix('membership')->middleware('membership.auth')->name('membership.')-
     Route::get('transaction/datalist', [TransactionController::class, 'datalist'])->name('transaction.datalist');
     Route::get('transaction/datalist/member/{member_id}', [TransactionController::class, 'datalistMember'])->name('transaction.datalistMember');
     Route::get('transaction/latest', [TransactionController::class, 'latestTransaction'])->name('transaction.latest');
+    Route::get('transaction/count', [TransactionController::class, 'countTransaction'])->name('transaction.count');
     Route::apiResource('transaction', TransactionController::class);
 
     Route::get('member/datalist', [MemberController::class, 'datalist'])->name('member.datalist');
