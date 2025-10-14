@@ -25,6 +25,7 @@ class TransactionResource extends JsonResource
                     return [
                         'id' => $this->payable->id,
                         'merchant_id' => $this->payable->merchant_id,
+                        'merchant_user_id' => $this->payable->merchant_user_id,
                         'merchant_name' => $this->payable->merchant_name,
                         'merchant_email' => $this->payable->merchant_email,
                         'user_id' => $this->payable->user_id,
