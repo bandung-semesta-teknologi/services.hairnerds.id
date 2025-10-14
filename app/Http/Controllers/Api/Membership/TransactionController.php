@@ -31,19 +31,58 @@ class TransactionController extends Controller
             ->where('payable_type', MembershipTransaction::class)
             ->with(['payable'])
             ->when($merchantId, function ($query, $merchantId) {
-                // Filter berdasarkan merchant_id yang ada di MembershipTransaction
                 $query->whereHas('payable', function ($q) use ($merchantId) {
                     $q->where('merchant_id', $merchantId);
                 });
             })
             ->when($search, function ($query, $search) {
-                // Pencarian fleksibel di Payment atau MembershipTransaction
                 $query->where(function ($q) use ($search) {
-                    $q->where('reference', 'like', "%{$search}%")
+                    $q->where('payment_code', 'like', "%{$search}%")
+                        ->orWhere('user_name', 'like', "%{$search}%")
                         ->orWhereHas('payable', function ($sub) use ($search) {
-                            $sub->where('transaction_code', 'like', "%{$search}%")
-                                ->orWhere('member_name', 'like', "%{$search}%")
-                                ->orWhere('member_email', 'like', "%{$search}%")
+                            $sub->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%")
+                                ->orWhere('phone_number', 'like', "%{$search}%")
+                                ->orWhere('serial_number', 'like', "%{$search}%")
+                                ->orWhere('card_number', 'like', "%{$search}%")
+                                ->orWhere('merchant_name', 'like', "%{$search}%")
+                                ->orWhere('merchant_email', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->latest()
+            ->paginate($perPage);
+
+        return TransactionResource::collection($payments);
+    }
+
+    public function datalistMember(Request $request, string $member_id)
+    {
+        $perPage = (int) ($request->input('per_page', 5));
+        $search = $request->input('search');
+        $merchantId = $request->input('merchant_id');
+
+        $payments = Payment::query()
+            ->where('payable_type', MembershipTransaction::class)
+            ->with(['payable'])
+            ->whereRelation('payable', function ($query) use ($member_id) {
+                $query->where('user_uuid_supabase', $member_id);
+            })
+            ->when($merchantId, function ($query, $merchantId) {
+                $query->whereHas('payable', function ($q) use ($merchantId) {
+                    $q->where('merchant_id', $merchantId);
+                });
+            })
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('payment_code', 'like', "%{$search}%")
+                        ->orWhere('user_name', 'like', "%{$search}%")
+                        ->orWhereHas('payable', function ($sub) use ($search) {
+                            $sub->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%")
+                                ->orWhere('phone_number', 'like', "%{$search}%")
+                                ->orWhere('serial_number', 'like', "%{$search}%")
+                                ->orWhere('card_number', 'like', "%{$search}%")
                                 ->orWhere('merchant_name', 'like', "%{$search}%")
                                 ->orWhere('merchant_email', 'like', "%{$search}%");
                         });
@@ -72,10 +111,16 @@ class TransactionController extends Controller
      */
     public function latestTransaction(Request $request)
     {
-        $limit = $request->limit ?? 3;
+        $limit = $request->input('limit', 3);
+        $merchantId = $request->input('merchant_id', null);
 
         $payments = Payment::query()
             ->where('payable_type', MembershipTransaction::class)
+            ->when($merchantId, function ($query, $merchantId) {
+                $query->whereHas('payable', function ($q) use ($merchantId) {
+                    $q->where('merchant_id', $merchantId);
+                });
+            })
             ->with(['payable'])
             ->limit($limit)
             ->latest()
