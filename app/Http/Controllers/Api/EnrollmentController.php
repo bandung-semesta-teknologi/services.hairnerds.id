@@ -128,6 +128,7 @@ class EnrollmentController extends Controller
         return EnrollmentResource::collection($enrollments);
     }
 
+
     public function store(EnrollmentStoreRequest $request)
     {
         $this->authorize('create', Enrollment::class);

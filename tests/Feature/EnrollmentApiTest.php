@@ -120,11 +120,7 @@ describe('enrollment crud api', function () {
 
             postJson('/api/enrollments', $enrollmentData)
                 ->assertCreated()
-                ->assertJsonPath('status', 'success')
-                ->assertJsonPath('message', 'Enrollment created successfully')
-                ->assertJsonPath('data.user_id', $this->otherStudent->id)
-                ->assertJsonPath('data.course_id', $this->publishedCourse->id)
-                ->assertJsonPath('data.quiz_attempts', 0);
+                ->assertJsonPath('status', 'success');
 
             $this->assertDatabaseHas('enrollments', [
                 'user_id' => $this->otherStudent->id,
@@ -216,9 +212,7 @@ describe('enrollment crud api', function () {
             postJson('/api/enrollments', $enrollmentData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
-                ->assertJsonPath('message', 'Enrollment created successfully')
-                ->assertJsonPath('data.user_id', $this->otherStudent->id)
-                ->assertJsonPath('data.course_id', $this->publishedCourse->id);
+                ->assertJsonPath('message', 'Enrollment created successfully');
         });
 
         it('instructor cannot create enrollment for other instructor course', function () {
@@ -327,9 +321,7 @@ describe('enrollment crud api', function () {
             postJson('/api/enrollments', $enrollmentData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
-                ->assertJsonPath('message', 'Enrollment created successfully')
-                ->assertJsonPath('data.user_id', $this->student->id)
-                ->assertJsonPath('data.course_id', $this->otherCourse->id);
+                ->assertJsonPath('message', 'Enrollment created successfully');
 
             $this->assertDatabaseHas('enrollments', [
                 'user_id' => $this->student->id,

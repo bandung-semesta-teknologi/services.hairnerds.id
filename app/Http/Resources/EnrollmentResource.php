@@ -7,11 +7,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class EnrollmentResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request)
     {
         return [
             'id' => $this->id,
-            'user_id' => $this->user_id,
             'user' => $this->when($this->relationLoaded('user'), function () {
                 return [
                     'id' => $this->user->id,
@@ -19,8 +18,10 @@ class EnrollmentResource extends JsonResource
                     'email' => $this->user->email,
                 ];
             }),
-            'course_id' => $this->course_id,
             'course' => $this->when($this->relationLoaded('course'), function () {
+                $lessons = $this->course->relationLoaded('lessons') ? $this->course->lessons : collect();
+                $quizLessons = $lessons->filter(fn($lesson) => $lesson->type === 'quiz');
+                $nonQuizLessons = $lessons->filter(fn($lesson) => $lesson->type !== 'quiz');
                 return [
                     'id' => $this->course->id,
                     'title' => $this->course->title,
@@ -47,7 +48,6 @@ class EnrollmentResource extends JsonResource
                 return $this->progress->map(function ($progress) {
                     return [
                         'id' => $progress->id,
-                        'lesson_id' => $progress->lesson_id,
                         'lesson' => $progress->relationLoaded('lesson') ? [
                             'id' => $progress->lesson->id,
                             'sequence' => $progress->lesson->sequence,
