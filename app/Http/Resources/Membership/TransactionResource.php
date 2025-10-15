@@ -1,12 +1,17 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Membership;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class PaymentResource extends JsonResource
+class TransactionResource extends JsonResource
 {
+    /**
+     * Transform the resource into an array.
+     *
+     * @return array<string, mixed>
+     */
     public function toArray(Request $request): array
     {
         return [
@@ -16,23 +21,22 @@ class PaymentResource extends JsonResource
             'payable_type' => $this->payable_type,
             'payable_id' => $this->payable_id,
             'payable' => $this->when($this->relationLoaded('payable'), function () {
-                if ($this->payable_type === 'App\Models\Course') {
+                if ($this->payable_type === 'App\Models\MembershipTransaction') {
                     return [
                         'id' => $this->payable->id,
-                        'title' => $this->payable->title,
-                        'slug' => $this->payable->slug,
-                        'price' => $this->payable->price,
-                        'thumbnail' => $this->payable->thumbnail,
-                    ];
-                } elseif ($this->payable_type === 'App\Models\Bootcamp') {
-                    return [
-                        'id' => $this->payable->id,
-                        'title' => $this->payable->title,
-                        'slug' => $this->payable->slug,
-                        'price' => $this->payable->price,
-                        'location' => $this->payable->location,
-                        'start_date' => $this->payable->start_date,
-                        'end_date' => $this->payable->end_date,
+                        'merchant_id' => $this->payable->merchant_id,
+                        'merchant_user_id' => $this->payable->merchant_user_id,
+                        'merchant_name' => $this->payable->merchant_name,
+                        'merchant_email' => $this->payable->merchant_email,
+                        'user_id' => $this->payable->user_id,
+                        'user_uuid_supabase' => $this->payable->user_uuid_supabase,
+                        'serial_number' => $this->payable->serial_number,
+                        'card_number' => $this->payable->card_number,
+                        'name' => $this->payable->name,
+                        'email' => $this->payable->email,
+                        'address' => $this->payable->address,
+                        'phone_number' => $this->payable->phone_number,
+                        'total_amount' => $this->payable->total_amount,
                     ];
                 }
                 return null;

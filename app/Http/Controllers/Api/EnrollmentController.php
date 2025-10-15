@@ -9,6 +9,7 @@ use App\Http\Resources\EnrollmentResource;
 use App\Models\Course;
 use App\Models\Enrollment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class EnrollmentController extends Controller
@@ -22,12 +23,24 @@ class EnrollmentController extends Controller
         $enrollments = Enrollment::query()
             ->with([
                 'user',
-                'course.instructors',
-                'course.lessons',
-                'course.reviews' => function($query) use ($user) {
-                    $query->where('user_id', $user->id);
-                },
-                'progress.lesson'
+                'course' => function($query) {
+                    $query->with([
+                        'instructors' => function($q) {
+                            $q->with('userProfile');
+                        },
+                        'categories'
+                    ]);
+                }
+            ])
+            ->withCount([
+                'progress as completed_lessons_count' => function($q) {
+                    $q->where('is_completed', true);
+                }
+            ])
+            ->addSelect([
+                'last_activity_at' => DB::table('progress')
+                    ->selectRaw('MAX(updated_at)')
+                    ->whereColumn('enrollment_id', 'enrollments.id')
             ])
             ->when($user->role === 'student', function($q) use ($user) {
                 return $q->where('user_id', $user->id);
@@ -39,8 +52,78 @@ class EnrollmentController extends Controller
             ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
             ->when($request->status === 'finished', fn($q) => $q->finished())
             ->when($request->status === 'active', fn($q) => $q->active())
+            ->when($request->search, function($q) use ($request) {
+                return $q->where(function($query) use ($request) {
+                    $query->whereHas('user', function($q) use ($request) {
+                        $q->where('name', 'like', '%' . $request->search . '%')
+                          ->orWhere('email', 'like', '%' . $request->search . '%');
+                    })
+                    ->orWhereHas('course', function($q) use ($request) {
+                        $q->where('title', 'like', '%' . $request->search . '%');
+                    });
+                });
+            })
             ->latest('enrolled_at')
             ->paginate($request->per_page ?? 15);
+
+        $courseIds = $enrollments->pluck('course_id')->unique();
+        $userIds = $enrollments->pluck('user_id')->unique();
+
+        $courseLessonCounts = DB::table('lessons')
+            ->select('course_id', DB::raw('COUNT(*) as total_lessons'))
+            ->whereIn('course_id', $courseIds)
+            ->whereNull('deleted_at')
+            ->groupBy('course_id')
+            ->pluck('total_lessons', 'course_id');
+
+        $courseQuizCounts = DB::table('lessons')
+            ->join('quizzes', 'lessons.id', '=', 'quizzes.lesson_id')
+            ->select('lessons.course_id', DB::raw('COUNT(DISTINCT lessons.id) as total_quizzes'))
+            ->whereIn('lessons.course_id', $courseIds)
+            ->whereNull('lessons.deleted_at')
+            ->whereNull('quizzes.deleted_at')
+            ->groupBy('lessons.course_id')
+            ->pluck('total_quizzes', 'course_id');
+
+        $completedQuizzes = DB::table('quiz_results')
+            ->join('lessons', 'quiz_results.lesson_id', '=', 'lessons.id')
+            ->select(
+                'quiz_results.user_id',
+                'lessons.course_id',
+                DB::raw('COUNT(DISTINCT quiz_results.lesson_id) as completed_quizzes')
+            )
+            ->whereIn('quiz_results.user_id', $userIds)
+            ->whereIn('lessons.course_id', $courseIds)
+            ->where('quiz_results.is_submitted', true)
+            ->groupBy('quiz_results.user_id', 'lessons.course_id')
+            ->get()
+            ->groupBy('user_id')
+            ->map(function($group) {
+                return $group->pluck('completed_quizzes', 'course_id');
+            });
+
+        $enrollments->getCollection()->transform(function ($enrollment) use ($courseLessonCounts, $courseQuizCounts, $completedQuizzes) {
+            $courseId = $enrollment->course_id;
+            $userId = $enrollment->user_id;
+
+            $totalLessons = $courseLessonCounts->get($courseId, 0);
+            $completedLessons = $enrollment->completed_lessons_count ?? 0;
+
+            $totalQuizzes = $courseQuizCounts->get($courseId, 0);
+            $completedQuizzesCount = $completedQuizzes->get($userId)?->get($courseId, 0) ?? 0;
+
+            $completionPercentage = $totalLessons > 0
+                ? (int) floor(($completedLessons / $totalLessons) * 100)
+                : 0;
+
+            $enrollment->total_lessons = $totalLessons;
+            $enrollment->completed_lessons = $completedLessons;
+            $enrollment->total_quizzes = $totalQuizzes;
+            $enrollment->completed_quizzes = $completedQuizzesCount;
+            $enrollment->completion_percentage = $completionPercentage;
+
+            return $enrollment;
+        });
 
         return EnrollmentResource::collection($enrollments);
     }
@@ -89,7 +172,12 @@ class EnrollmentController extends Controller
             }
 
             $enrollment = Enrollment::create($data);
-            $enrollment->load(['user', 'course']);
+            $enrollment->load([
+                'user',
+                'course' => function($query) {
+                    $query->with(['instructors.userProfile', 'categories']);
+                }
+            ]);
 
             return response()->json([
                 'status' => 'success',
@@ -110,7 +198,13 @@ class EnrollmentController extends Controller
     {
         $this->authorize('view', $enrollment);
 
-        $enrollment->load(['user', 'course', 'progress']);
+        $enrollment->load([
+            'user',
+            'course' => function($query) {
+                $query->with(['instructors.userProfile', 'categories']);
+            },
+            'progress'
+        ]);
 
         return new EnrollmentResource($enrollment);
     }
@@ -121,7 +215,12 @@ class EnrollmentController extends Controller
 
         try {
             $enrollment->update($request->validated());
-            $enrollment->load(['user', 'course']);
+            $enrollment->load([
+                'user',
+                'course' => function($query) {
+                    $query->with(['instructors.userProfile', 'categories']);
+                }
+            ]);
 
             return response()->json([
                 'status' => 'success',
@@ -165,7 +264,12 @@ class EnrollmentController extends Controller
 
         try {
             $enrollment->update(['finished_at' => now()]);
-            $enrollment->load(['user', 'course']);
+            $enrollment->load([
+                'user',
+                'course' => function($query) {
+                    $query->with(['instructors.userProfile', 'categories']);
+                }
+            ]);
 
             return response()->json([
                 'status' => 'success',

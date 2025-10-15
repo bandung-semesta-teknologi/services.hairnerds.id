@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->createCourses();
         $this->createBootcamps();
         $this->callRelatedSeeders();
+        $this->callMembershipSerialSeeder();
     }
 
     private function createBaseUsers(): void
@@ -218,6 +219,13 @@ class DatabaseSeeder extends Seeder
             AnswerBankSeeder::class,
             EnrollmentSeeder::class,
             ProgressSeeder::class,
+        ]);
+    }
+
+    private function callMembershipSerialSeeder(): void
+    {
+        $this->call([
+            MembershipSerialSeeder::class,
         ]);
     }
 }

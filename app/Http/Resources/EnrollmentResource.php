@@ -27,30 +27,23 @@ class EnrollmentResource extends JsonResource
                     'title' => $this->course->title,
                     'slug' => $this->course->slug,
                     'short_description' => $this->course->short_description,
+                    'thumbnail' => $this->course->thumbnail,
                     'level' => $this->course->level,
                     'price' => $this->course->price,
-                    'total_lessons' => $nonQuizLessons->count(),
-                    'total_quizzes' => $quizLessons->count(),
-                    'instructors' => $this->when($this->course->relationLoaded('instructors'), function() {
-                        return $this->course->instructors->map(function($instructor) {
-                            return [
-                                'id' => $instructor->id,
-                                'name' => $instructor->name,
-                                'email' => $instructor->email,
-                            ];
-                        });
-                    }),
+                    'instructors' => UserResource::collection($this->whenLoaded('course.instructors')),
+                    'categories' => CategoryResource::collection($this->whenLoaded('course.categories')),
                 ];
             }),
             'enrolled_at' => $this->enrolled_at,
             'finished_at' => $this->finished_at,
             'quiz_attempts' => $this->quiz_attempts,
             'is_finished' => $this->finished_at !== null,
-            'has_reviewed' => $this->when($this->relationLoaded('course'), function() {
-                return $this->course->relationLoaded('reviews')
-                    ? $this->course->reviews->isNotEmpty()
-                    : false;
-            }),
+            'completion_percentage' => $this->completion_percentage ?? 0,
+            'total_lessons' => $this->total_lessons ?? 0,
+            'completed_lessons' => $this->completed_lessons ?? 0,
+            'total_quizzes' => $this->total_quizzes ?? 0,
+            'completed_quizzes' => $this->completed_quizzes ?? 0,
+            'last_activity_at' => $this->last_activity_at,
             'progress' => $this->when($this->relationLoaded('progress'), function () {
                 return $this->progress->map(function ($progress) {
                     return [
