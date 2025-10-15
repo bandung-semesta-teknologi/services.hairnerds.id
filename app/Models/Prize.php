@@ -77,21 +77,23 @@ class Prize extends Model
         parent::boot();
 
         static::creating(function ($prize) {
-            if (empty($prize->slug) && !empty($prize->name)) {
-                $prize->slug = static::generateUniqueSlug($prize->name);
+            if (!empty($prize->name)) {
+                $slug = !empty($prize->slug) ? $prize->slug : Str::slug($prize->name);
+                $prize->slug = static::generateUniqueSlug($slug);
             }
         });
 
         static::updating(function ($prize) {
             if ($prize->isDirty('name') && !empty($prize->name)) {
-                $prize->slug = static::generateUniqueSlug($prize->name, $prize->id);
+                $slug = Str::slug($prize->name);
+                $prize->slug = static::generateUniqueSlug($slug, $prize->id);
             }
         });
     }
 
-    public static function generateUniqueSlug($name, $excludeId = null)
+    public static function generateUniqueSlug($baseSlug, $excludeId = null)
     {
-        $slug = Str::slug($name);
+        $slug = Str::slug($baseSlug);
         $originalSlug = $slug;
         $counter = 1;
 
@@ -99,6 +101,7 @@ class Prize extends Model
             ->when($excludeId, function($query) use ($excludeId) {
                 return $query->where('id', '!=', $excludeId);
             })
+            ->withTrashed()
             ->exists()) {
             $slug = $originalSlug . '-' . $counter;
             $counter++;

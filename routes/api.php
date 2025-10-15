@@ -21,7 +21,6 @@ use App\Http\Controllers\Api\InstructorManagementController;
 use App\Http\Controllers\Api\LessonController;
 use App\Http\Controllers\Api\MyBootcampController;
 use App\Http\Controllers\Api\PaymentController;
-use App\Http\Controllers\Api\PrizeController;
 use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\QuestionController;
 use App\Http\Controllers\Api\QuizController;
@@ -179,11 +178,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/student-management/{student}', [StudentManagementController::class, 'update']);
     Route::post('/student-management/{student}/reset-password', [StudentManagementController::class, 'resetPassword']);
     Route::delete('/student-management/{student}', [StudentManagementController::class, 'destroy']);
-
-    Route::get('/prizes', [PrizeController::class, 'index']);
-    Route::post('/prizes', [PrizeController::class, 'store']);
-    Route::get('/prizes/{prize:slug}', [PrizeController::class, 'show']);
-    Route::post('/prizes/{prize:slug}', [PrizeController::class, 'update']);
-    Route::post('/prizes/{prize:slug}', [PrizeController::class, 'update']);
-    Route::delete('/prizes/{prize:slug}', [PrizeController::class, 'destroy']);
 });

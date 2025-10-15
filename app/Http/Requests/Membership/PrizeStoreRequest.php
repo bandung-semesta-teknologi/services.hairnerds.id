@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Membership;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -27,7 +27,6 @@ class PrizeStoreRequest extends FormRequest
             'redemption_end_date' => 'required|date|after_or_equal:redemption_start_date',
             'status' => ['nullable', Rule::in(['active', 'inactive'])],
             'banner_image' => 'nullable|image|max:2048',
-            'created_by' => 'nullable|string|max:255',
         ];
     }
 

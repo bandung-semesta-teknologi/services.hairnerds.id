@@ -1,21 +1,22 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Membership;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\PrizeStoreRequest;
-use App\Http\Requests\PrizeUpdateRequest;
-use App\Http\Resources\PrizeResource;
+use App\Http\Requests\Membership\PrizeStoreRequest;
+use App\Http\Requests\Membership\PrizeUpdateRequest;
+use App\Http\Resources\Membership\PrizeResource;
 use App\Models\Prize;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+#[Group('Prize Membership API')]
 class PrizeController extends Controller
 {
     public function index(Request $request)
     {
-        $this->authorize('viewAny', Prize::class);
-
         $prizes = Prize::query()
             ->when($request->search, fn($q) => $q->where('name', 'like', '%' . $request->search . '%'))
             ->when($request->status, fn($q) => $q->where('status', $request->status))
@@ -28,72 +29,80 @@ class PrizeController extends Controller
             ->when($request->point_cost_min, fn($q) => $q->where('point_cost', '>=', $request->point_cost_min))
             ->when($request->point_cost_max, fn($q) => $q->where('point_cost', '<=', $request->point_cost_max))
             ->latest()
-            ->paginate($request->per_page ?? 15);
+            ->paginate($request->per_page ?? 10);
 
         return PrizeResource::collection($prizes);
     }
 
     public function store(PrizeStoreRequest $request)
     {
-        $this->authorize('create', Prize::class);
-
         try {
-            $data = $request->validated();
+            return DB::transaction(function () use ($request) {
+                $data = $request->validated();
 
-            if ($request->hasFile('banner_image')) {
-                $data['banner_image'] = $request->file('banner_image')->store('prizes/banners', 'public');
-            }
+                if ($request->hasFile('banner_image')) {
+                    $data['banner_image'] = $request->file('banner_image')->store('prizes/banners', 'public');
+                }
 
-            if (!isset($data['available_stock'])) {
-                $data['available_stock'] = $data['total_stock'];
-            }
+                if (!isset($data['available_stock'])) {
+                    $data['available_stock'] = $data['total_stock'];
+                }
 
-            $prize = Prize::create($data);
+                $supabaseUser = $request->input('supabase_user');
+                $data['created_by'] = $supabaseUser->sub ?? null;
 
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Prize created successfully',
-                'data' => new PrizeResource($prize)
-            ], 201);
+                unset($data['slug']);
+
+                $prize = Prize::create($data);
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Prize created successfully',
+                    'data' => new PrizeResource($prize)
+                ], 201);
+            });
         } catch (\Exception $e) {
-            Log::error('Error creating prize: ' . $e->getMessage());
+            Log::error('Error creating prize: ' . $e->getMessage(), [
+                'request_data' => $request->validated(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to create prize'
+                'message' => 'Failed to create prize',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
     }
 
     public function show(Prize $prize)
     {
-        $this->authorize('view', $prize);
-
         return new PrizeResource($prize);
     }
 
     public function update(PrizeUpdateRequest $request, Prize $prize)
     {
-        $this->authorize('update', $prize);
-
         try {
-            $data = $request->validated();
+            return DB::transaction(function () use ($request, $prize) {
+                $data = $request->validated();
 
-            if ($request->hasFile('banner_image')) {
-                $data['banner_image'] = $request->file('banner_image')->store('prizes/banners', 'public');
-            }
+                if ($request->hasFile('banner_image')) {
+                    $data['banner_image'] = $request->file('banner_image')->store('prizes/banners', 'public');
+                }
 
-            $prize->update($data);
+                unset($data['slug']);
 
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Prize updated successfully',
-                'data' => new PrizeResource($prize)
-            ], 200);
+                $prize->update($data);
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Prize updated successfully',
+                    'data' => new PrizeResource($prize)
+                ], 200);
+            });
         } catch (\Exception $e) {
             Log::error('Error updating prize: ' . $e->getMessage(), [
                 'prize_id' => $prize->id,
-                'user_id' => $request->user()?->id,
                 'data' => $request->validated(),
                 'exception' => $e->getTraceAsString()
             ]);
@@ -108,8 +117,6 @@ class PrizeController extends Controller
 
     public function destroy(Prize $prize)
     {
-        $this->authorize('delete', $prize);
-
         try {
             $prize->delete();
 

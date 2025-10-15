@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Membership;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -23,7 +23,7 @@ class PrizeResource extends JsonResource
             'redemption_start_date' => $this->redemption_start_date,
             'redemption_end_date' => $this->redemption_end_date,
             'status' => $this->status,
-            'banner_image' => $this->banner_image,
+            'banner_image' => $this->banner_image ? asset('storage/' . $this->banner_image) : null,
             'created_by' => $this->created_by,
             'is_available' => $this->isAvailable(),
             'is_active' => $this->isActive(),
