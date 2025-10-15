@@ -41,10 +41,16 @@ class PaymentService
             ->where('payable_type', Course::class)
             ->where('payable_id', $course->id)
             ->pending()
-            ->exists();
+            ->first();
 
         if ($existingPendingPayment) {
-            throw new \Exception('Pending payment already exists for this course');
+            return [
+                'payment' => $existingPendingPayment,
+                'snap_token' => $existingPendingPayment->snap_token,
+                'redirect_url' => $existingPendingPayment->redirect_url,
+                'message' => 'Pending payment already exists for this course',
+                'is_existing' => true,
+            ];
         }
 
         return DB::transaction(function () use ($course, $user) {
@@ -61,10 +67,17 @@ class PaymentService
 
             $midtransResponse = $this->midtransService->createTransaction($payment);
 
-            return [
-                'payment' => $payment,
+            $payment->update([
                 'snap_token' => $midtransResponse['token'] ?? null,
                 'redirect_url' => $midtransResponse['redirect_url'] ?? null,
+            ]);
+
+            return [
+                'payment' => $payment->fresh(),
+                'snap_token' => $midtransResponse['token'] ?? null,
+                'redirect_url' => $midtransResponse['redirect_url'] ?? null,
+                'message' => 'Payment created successfully',
+                'is_existing' => false,
             ];
         });
     }
@@ -87,10 +100,16 @@ class PaymentService
             ->where('payable_type', Bootcamp::class)
             ->where('payable_id', $bootcamp->id)
             ->pending()
-            ->exists();
+            ->first();
 
         if ($existingPendingPayment) {
-            throw new \Exception('Pending payment already exists for this bootcamp');
+            return [
+                'payment' => $existingPendingPayment,
+                'snap_token' => $existingPendingPayment->snap_token,
+                'redirect_url' => $existingPendingPayment->redirect_url,
+                'message' => 'Pending payment already exists for this bootcamp',
+                'is_existing' => true,
+            ];
         }
 
         return DB::transaction(function () use ($bootcamp, $user) {
@@ -111,10 +130,17 @@ class PaymentService
 
             $midtransResponse = $this->midtransService->createTransaction($payment);
 
-            return [
-                'payment' => $payment,
+            $payment->update([
                 'snap_token' => $midtransResponse['token'] ?? null,
                 'redirect_url' => $midtransResponse['redirect_url'] ?? null,
+            ]);
+
+            return [
+                'payment' => $payment->fresh(),
+                'snap_token' => $midtransResponse['token'] ?? null,
+                'redirect_url' => $midtransResponse['redirect_url'] ?? null,
+                'message' => 'Payment created successfully',
+                'is_existing' => false,
             ];
         });
     }
