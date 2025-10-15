@@ -20,7 +20,15 @@ class EnrollmentController extends Controller
         $user = $request->user();
 
         $enrollments = Enrollment::query()
-            ->with(['user', 'course', 'progress'])
+            ->with([
+                'user',
+                'course.instructors',
+                'course.lessons',
+                'course.reviews' => function($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                },
+                'progress.lesson'
+            ])
             ->when($user->role === 'student', function($q) use ($user) {
                 return $q->where('user_id', $user->id);
             })
@@ -36,6 +44,7 @@ class EnrollmentController extends Controller
 
         return EnrollmentResource::collection($enrollments);
     }
+
 
     public function store(EnrollmentStoreRequest $request)
     {
