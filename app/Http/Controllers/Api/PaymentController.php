@@ -263,4 +263,53 @@ class PaymentController extends Controller
             'transaction_time' => now()->format('Y-m-d H:i:s')
         ]);
     }
+
+    public function cancelled(Request $request)
+    {
+        $orderId = $request->order_id;
+        $payment = Payment::where('payment_code', $orderId)->first();
+
+        if (!$payment) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Payment not found'
+            ], 404);
+        }
+
+        Log::info('Payment cancelled', [
+            'order_id' => $orderId,
+            'payment_id' => $payment->id
+        ]);
+
+        return response()->json([
+            'status' => 'cancelled',
+            'message' => 'Payment was cancelled by user',
+            'data' => new PaymentResource($payment->load(['payable']))
+        ]);
+    }
+
+    public function error(Request $request)
+    {
+        $orderId = $request->order_id;
+        $payment = Payment::where('payment_code', $orderId)->first();
+
+        if (!$payment) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Payment not found'
+            ], 404);
+        }
+
+        Log::error('Payment error occurred', [
+            'order_id' => $orderId,
+            'payment_id' => $payment->id,
+            'request_data' => $request->all()
+        ]);
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Payment encountered an error',
+            'data' => new PaymentResource($payment->load(['payable']))
+        ]);
+    }
 }
