@@ -116,8 +116,15 @@ class AuthController extends Controller
 
     public function resetPassword(AuthResetPasswordRequest $request)
     {
+        $email = $request->input('email') ?: $request->query('email');
+
         $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
+            [
+                'email' => $email,
+                'password' => $request->password,
+                'password_confirmation' => $request->password_confirmation,
+                'token' => $request->token,
+            ],
             function (User $user, string $password) {
                 $user->forceFill(['password' => Hash::make($password)])
                     ->setRememberToken(Str::random(60));
@@ -126,6 +133,7 @@ class AuthController extends Controller
                 event(new PasswordReset($user));
             },
         );
+
         return $status === Password::PASSWORD_RESET
             ? response()->json(['message' => 'Password has been reset.'], 200)
             : response()->json(['message' => 'Invalid token or email.'], 400);
