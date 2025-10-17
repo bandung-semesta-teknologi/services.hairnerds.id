@@ -23,14 +23,12 @@ class EnrollmentController extends Controller
         $enrollments = Enrollment::query()
             ->with([
                 'user',
-                'course' => function($query) {
-                    $query->with([
-                        'instructors' => function($q) {
-                            $q->with('userProfile');
-                        },
-                        'categories'
-                    ]);
-                }
+                'course.instructors',
+                'course.lessons',
+                'course.reviews' => function($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                },
+                'progress.lesson'
             ])
             ->withCount([
                 'progress as completed_lessons_count' => function($q) {

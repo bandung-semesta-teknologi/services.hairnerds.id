@@ -63,6 +63,11 @@ class EnrollmentResource extends JsonResource
                     ];
                 });
             }),
+            'is_reviewed' => $this->when($this->relationLoaded('course'), function() {
+                return $this->course->relationLoaded('reviews')
+                    ? $this->course->reviews->isNotEmpty()
+                    : false;
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
