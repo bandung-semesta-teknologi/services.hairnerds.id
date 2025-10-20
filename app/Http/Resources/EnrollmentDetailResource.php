@@ -27,9 +27,10 @@ class EnrollmentDetailResource extends JsonResource
                 'short_description' => $this->course->short_description,
                 'description' => $this->course->description,
                 'level' => $this->course->level,
+                'requirements' => $this->course->requirements,
                 'price' => $this->course->price,
                 'thumbnail' => $this->course->thumbnail,
-                'language' => $this->course->language,
+                'lang' => $this->course->lang,
                 'instructors' => $this->course->instructors->map(function ($instructor) {
                     return [
                         'id' => $instructor->id,
