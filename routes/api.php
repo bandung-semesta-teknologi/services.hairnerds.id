@@ -146,6 +146,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
 
     Route::apiResource('enrollments', EnrollmentController::class);
+    Route::get('/enrollments/course/{course:slug}', [EnrollmentController::class, 'showByCourseSlug']);
     Route::post('/enrollments/{enrollment}/finish', [EnrollmentController::class, 'finish']);
 
     Route::apiResource('progress', ProgressController::class);
