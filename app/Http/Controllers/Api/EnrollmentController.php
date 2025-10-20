@@ -218,8 +218,7 @@ class EnrollmentController extends Controller
                 'course.instructors',
                 'course.categories',
                 'course.faqs',
-                'course.sections.lessons.attachments',
-                'course.sections.lessons.quiz.questions.answerBanks',
+                'course.sections.lessons',
                 'progress.lesson'
             ])
             ->first();
