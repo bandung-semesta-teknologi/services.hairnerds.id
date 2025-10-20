@@ -126,6 +126,7 @@ class MemberController extends Controller
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
+                'email_verified_at' => now(),
                 'password' => Hash::make("password"),
                 'role' => 'student',
             ]);
@@ -133,11 +134,13 @@ class MemberController extends Controller
             $user->userCredentials()->create([
                 'type' => 'email',
                 'identifier' => $user->email,
+                'verified_at' => now(),
             ]);
 
             $user->userCredentials()->create([
                 'type' => 'phone',
                 'identifier' => $data['phone_number'],
+                'verified_at' => now(),
             ]);
 
             $user->userProfile()->create([
