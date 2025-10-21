@@ -113,10 +113,20 @@ class LessonController extends Controller
     {
         $this->authorize('view', $lesson);
 
+        $user = request()->user();
+
         $lesson->load(['section', 'course', 'attachments']);
 
         if ($lesson->type === 'quiz') {
             $lesson->load(['quiz.questions.answerBanks']);
+        }
+
+        if ($user && $user->role === 'student') {
+            $progress = \App\Models\Progress::where('user_id', $user->id)
+                ->where('lesson_id', $lesson->id)
+                ->first();
+
+            $lesson->progress_id = $progress ? $progress->id : null;
         }
 
         return new LessonResource($lesson);

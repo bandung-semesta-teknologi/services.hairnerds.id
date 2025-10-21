@@ -29,6 +29,11 @@ class LessonResource extends JsonResource
             'summary' => $this->summary,
             'datetime' => $this->datetime,
 
+            'progress_id' => $this->when(
+                isset($this->progress_id) && $request->user()?->role === 'student',
+                $this->progress_id
+            ),
+
             'attachments' => AttachmentResource::collection($this->whenLoaded('attachments')),
             'attachments_count' => $this->whenLoaded('attachments', fn() => $this->attachments->count(), 0),
 
@@ -66,13 +71,13 @@ class LessonResource extends JsonResource
                                             return [
                                                 'id' => $answerBank->id,
                                                 'answer' => $answerBank->answer,
-                                                'is_true' => $answerBank->is_true,
+                                                'is_correct' => $answerBank->is_correct,
                                             ];
                                         })
-                                        : null,
+                                        : [],
                                 ];
                             })
-                            : null,
+                            : [],
                     ];
                 }
             ),
