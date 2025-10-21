@@ -25,6 +25,8 @@ class EnrollmentController extends Controller
             ->with([
                 'user',
                 'course.instructors',
+                'course.categories',
+                'course.sections.lessons',
                 'course.lessons',
                 'course.reviews' => function($query) use ($user) {
                     $query->where('user_id', $user->id);
