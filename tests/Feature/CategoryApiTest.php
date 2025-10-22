@@ -30,7 +30,7 @@ describe('category crud api', function () {
         it('anyone can get all categories without auth', function () {
             Category::factory()->count(8)->create();
 
-            getJson('/api/categories')
+            getJson('/api/academy/categories')
                 ->assertOk()
                 ->assertJsonCount(8, 'data')
                 ->assertJsonStructure([
@@ -48,14 +48,14 @@ describe('category crud api', function () {
         it('anyone can get single category without auth', function () {
             $category = Category::factory()->create();
 
-            getJson("/api/categories/{$category->id}")
+            getJson("/api/academy/categories/{$category->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $category->id)
                 ->assertJsonPath('data.name', $category->name);
         });
 
         it('returns 404 when category not found', function () {
-            getJson('/api/categories/99999')
+            getJson('/api/academy/categories/99999')
                 ->assertNotFound();
         });
     });
@@ -70,7 +70,7 @@ describe('category crud api', function () {
                 'name' => 'Web Development'
             ];
 
-            postJson('/api/categories', $categoryData)
+            postJson('/api/academy/categories', $categoryData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Category created successfully')
@@ -82,7 +82,7 @@ describe('category crud api', function () {
         });
 
         it('validates name is required when creating category', function () {
-            postJson('/api/categories', [])
+            postJson('/api/academy/categories', [])
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['name']);
         });
@@ -90,7 +90,7 @@ describe('category crud api', function () {
         it('admin can update category', function () {
             $category = Category::factory()->create(['name' => 'Old Name']);
 
-            putJson("/api/categories/{$category->id}", [
+            putJson("/api/academy/categories/{$category->id}", [
                 'name' => 'Updated Name'
             ])
                 ->assertOk()
@@ -107,7 +107,7 @@ describe('category crud api', function () {
         it('admin can delete category without courses', function () {
             $category = Category::factory()->create();
 
-            deleteJson("/api/categories/{$category->id}")
+            deleteJson("/api/academy/categories/{$category->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Category deleted successfully');
@@ -120,7 +120,7 @@ describe('category crud api', function () {
             $course = Course::factory()->create();
             $course->categories()->attach($category->id);
 
-            deleteJson("/api/categories/{$category->id}")
+            deleteJson("/api/academy/categories/{$category->id}")
                 ->assertUnprocessable()
                 ->assertJsonPath('status', 'error')
                 ->assertJsonPath('message', 'Cannot delete category with existing courses');
@@ -132,7 +132,7 @@ describe('category crud api', function () {
         });
 
         it('returns 404 when deleting non-existent category', function () {
-            deleteJson('/api/categories/99999')
+            deleteJson('/api/academy/categories/99999')
                 ->assertNotFound();
         });
     });
@@ -147,7 +147,7 @@ describe('category crud api', function () {
                 'name' => 'Mobile Development'
             ];
 
-            postJson('/api/categories', $categoryData)
+            postJson('/api/academy/categories', $categoryData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Category created successfully')
@@ -161,7 +161,7 @@ describe('category crud api', function () {
         it('instructor can update category', function () {
             $category = Category::factory()->create(['name' => 'Old Name']);
 
-            putJson("/api/categories/{$category->id}", [
+            putJson("/api/academy/categories/{$category->id}", [
                 'name' => 'Instructor Updated'
             ])
                 ->assertOk()
@@ -173,7 +173,7 @@ describe('category crud api', function () {
         it('instructor can delete category', function () {
             $category = Category::factory()->create();
 
-            deleteJson("/api/categories/{$category->id}")
+            deleteJson("/api/academy/categories/{$category->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Category deleted successfully');
@@ -190,7 +190,7 @@ describe('category crud api', function () {
         it('student can view all categories', function () {
             Category::factory()->count(5)->create();
 
-            getJson('/api/categories')
+            getJson('/api/academy/categories')
                 ->assertOk()
                 ->assertJsonCount(5, 'data')
                 ->assertJsonStructure([
@@ -208,14 +208,14 @@ describe('category crud api', function () {
         it('student can view single category', function () {
             $category = Category::factory()->create();
 
-            getJson("/api/categories/{$category->id}")
+            getJson("/api/academy/categories/{$category->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $category->id)
                 ->assertJsonPath('data.name', $category->name);
         });
 
         it('student cannot create category', function () {
-            postJson('/api/categories', [
+            postJson('/api/academy/categories', [
                 'name' => 'Unauthorized Category'
             ])
                 ->assertForbidden();
@@ -224,7 +224,7 @@ describe('category crud api', function () {
         it('student cannot update category', function () {
             $category = Category::factory()->create();
 
-            putJson("/api/categories/{$category->id}", [
+            putJson("/api/academy/categories/{$category->id}", [
                 'name' => 'Unauthorized Update'
             ])
                 ->assertForbidden();
@@ -233,7 +233,7 @@ describe('category crud api', function () {
         it('student cannot delete category', function () {
             $category = Category::factory()->create();
 
-            deleteJson("/api/categories/{$category->id}")
+            deleteJson("/api/academy/categories/{$category->id}")
                 ->assertForbidden();
         });
     });
@@ -242,7 +242,7 @@ describe('category crud api', function () {
         it('guest user can view all categories', function () {
             Category::factory()->count(3)->create();
 
-            getJson('/api/categories')
+            getJson('/api/academy/categories')
                 ->assertOk()
                 ->assertJsonCount(3, 'data')
                 ->assertJsonStructure([
@@ -260,14 +260,14 @@ describe('category crud api', function () {
         it('guest user can view single category', function () {
             $category = Category::factory()->create();
 
-            getJson("/api/categories/{$category->id}")
+            getJson("/api/academy/categories/{$category->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $category->id)
                 ->assertJsonPath('data.name', $category->name);
         });
 
         it('guest user cannot create category', function () {
-            postJson('/api/categories', [
+            postJson('/api/academy/categories', [
                 'name' => 'Unauthorized Category'
             ])
                 ->assertUnauthorized();
@@ -276,7 +276,7 @@ describe('category crud api', function () {
         it('guest user cannot update category', function () {
             $category = Category::factory()->create();
 
-            putJson("/api/categories/{$category->id}", [
+            putJson("/api/academy/categories/{$category->id}", [
                 'name' => 'Unauthorized Update'
             ])
                 ->assertUnauthorized();
@@ -285,7 +285,7 @@ describe('category crud api', function () {
         it('guest user cannot delete category', function () {
             $category = Category::factory()->create();
 
-            deleteJson("/api/categories/{$category->id}")
+            deleteJson("/api/academy/categories/{$category->id}")
                 ->assertUnauthorized();
         });
     });

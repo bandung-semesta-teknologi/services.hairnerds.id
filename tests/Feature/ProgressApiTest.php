@@ -87,17 +87,17 @@ describe('progress crud api', function () {
 
     describe('guest access (forbidden)', function () {
         it('guest user cannot view progress', function () {
-            getJson('/api/progress')
+            getJson('/api/academy/progress')
                 ->assertUnauthorized();
         });
 
         it('guest user cannot view single progress', function () {
-            getJson("/api/progress/{$this->progress->id}")
+            getJson("/api/academy/progress/{$this->progress->id}")
                 ->assertUnauthorized();
         });
 
         it('guest user cannot create progress', function () {
-            postJson('/api/progress', [
+            postJson('/api/academy/progress', [
                 'enrollment_id' => $this->enrollment->id,
                 'user_id' => $this->student->id,
                 'course_id' => $this->publishedCourse->id,
@@ -107,19 +107,19 @@ describe('progress crud api', function () {
         });
 
         it('guest user cannot update progress', function () {
-            putJson("/api/progress/{$this->progress->id}", [
+            putJson("/api/academy/progress/{$this->progress->id}", [
                 'is_completed' => true
             ])
                 ->assertUnauthorized();
         });
 
         it('guest user cannot delete progress', function () {
-            deleteJson("/api/progress/{$this->progress->id}")
+            deleteJson("/api/academy/progress/{$this->progress->id}")
                 ->assertUnauthorized();
         });
 
         it('guest user cannot complete progress', function () {
-            postJson("/api/progress/{$this->progress->id}/complete")
+            postJson("/api/academy/progress/{$this->progress->id}/complete")
                 ->assertUnauthorized();
         });
     });
@@ -143,7 +143,7 @@ describe('progress crud api', function () {
                 'lesson_id' => $this->otherLesson->id
             ]);
 
-            getJson('/api/progress')
+            getJson('/api/academy/progress')
                 ->assertOk()
                 ->assertJsonCount(6, 'data')
                 ->assertJsonStructure([
@@ -178,7 +178,7 @@ describe('progress crud api', function () {
                 'is_completed' => false
             ];
 
-            postJson('/api/progress', $progressData)
+            postJson('/api/academy/progress', $progressData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Progress created successfully')
@@ -200,7 +200,7 @@ describe('progress crud api', function () {
                 'score' => 85
             ];
 
-            putJson("/api/progress/{$this->progress->id}", $updateData)
+            putJson("/api/academy/progress/{$this->progress->id}", $updateData)
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Progress updated successfully')
@@ -215,7 +215,7 @@ describe('progress crud api', function () {
         });
 
         it('admin can delete any progress', function () {
-            deleteJson("/api/progress/{$this->progress->id}")
+            deleteJson("/api/academy/progress/{$this->progress->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Progress deleted successfully');
@@ -224,7 +224,7 @@ describe('progress crud api', function () {
         });
 
         it('admin can complete any progress', function () {
-            postJson("/api/progress/{$this->progress->id}/complete")
+            postJson("/api/academy/progress/{$this->progress->id}/complete")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Progress marked as completed')
@@ -237,7 +237,7 @@ describe('progress crud api', function () {
         });
 
         it('admin can view any progress', function () {
-            getJson("/api/progress/{$this->progress->id}")
+            getJson("/api/academy/progress/{$this->progress->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $this->progress->id)
                 ->assertJsonStructure([
@@ -270,7 +270,7 @@ describe('progress crud api', function () {
                 'lesson_id' => $this->otherLesson->id
             ]);
 
-            getJson('/api/progress')
+            getJson('/api/academy/progress')
                 ->assertOk()
                 ->assertJsonCount(4, 'data');
         });
@@ -288,7 +288,7 @@ describe('progress crud api', function () {
                 'lesson_id' => $this->publishedLesson->id
             ];
 
-            postJson('/api/progress', $progressData)
+            postJson('/api/academy/progress', $progressData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Progress created successfully')
@@ -296,7 +296,7 @@ describe('progress crud api', function () {
         });
 
         it('instructor can update progress from their own course', function () {
-            putJson("/api/progress/{$this->progress->id}", [
+            putJson("/api/academy/progress/{$this->progress->id}", [
                 'is_completed' => true,
                 'score' => 90
             ])
@@ -307,7 +307,7 @@ describe('progress crud api', function () {
         });
 
         it('instructor can delete progress from their own course', function () {
-            deleteJson("/api/progress/{$this->progress->id}")
+            deleteJson("/api/academy/progress/{$this->progress->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Progress deleted successfully');
@@ -316,7 +316,7 @@ describe('progress crud api', function () {
         });
 
         it('instructor can complete progress from their own course', function () {
-            postJson("/api/progress/{$this->progress->id}/complete")
+            postJson("/api/academy/progress/{$this->progress->id}/complete")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Progress marked as completed')
@@ -324,7 +324,7 @@ describe('progress crud api', function () {
         });
 
         it('instructor can view progress from their own course', function () {
-            getJson("/api/progress/{$this->progress->id}")
+            getJson("/api/academy/progress/{$this->progress->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $this->progress->id);
         });
@@ -337,7 +337,7 @@ describe('progress crud api', function () {
                 'lesson_id' => $this->otherLesson->id
             ];
 
-            postJson('/api/progress', $progressData)
+            postJson('/api/academy/progress', $progressData)
                 ->assertForbidden();
         });
 
@@ -349,7 +349,7 @@ describe('progress crud api', function () {
                 'lesson_id' => $this->otherLesson->id
             ]);
 
-            putJson("/api/progress/{$otherProgress->id}", [
+            putJson("/api/academy/progress/{$otherProgress->id}", [
                 'is_completed' => true
             ])
                 ->assertForbidden();
@@ -363,7 +363,7 @@ describe('progress crud api', function () {
                 'lesson_id' => $this->otherLesson->id
             ]);
 
-            deleteJson("/api/progress/{$otherProgress->id}")
+            deleteJson("/api/academy/progress/{$otherProgress->id}")
                 ->assertForbidden();
         });
 
@@ -375,7 +375,7 @@ describe('progress crud api', function () {
                 'lesson_id' => $this->otherLesson->id
             ]);
 
-            getJson("/api/progress/{$otherProgress->id}")
+            getJson("/api/academy/progress/{$otherProgress->id}")
                 ->assertForbidden();
         });
     });
@@ -399,13 +399,13 @@ describe('progress crud api', function () {
                 'lesson_id' => $this->otherLesson->id
             ]);
 
-            getJson('/api/progress')
+            getJson('/api/academy/progress')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
 
         it('student can complete their own progress', function () {
-            postJson("/api/progress/{$this->progress->id}/complete")
+            postJson("/api/academy/progress/{$this->progress->id}/complete")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Progress marked as completed')
@@ -418,13 +418,13 @@ describe('progress crud api', function () {
         });
 
         it('student can view their own progress', function () {
-            getJson("/api/progress/{$this->progress->id}")
+            getJson("/api/academy/progress/{$this->progress->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $this->progress->id);
         });
 
         it('student cannot create progress', function () {
-            postJson('/api/progress', [
+            postJson('/api/academy/progress', [
                 'enrollment_id' => $this->enrollment->id,
                 'user_id' => $this->student->id,
                 'course_id' => $this->publishedCourse->id,
@@ -434,14 +434,14 @@ describe('progress crud api', function () {
         });
 
         it('student cannot update progress', function () {
-            putJson("/api/progress/{$this->progress->id}", [
+            putJson("/api/academy/progress/{$this->progress->id}", [
                 'is_completed' => true
             ])
                 ->assertForbidden();
         });
 
         it('student cannot delete progress', function () {
-            deleteJson("/api/progress/{$this->progress->id}")
+            deleteJson("/api/academy/progress/{$this->progress->id}")
                 ->assertForbidden();
         });
 
@@ -453,7 +453,7 @@ describe('progress crud api', function () {
                 'lesson_id' => $this->otherLesson->id
             ]);
 
-            getJson("/api/progress/{$otherProgress->id}")
+            getJson("/api/academy/progress/{$otherProgress->id}")
                 ->assertForbidden();
         });
 
@@ -465,7 +465,7 @@ describe('progress crud api', function () {
                 'lesson_id' => $this->otherLesson->id
             ]);
 
-            postJson("/api/progress/{$otherProgress->id}/complete")
+            postJson("/api/academy/progress/{$otherProgress->id}/complete")
                 ->assertForbidden();
         });
     });

@@ -56,17 +56,17 @@ describe('enrollment crud api', function () {
 
     describe('guest access (forbidden)', function () {
         it('guest user cannot view enrollments', function () {
-            getJson('/api/enrollments')
+            getJson('/api/academy/enrollments')
                 ->assertUnauthorized();
         });
 
         it('guest user cannot view single enrollment', function () {
-            getJson("/api/enrollments/{$this->enrollment->id}")
+            getJson("/api/academy/enrollments/{$this->enrollment->id}")
                 ->assertUnauthorized();
         });
 
         it('guest user cannot create enrollment', function () {
-            postJson('/api/enrollments', [
+            postJson('/api/academy/enrollments', [
                 'user_id' => $this->student->id,
                 'course_id' => $this->publishedCourse->id
             ])
@@ -74,19 +74,19 @@ describe('enrollment crud api', function () {
         });
 
         it('guest user cannot update enrollment', function () {
-            putJson("/api/enrollments/{$this->enrollment->id}", [
+            putJson("/api/academy/enrollments/{$this->enrollment->id}", [
                 'quiz_attempts' => 5
             ])
                 ->assertUnauthorized();
         });
 
         it('guest user cannot delete enrollment', function () {
-            deleteJson("/api/enrollments/{$this->enrollment->id}")
+            deleteJson("/api/academy/enrollments/{$this->enrollment->id}")
                 ->assertUnauthorized();
         });
 
         it('guest user cannot finish enrollment', function () {
-            postJson("/api/enrollments/{$this->enrollment->id}/finish")
+            postJson("/api/academy/enrollments/{$this->enrollment->id}/finish")
                 ->assertUnauthorized();
         });
     });
@@ -106,7 +106,7 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson('/api/enrollments')
+            getJson('/api/academy/enrollments')
                 ->assertOk()
                 ->assertJsonCount(6, 'data');
         });
@@ -118,7 +118,7 @@ describe('enrollment crud api', function () {
                 'quiz_attempts' => 0
             ];
 
-            postJson('/api/enrollments', $enrollmentData)
+            postJson('/api/academy/enrollments', $enrollmentData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success');
 
@@ -134,7 +134,7 @@ describe('enrollment crud api', function () {
                 'finished_at' => now()->toDateTimeString()
             ];
 
-            putJson("/api/enrollments/{$this->enrollment->id}", $updateData)
+            putJson("/api/academy/enrollments/{$this->enrollment->id}", $updateData)
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Enrollment updated successfully')
@@ -147,7 +147,7 @@ describe('enrollment crud api', function () {
         });
 
         it('admin can delete any enrollment', function () {
-            deleteJson("/api/enrollments/{$this->enrollment->id}")
+            deleteJson("/api/academy/enrollments/{$this->enrollment->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Enrollment deleted successfully');
@@ -156,7 +156,7 @@ describe('enrollment crud api', function () {
         });
 
         it('admin can finish any enrollment', function () {
-            postJson("/api/enrollments/{$this->enrollment->id}/finish")
+            postJson("/api/academy/enrollments/{$this->enrollment->id}/finish")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Enrollment finished successfully')
@@ -170,7 +170,7 @@ describe('enrollment crud api', function () {
         });
 
         it('admin can view any enrollment', function () {
-            getJson("/api/enrollments/{$this->enrollment->id}")
+            getJson("/api/academy/enrollments/{$this->enrollment->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $this->enrollment->id)
                 ->assertJsonStructure([
@@ -198,7 +198,7 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson('/api/enrollments')
+            getJson('/api/academy/enrollments')
                 ->assertOk()
                 ->assertJsonCount(4, 'data');
         });
@@ -209,7 +209,7 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ];
 
-            postJson('/api/enrollments', $enrollmentData)
+            postJson('/api/academy/enrollments', $enrollmentData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Enrollment created successfully');
@@ -221,14 +221,14 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->otherCourse->id
             ];
 
-            postJson('/api/enrollments', $enrollmentData)
+            postJson('/api/academy/enrollments', $enrollmentData)
                 ->assertStatus(403)
                 ->assertJsonPath('status', 'error')
                 ->assertJsonPath('message', 'Cannot enroll students in courses you do not teach');
         });
 
         it('instructor can update enrollment from their own course', function () {
-            putJson("/api/enrollments/{$this->enrollment->id}", [
+            putJson("/api/academy/enrollments/{$this->enrollment->id}", [
                 'quiz_attempts' => 3
             ])
                 ->assertOk()
@@ -238,7 +238,7 @@ describe('enrollment crud api', function () {
         });
 
         it('instructor can delete enrollment from their own course', function () {
-            deleteJson("/api/enrollments/{$this->enrollment->id}")
+            deleteJson("/api/academy/enrollments/{$this->enrollment->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Enrollment deleted successfully');
@@ -247,7 +247,7 @@ describe('enrollment crud api', function () {
         });
 
         it('instructor can finish enrollment from their own course', function () {
-            postJson("/api/enrollments/{$this->enrollment->id}/finish")
+            postJson("/api/academy/enrollments/{$this->enrollment->id}/finish")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Enrollment finished successfully')
@@ -255,7 +255,7 @@ describe('enrollment crud api', function () {
         });
 
         it('instructor can view enrollment from their own course', function () {
-            getJson("/api/enrollments/{$this->enrollment->id}")
+            getJson("/api/academy/enrollments/{$this->enrollment->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $this->enrollment->id);
         });
@@ -266,7 +266,7 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            putJson("/api/enrollments/{$otherEnrollment->id}", [
+            putJson("/api/academy/enrollments/{$otherEnrollment->id}", [
                 'quiz_attempts' => 5
             ])
                 ->assertForbidden();
@@ -278,7 +278,7 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            deleteJson("/api/enrollments/{$otherEnrollment->id}")
+            deleteJson("/api/academy/enrollments/{$otherEnrollment->id}")
                 ->assertForbidden();
         });
 
@@ -288,7 +288,7 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson("/api/enrollments/{$otherEnrollment->id}")
+            getJson("/api/academy/enrollments/{$otherEnrollment->id}")
                 ->assertForbidden();
         });
     });
@@ -308,7 +308,7 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            getJson('/api/enrollments')
+            getJson('/api/academy/enrollments')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -318,7 +318,7 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->otherCourse->id
             ];
 
-            postJson('/api/enrollments', $enrollmentData)
+            postJson('/api/academy/enrollments', $enrollmentData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Enrollment created successfully');
@@ -334,7 +334,7 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->draftCourse->id
             ];
 
-            postJson('/api/enrollments', $enrollmentData)
+            postJson('/api/academy/enrollments', $enrollmentData)
                 ->assertStatus(422)
                 ->assertJsonPath('status', 'error')
                 ->assertJsonPath('message', 'Cannot enroll in unpublished course');
@@ -345,14 +345,14 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ];
 
-            postJson('/api/enrollments', $enrollmentData)
+            postJson('/api/academy/enrollments', $enrollmentData)
                 ->assertStatus(422)
                 ->assertJsonPath('status', 'error')
                 ->assertJsonPath('message', 'Already enrolled in this course');
         });
 
         it('student can update their own enrollment', function () {
-            putJson("/api/enrollments/{$this->enrollment->id}", [
+            putJson("/api/academy/enrollments/{$this->enrollment->id}", [
                 'quiz_attempts' => 2
             ])
                 ->assertOk()
@@ -362,7 +362,7 @@ describe('enrollment crud api', function () {
         });
 
         it('student can finish their own enrollment', function () {
-            postJson("/api/enrollments/{$this->enrollment->id}/finish")
+            postJson("/api/academy/enrollments/{$this->enrollment->id}/finish")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Enrollment finished successfully')
@@ -370,13 +370,13 @@ describe('enrollment crud api', function () {
         });
 
         it('student can view their own enrollment', function () {
-            getJson("/api/enrollments/{$this->enrollment->id}")
+            getJson("/api/academy/enrollments/{$this->enrollment->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $this->enrollment->id);
         });
 
         it('student cannot delete their own enrollment', function () {
-            deleteJson("/api/enrollments/{$this->enrollment->id}")
+            deleteJson("/api/academy/enrollments/{$this->enrollment->id}")
                 ->assertForbidden();
         });
 
@@ -386,7 +386,7 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            getJson("/api/enrollments/{$otherEnrollment->id}")
+            getJson("/api/academy/enrollments/{$otherEnrollment->id}")
                 ->assertForbidden();
         });
 
@@ -396,7 +396,7 @@ describe('enrollment crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            putJson("/api/enrollments/{$otherEnrollment->id}", [
+            putJson("/api/academy/enrollments/{$otherEnrollment->id}", [
                 'quiz_attempts' => 5
             ])
                 ->assertForbidden();

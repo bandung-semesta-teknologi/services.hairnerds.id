@@ -61,7 +61,7 @@ describe('review crud api', function () {
             Review::factory()->count(2)->hidden()->create(['course_id' => $this->publishedCourse->id]);
             Review::factory()->count(2)->visible()->create(['course_id' => $this->draftCourse->id]);
 
-            getJson('/api/reviews')
+            getJson('/api/academy/reviews')
                 ->assertOk()
                 ->assertJsonCount(3, 'data')
                 ->assertJsonStructure([
@@ -88,7 +88,7 @@ describe('review crud api', function () {
             Review::factory()->count(3)->visible()->create(['course_id' => $this->publishedCourse->id]);
             Review::factory()->count(2)->visible()->create(['course_id' => $this->otherCourse->id]);
 
-            getJson("/api/reviews?course_id={$this->publishedCourse->id}")
+            getJson("/api/academy/reviews?course_id={$this->publishedCourse->id}")
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -96,7 +96,7 @@ describe('review crud api', function () {
         it('anyone can get single visible review from published course without auth', function () {
             $review = Review::factory()->visible()->create(['course_id' => $this->publishedCourse->id]);
 
-            getJson("/api/reviews/{$review->id}")
+            getJson("/api/academy/reviews/{$review->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $review->id)
                 ->assertJsonPath('data.comments', $review->comments)
@@ -106,26 +106,26 @@ describe('review crud api', function () {
         it('anyone cannot get hidden review without auth', function () {
             $review = Review::factory()->hidden()->create(['course_id' => $this->publishedCourse->id]);
 
-            getJson("/api/reviews/{$review->id}")
+            getJson("/api/academy/reviews/{$review->id}")
                 ->assertForbidden();
         });
 
         it('anyone cannot get review from draft course without auth', function () {
             $review = Review::factory()->visible()->create(['course_id' => $this->draftCourse->id]);
 
-            getJson("/api/reviews/{$review->id}")
+            getJson("/api/academy/reviews/{$review->id}")
                 ->assertForbidden();
         });
 
         it('returns 404 when review not found', function () {
-            getJson('/api/reviews/99999')
+            getJson('/api/academy/reviews/99999')
                 ->assertNotFound();
         });
 
         it('anyone can set custom per_page for pagination', function () {
             Review::factory()->count(10)->visible()->create(['course_id' => $this->publishedCourse->id]);
 
-            getJson('/api/reviews?per_page=4')
+            getJson('/api/academy/reviews?per_page=4')
                 ->assertOk()
                 ->assertJsonCount(4, 'data');
         });
@@ -141,7 +141,7 @@ describe('review crud api', function () {
             Review::factory()->count(2)->hidden()->create(['course_id' => $this->publishedCourse->id]);
             Review::factory()->count(2)->visible()->create(['course_id' => $this->draftCourse->id]);
 
-            getJson('/api/reviews')
+            getJson('/api/academy/reviews')
                 ->assertOk()
                 ->assertJsonCount(7, 'data');
         });
@@ -155,7 +155,7 @@ describe('review crud api', function () {
                 'is_visible' => true
             ];
 
-            postJson('/api/reviews', $reviewData)
+            postJson('/api/academy/reviews', $reviewData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Review created successfully')
@@ -171,7 +171,7 @@ describe('review crud api', function () {
         });
 
         it('validates required fields when creating review', function () {
-            postJson('/api/reviews', [])
+            postJson('/api/academy/reviews', [])
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['course_id', 'user_id', 'comments', 'rating']);
         });
@@ -185,7 +185,7 @@ describe('review crud api', function () {
                 'is_visible' => false
             ];
 
-            putJson("/api/reviews/{$review->id}", $updateData)
+            putJson("/api/academy/reviews/{$review->id}", $updateData)
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Review updated successfully')
@@ -204,7 +204,7 @@ describe('review crud api', function () {
         it('admin can delete any review', function () {
             $review = Review::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            deleteJson("/api/reviews/{$review->id}")
+            deleteJson("/api/academy/reviews/{$review->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Review deleted successfully');
@@ -215,7 +215,7 @@ describe('review crud api', function () {
         it('admin can view any review', function () {
             $review = Review::factory()->hidden()->create(['course_id' => $this->draftCourse->id]);
 
-            getJson("/api/reviews/{$review->id}")
+            getJson("/api/academy/reviews/{$review->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $review->id);
         });
@@ -231,7 +231,7 @@ describe('review crud api', function () {
             Review::factory()->count(2)->create(['course_id' => $this->draftCourse->id]);
             Review::factory()->count(2)->create(['course_id' => $this->otherCourse->id]);
 
-            getJson('/api/reviews')
+            getJson('/api/academy/reviews')
                 ->assertOk()
                 ->assertJsonCount(5, 'data');
         });
@@ -239,7 +239,7 @@ describe('review crud api', function () {
         it('instructor can view review from their own course', function () {
             $review = Review::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            getJson("/api/reviews/{$review->id}")
+            getJson("/api/academy/reviews/{$review->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $review->id);
         });
@@ -247,12 +247,12 @@ describe('review crud api', function () {
         it('instructor cannot view review from other instructor course', function () {
             $review = Review::factory()->create(['course_id' => $this->otherCourse->id]);
 
-            getJson("/api/reviews/{$review->id}")
+            getJson("/api/academy/reviews/{$review->id}")
                 ->assertForbidden();
         });
 
         it('instructor cannot create review', function () {
-            postJson('/api/reviews', [
+            postJson('/api/academy/reviews', [
                 'course_id' => $this->publishedCourse->id,
                 'user_id' => $this->student->id,
                 'comments' => 'Great course!',
@@ -264,7 +264,7 @@ describe('review crud api', function () {
         it('instructor cannot update review', function () {
             $review = Review::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            putJson("/api/reviews/{$review->id}", [
+            putJson("/api/academy/reviews/{$review->id}", [
                 'comments' => 'Updated comment'
             ])
                 ->assertForbidden();
@@ -273,7 +273,7 @@ describe('review crud api', function () {
         it('instructor cannot delete review', function () {
             $review = Review::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            deleteJson("/api/reviews/{$review->id}")
+            deleteJson("/api/academy/reviews/{$review->id}")
                 ->assertForbidden();
         });
     });
@@ -288,7 +288,7 @@ describe('review crud api', function () {
             Review::factory()->count(2)->hidden()->create(['course_id' => $this->publishedCourse->id]);
             Review::factory()->count(2)->visible()->create(['course_id' => $this->draftCourse->id]);
 
-            getJson('/api/reviews')
+            getJson('/api/academy/reviews')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -296,7 +296,7 @@ describe('review crud api', function () {
         it('student can view single visible review from published course', function () {
             $review = Review::factory()->visible()->create(['course_id' => $this->publishedCourse->id]);
 
-            getJson("/api/reviews/{$review->id}")
+            getJson("/api/academy/reviews/{$review->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $review->id);
         });
@@ -304,7 +304,7 @@ describe('review crud api', function () {
         it('student cannot view hidden review', function () {
             $review = Review::factory()->hidden()->create(['course_id' => $this->publishedCourse->id]);
 
-            getJson("/api/reviews/{$review->id}")
+            getJson("/api/academy/reviews/{$review->id}")
                 ->assertForbidden();
         });
 
@@ -316,7 +316,7 @@ describe('review crud api', function () {
                 'rating' => 5
             ];
 
-            postJson('/api/reviews', $reviewData)
+            postJson('/api/academy/reviews', $reviewData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Review created successfully')
@@ -332,7 +332,7 @@ describe('review crud api', function () {
         });
 
         it('student cannot create review for non-enrolled course', function () {
-            postJson('/api/reviews', [
+            postJson('/api/academy/reviews', [
                 'course_id' => $this->otherCourse->id,
                 'user_id' => $this->student->id,
                 'comments' => 'Good course!',
@@ -349,7 +349,7 @@ describe('review crud api', function () {
                 'user_id' => $this->student->id
             ]);
 
-            postJson('/api/reviews', [
+            postJson('/api/academy/reviews', [
                 'course_id' => $this->publishedCourse->id,
                 'user_id' => $this->student->id,
                 'comments' => 'Another review',
@@ -366,7 +366,7 @@ describe('review crud api', function () {
                 'user_id' => $this->student->id
             ]);
 
-            putJson("/api/reviews/{$review->id}", [
+            putJson("/api/academy/reviews/{$review->id}", [
                 'comments' => 'Updated my review',
                 'rating' => 4
             ])
@@ -383,7 +383,7 @@ describe('review crud api', function () {
                 'user_id' => $this->otherStudent->id
             ]);
 
-            putJson("/api/reviews/{$review->id}", [
+            putJson("/api/academy/reviews/{$review->id}", [
                 'comments' => 'Unauthorized update'
             ])
                 ->assertForbidden();
@@ -395,7 +395,7 @@ describe('review crud api', function () {
                 'user_id' => $this->student->id
             ]);
 
-            deleteJson("/api/reviews/{$review->id}")
+            deleteJson("/api/academy/reviews/{$review->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Review deleted successfully');
@@ -409,7 +409,7 @@ describe('review crud api', function () {
                 'user_id' => $this->otherStudent->id
             ]);
 
-            deleteJson("/api/reviews/{$review->id}")
+            deleteJson("/api/academy/reviews/{$review->id}")
                 ->assertForbidden();
         });
     });
@@ -420,7 +420,7 @@ describe('review crud api', function () {
             Review::factory()->count(2)->hidden()->create(['course_id' => $this->publishedCourse->id]);
             Review::factory()->count(2)->visible()->create(['course_id' => $this->draftCourse->id]);
 
-            getJson('/api/reviews')
+            getJson('/api/academy/reviews')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -428,7 +428,7 @@ describe('review crud api', function () {
         it('guest user can view single visible review from published course', function () {
             $review = Review::factory()->visible()->create(['course_id' => $this->publishedCourse->id]);
 
-            getJson("/api/reviews/{$review->id}")
+            getJson("/api/academy/reviews/{$review->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $review->id);
         });
@@ -436,12 +436,12 @@ describe('review crud api', function () {
         it('guest user cannot view hidden review', function () {
             $review = Review::factory()->hidden()->create(['course_id' => $this->publishedCourse->id]);
 
-            getJson("/api/reviews/{$review->id}")
+            getJson("/api/academy/reviews/{$review->id}")
                 ->assertForbidden();
         });
 
         it('guest user cannot create review', function () {
-            postJson('/api/reviews', [
+            postJson('/api/academy/reviews', [
                 'course_id' => $this->publishedCourse->id,
                 'user_id' => $this->student->id,
                 'comments' => 'Good course!',
@@ -453,7 +453,7 @@ describe('review crud api', function () {
         it('guest user cannot update review', function () {
             $review = Review::factory()->visible()->create(['course_id' => $this->publishedCourse->id]);
 
-            putJson("/api/reviews/{$review->id}", [
+            putJson("/api/academy/reviews/{$review->id}", [
                 'comments' => 'Unauthorized update'
             ])
                 ->assertUnauthorized();
@@ -462,7 +462,7 @@ describe('review crud api', function () {
         it('guest user cannot delete review', function () {
             $review = Review::factory()->visible()->create(['course_id' => $this->publishedCourse->id]);
 
-            deleteJson("/api/reviews/{$review->id}")
+            deleteJson("/api/academy/reviews/{$review->id}")
                 ->assertUnauthorized();
         });
     });

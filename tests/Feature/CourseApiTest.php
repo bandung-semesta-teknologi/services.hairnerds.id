@@ -31,7 +31,7 @@ describe('course crud api', function () {
                 $course->categories()->attach($this->categories->random(2)->pluck('id'));
             });
 
-            getJson('/api/public-courses')
+            getJson('/api/academy/public-courses')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -40,7 +40,7 @@ describe('course crud api', function () {
             $course = Course::factory()->published()->create();
             $course->categories()->attach($this->categories->take(2)->pluck('id'));
 
-            getJson("/api/public-courses/{$course->slug}")
+            getJson("/api/academy/public-courses/{$course->slug}")
                 ->assertOk()
                 ->assertJsonPath('data.status', 'published');
         });
@@ -48,7 +48,7 @@ describe('course crud api', function () {
         it('guest cannot see draft course details', function () {
             $draftCourse = Course::factory()->draft()->create();
 
-            getJson("/api/public-courses/{$draftCourse->slug}")
+            getJson("/api/academy/public-courses/{$draftCourse->slug}")
                 ->assertNotFound();
         });
     });
@@ -78,7 +78,7 @@ describe('course crud api', function () {
                 $course->instructors()->attach($instructor->id);
             });
 
-            getJson('/api/courses')
+            getJson('/api/academy/courses')
                 ->assertOk()
                 ->assertJsonCount(5, 'data');
         });
@@ -96,11 +96,11 @@ describe('course crud api', function () {
                 $course->instructors()->attach($instructor->id);
             });
 
-            getJson('/api/courses?status=draft')
+            getJson('/api/academy/courses?status=draft')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
 
-            getJson('/api/courses?status=published')
+            getJson('/api/academy/courses?status=published')
                 ->assertOk()
                 ->assertJsonCount(2, 'data');
         });
@@ -116,7 +116,7 @@ describe('course crud api', function () {
                 'price' => 99,
             ];
 
-            postJson('/api/courses', $courseData)
+            postJson('/api/academy/courses', $courseData)
                 ->assertCreated()
                 ->assertJsonPath('data.title', 'Test Course');
         });
@@ -124,7 +124,7 @@ describe('course crud api', function () {
         it('admin can verify draft course', function () {
             $draftCourse = Course::factory()->draft()->create(['verified_at' => null]);
 
-            postJson("/api/courses/{$draftCourse->slug}/verify", [
+            postJson("/api/academy/courses/{$draftCourse->slug}/verify", [
                 'status' => 'published'
             ])
                 ->assertOk()
@@ -152,7 +152,7 @@ describe('course crud api', function () {
                 $course->instructors()->attach($otherInstructor->id);
             });
 
-            getJson('/api/courses')
+            getJson('/api/academy/courses')
                 ->assertOk()
                 ->assertJsonCount(2, 'data');
         });
@@ -165,7 +165,7 @@ describe('course crud api', function () {
                 'lang' => 'english',
             ];
 
-            postJson('/api/courses', $courseData)
+            postJson('/api/academy/courses', $courseData)
                 ->assertCreated()
                 ->assertJsonPath('data.title', 'Instructor Course')
                 ->assertJsonPath('data.status', 'draft');
@@ -176,7 +176,7 @@ describe('course crud api', function () {
             $course->categories()->attach($this->categories->first()->id);
             $course->instructors()->attach($this->instructor->id);
 
-            putJson("/api/courses/{$course->slug}", [
+            putJson("/api/academy/courses/{$course->slug}", [
                 'title' => 'Updated Course'
             ])
                 ->assertOk()
@@ -189,7 +189,7 @@ describe('course crud api', function () {
             $course->categories()->attach($this->categories->first()->id);
             $course->instructors()->attach($otherInstructor->id);
 
-            putJson("/api/courses/{$course->slug}", ['title' => 'Updated Title'])
+            putJson("/api/academy/courses/{$course->slug}", ['title' => 'Updated Title'])
                 ->assertForbidden();
         });
 
@@ -197,7 +197,7 @@ describe('course crud api', function () {
             $draftCourse = Course::factory()->draft()->create();
             $draftCourse->instructors()->attach($this->instructor->id);
 
-            postJson("/api/courses/{$draftCourse->slug}/verify", [
+            postJson("/api/academy/courses/{$draftCourse->slug}/verify", [
                 'status' => 'published'
             ])
                 ->assertForbidden();
@@ -217,13 +217,13 @@ describe('course crud api', function () {
                 $course->categories()->attach($this->categories->first()->id);
             });
 
-            getJson('/api/courses')
+            getJson('/api/academy/courses')
                 ->assertOk()
                 ->assertJsonCount(2, 'data');
         });
 
         it('student cannot create course', function () {
-            postJson('/api/courses', [
+            postJson('/api/academy/courses', [
                 'title' => 'Test Course',
                 'category_ids' => [$this->categories->first()->id],
                 'level' => 'beginner',
@@ -235,7 +235,7 @@ describe('course crud api', function () {
         it('student cannot update course', function () {
             $course = Course::factory()->published()->create();
 
-            putJson("/api/courses/{$course->slug}", ['title' => 'Updated'])
+            putJson("/api/academy/courses/{$course->slug}", ['title' => 'Updated'])
                 ->assertForbidden();
         });
     });

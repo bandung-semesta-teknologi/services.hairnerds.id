@@ -93,19 +93,19 @@ describe('question crud api', function () {
 
     describe('guest access (forbidden)', function () {
         it('guest user cannot view questions', function () {
-            getJson('/api/questions')
+            getJson('/api/academy/questions')
                 ->assertUnauthorized();
         });
 
         it('guest user cannot view single question', function () {
             $question = Question::factory()->create(['quiz_id' => $this->publishedQuiz->id]);
 
-            getJson("/api/questions/{$question->id}")
+            getJson("/api/academy/questions/{$question->id}")
                 ->assertUnauthorized();
         });
 
         it('guest user cannot create question', function () {
-            postJson('/api/questions', [
+            postJson('/api/academy/questions', [
                 'quiz_id' => $this->publishedQuiz->id,
                 'type' => 'single_choice',
                 'question' => 'What is the most important barbering tool?',
@@ -117,7 +117,7 @@ describe('question crud api', function () {
         it('guest user cannot update question', function () {
             $question = Question::factory()->create(['quiz_id' => $this->publishedQuiz->id]);
 
-            putJson("/api/questions/{$question->id}", [
+            putJson("/api/academy/questions/{$question->id}", [
                 'question' => 'Updated question text'
             ])
                 ->assertUnauthorized();
@@ -126,7 +126,7 @@ describe('question crud api', function () {
         it('guest user cannot delete question', function () {
             $question = Question::factory()->create(['quiz_id' => $this->publishedQuiz->id]);
 
-            deleteJson("/api/questions/{$question->id}")
+            deleteJson("/api/academy/questions/{$question->id}")
                 ->assertUnauthorized();
         });
     });
@@ -141,7 +141,7 @@ describe('question crud api', function () {
             Question::factory()->count(2)->create(['quiz_id' => $this->draftQuiz->id]);
             Question::factory()->count(2)->create(['quiz_id' => $this->otherQuiz->id]);
 
-            getJson('/api/questions')
+            getJson('/api/academy/questions')
                 ->assertOk()
                 ->assertJsonCount(7, 'data')
                 ->assertJsonStructure([
@@ -171,7 +171,7 @@ describe('question crud api', function () {
                 'score' => 10
             ];
 
-            postJson('/api/questions', $questionData)
+            postJson('/api/academy/questions', $questionData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Question created successfully')
@@ -200,7 +200,7 @@ describe('question crud api', function () {
                 ]
             ];
 
-            postJson('/api/questions', $questionData)
+            postJson('/api/academy/questions', $questionData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('data.type', 'multiple_choice')
@@ -234,7 +234,7 @@ describe('question crud api', function () {
                 'score' => 20
             ];
 
-            putJson("/api/questions/{$question->id}", $updateData)
+            putJson("/api/academy/questions/{$question->id}", $updateData)
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Question updated successfully')
@@ -253,7 +253,7 @@ describe('question crud api', function () {
         it('admin can delete any question', function () {
             $question = Question::factory()->create(['quiz_id' => $this->publishedQuiz->id]);
 
-            deleteJson("/api/questions/{$question->id}")
+            deleteJson("/api/academy/questions/{$question->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Question deleted successfully');
@@ -264,7 +264,7 @@ describe('question crud api', function () {
         it('admin can view any question', function () {
             $question = Question::factory()->create(['quiz_id' => $this->draftQuiz->id]);
 
-            getJson("/api/questions/{$question->id}")
+            getJson("/api/academy/questions/{$question->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $question->id)
                 ->assertJsonStructure([
@@ -286,7 +286,7 @@ describe('question crud api', function () {
             Question::factory()->count(2)->create(['quiz_id' => $this->draftQuiz->id]);
             Question::factory()->count(2)->create(['quiz_id' => $this->otherQuiz->id]);
 
-            getJson('/api/questions')
+            getJson('/api/academy/questions')
                 ->assertOk()
                 ->assertJsonCount(5, 'data');
         });
@@ -299,7 +299,7 @@ describe('question crud api', function () {
                 'score' => 10
             ];
 
-            postJson('/api/questions', $questionData)
+            postJson('/api/academy/questions', $questionData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Question created successfully')
@@ -316,7 +316,7 @@ describe('question crud api', function () {
                 'score' => 10
             ];
 
-            postJson('/api/questions', $questionData)
+            postJson('/api/academy/questions', $questionData)
                 ->assertStatus(403)
                 ->assertJsonPath('status', 'error')
                 ->assertJsonPath('message', 'Unauthorized to create questions for this quiz');
@@ -325,7 +325,7 @@ describe('question crud api', function () {
         it('instructor can update question from their own course', function () {
             $question = Question::factory()->create(['quiz_id' => $this->publishedQuiz->id]);
 
-            putJson("/api/questions/{$question->id}", [
+            putJson("/api/academy/questions/{$question->id}", [
                 'question' => 'Instructor Updated Question',
                 'score' => 15
             ])
@@ -338,7 +338,7 @@ describe('question crud api', function () {
         it('instructor can delete question from their own course', function () {
             $question = Question::factory()->create(['quiz_id' => $this->publishedQuiz->id]);
 
-            deleteJson("/api/questions/{$question->id}")
+            deleteJson("/api/academy/questions/{$question->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Question deleted successfully');
@@ -349,7 +349,7 @@ describe('question crud api', function () {
         it('instructor can view question from their own course', function () {
             $question = Question::factory()->create(['quiz_id' => $this->draftQuiz->id]);
 
-            getJson("/api/questions/{$question->id}")
+            getJson("/api/academy/questions/{$question->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $question->id);
         });
@@ -357,7 +357,7 @@ describe('question crud api', function () {
         it('instructor cannot update question from other instructor course', function () {
             $question = Question::factory()->create(['quiz_id' => $this->otherQuiz->id]);
 
-            putJson("/api/questions/{$question->id}", [
+            putJson("/api/academy/questions/{$question->id}", [
                 'question' => 'Unauthorized update'
             ])
                 ->assertForbidden();
@@ -366,14 +366,14 @@ describe('question crud api', function () {
         it('instructor cannot delete question from other instructor course', function () {
             $question = Question::factory()->create(['quiz_id' => $this->otherQuiz->id]);
 
-            deleteJson("/api/questions/{$question->id}")
+            deleteJson("/api/academy/questions/{$question->id}")
                 ->assertForbidden();
         });
 
         it('instructor cannot view question from other instructor course', function () {
             $question = Question::factory()->create(['quiz_id' => $this->otherQuiz->id]);
 
-            getJson("/api/questions/{$question->id}")
+            getJson("/api/academy/questions/{$question->id}")
                 ->assertForbidden();
         });
     });
@@ -388,7 +388,7 @@ describe('question crud api', function () {
             Question::factory()->count(2)->create(['quiz_id' => $this->draftQuiz->id]);
             Question::factory()->count(2)->create(['quiz_id' => $this->otherQuiz->id]);
 
-            getJson('/api/questions')
+            getJson('/api/academy/questions')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -396,7 +396,7 @@ describe('question crud api', function () {
         it('student can view single question from enrolled published course', function () {
             $question = Question::factory()->create(['quiz_id' => $this->publishedQuiz->id]);
 
-            getJson("/api/questions/{$question->id}")
+            getJson("/api/academy/questions/{$question->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $question->id);
         });
@@ -404,19 +404,19 @@ describe('question crud api', function () {
         it('student cannot view question from draft course', function () {
             $question = Question::factory()->create(['quiz_id' => $this->draftQuiz->id]);
 
-            getJson("/api/questions/{$question->id}")
+            getJson("/api/academy/questions/{$question->id}")
                 ->assertForbidden();
         });
 
         it('student cannot view question from unenrolled course', function () {
             $question = Question::factory()->create(['quiz_id' => $this->otherQuiz->id]);
 
-            getJson("/api/questions/{$question->id}")
+            getJson("/api/academy/questions/{$question->id}")
                 ->assertForbidden();
         });
 
         it('student cannot create question', function () {
-            postJson('/api/questions', [
+            postJson('/api/academy/questions', [
                 'quiz_id' => $this->publishedQuiz->id,
                 'type' => 'single_choice',
                 'question' => 'Student Question',
@@ -428,7 +428,7 @@ describe('question crud api', function () {
         it('student cannot update question', function () {
             $question = Question::factory()->create(['quiz_id' => $this->publishedQuiz->id]);
 
-            putJson("/api/questions/{$question->id}", [
+            putJson("/api/academy/questions/{$question->id}", [
                 'question' => 'Student Updated Question'
             ])
                 ->assertForbidden();
@@ -437,7 +437,7 @@ describe('question crud api', function () {
         it('student cannot delete question', function () {
             $question = Question::factory()->create(['quiz_id' => $this->publishedQuiz->id]);
 
-            deleteJson("/api/questions/{$question->id}")
+            deleteJson("/api/academy/questions/{$question->id}")
                 ->assertForbidden();
         });
     });
@@ -457,7 +457,7 @@ describe('question crud api', function () {
             Question::factory()->count(3)->create(['quiz_id' => $this->publishedQuiz->id]);
             Question::factory()->count(2)->create(['quiz_id' => $quiz2->id]);
 
-            getJson("/api/questions?quiz_id={$this->publishedQuiz->id}")
+            getJson("/api/academy/questions?quiz_id={$this->publishedQuiz->id}")
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -476,15 +476,15 @@ describe('question crud api', function () {
                 'type' => 'fill_blank'
             ]);
 
-            getJson('/api/questions?type=single_choice')
+            getJson('/api/academy/questions?type=single_choice')
                 ->assertOk()
                 ->assertJsonCount(2, 'data');
 
-            getJson('/api/questions?type=multiple_choice')
+            getJson('/api/academy/questions?type=multiple_choice')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
 
-            getJson('/api/questions?type=fill_blank')
+            getJson('/api/academy/questions?type=fill_blank')
                 ->assertOk()
                 ->assertJsonCount(1, 'data');
         });
@@ -499,7 +499,7 @@ describe('question crud api', function () {
                 'question' => 'How to create a database?'
             ]);
 
-            getJson('/api/questions?search=programming')
+            getJson('/api/academy/questions?search=programming')
                 ->assertOk()
                 ->assertJsonCount(1, 'data')
                 ->assertJsonPath('data.0.question', 'What is the best programming language?');
@@ -508,7 +508,7 @@ describe('question crud api', function () {
         it('can paginate questions', function () {
             Question::factory()->count(25)->create(['quiz_id' => $this->publishedQuiz->id]);
 
-            getJson('/api/questions?per_page=10')
+            getJson('/api/academy/questions?per_page=10')
                 ->assertOk()
                 ->assertJsonCount(10, 'data')
                 ->assertJsonStructure([
@@ -530,7 +530,7 @@ describe('question crud api', function () {
         });
 
         it('validates required fields when creating question', function () {
-            postJson('/api/questions', [])
+            postJson('/api/academy/questions', [])
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['quiz_id', 'type', 'question']);
         });
@@ -542,7 +542,7 @@ describe('question crud api', function () {
                 'question' => 'Test question'
             ];
 
-            postJson('/api/questions', $questionData)
+            postJson('/api/academy/questions', $questionData)
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['type']);
         });
@@ -554,7 +554,7 @@ describe('question crud api', function () {
                 'question' => 'Test question'
             ];
 
-            postJson('/api/questions', $questionData)
+            postJson('/api/academy/questions', $questionData)
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['quiz_id']);
         });
@@ -570,7 +570,7 @@ describe('question crud api', function () {
                 ]
             ];
 
-            postJson('/api/questions', $questionData)
+            postJson('/api/academy/questions', $questionData)
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['answers.0.is_true', 'answers.1.answer']);
         });
@@ -583,7 +583,7 @@ describe('question crud api', function () {
                 'score' => -5
             ];
 
-            postJson('/api/questions', $questionData)
+            postJson('/api/academy/questions', $questionData)
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['score']);
         });
@@ -595,19 +595,19 @@ describe('question crud api', function () {
         });
 
         it('returns 404 when question not found', function () {
-            getJson('/api/questions/99999')
+            getJson('/api/academy/questions/99999')
                 ->assertNotFound();
         });
 
         it('returns 404 when updating non-existent question', function () {
-            putJson('/api/questions/99999', [
+            putJson('/api/academy/questions/99999', [
                 'question' => 'Updated question'
             ])
                 ->assertNotFound();
         });
 
         it('returns 404 when deleting non-existent question', function () {
-            deleteJson('/api/questions/99999')
+            deleteJson('/api/academy/questions/99999')
                 ->assertNotFound();
         });
     });

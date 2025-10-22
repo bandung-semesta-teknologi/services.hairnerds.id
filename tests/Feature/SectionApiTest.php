@@ -49,7 +49,7 @@ describe('section crud api', function () {
             Section::factory()->count(3)->create(['course_id' => $this->publishedCourse->id]);
             Section::factory()->count(2)->create(['course_id' => $this->draftCourse->id]);
 
-            getJson('/api/sections')
+            getJson('/api/academy/sections')
                 ->assertOk()
                 ->assertJsonCount(3, 'data')
                 ->assertJsonStructure([
@@ -75,11 +75,11 @@ describe('section crud api', function () {
             Section::factory()->count(3)->create(['course_id' => $this->publishedCourse->id]);
             Section::factory()->count(2)->create(['course_id' => $this->draftCourse->id]);
 
-            getJson("/api/sections?course_id={$this->publishedCourse->id}")
+            getJson("/api/academy/sections?course_id={$this->publishedCourse->id}")
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
 
-            getJson("/api/sections?course_id={$this->draftCourse->id}")
+            getJson("/api/academy/sections?course_id={$this->draftCourse->id}")
                 ->assertOk()
                 ->assertJsonCount(0, 'data');
         });
@@ -89,7 +89,7 @@ describe('section crud api', function () {
             Section::factory()->create(['course_id' => $this->publishedCourse->id, 'sequence' => 1]);
             Section::factory()->create(['course_id' => $this->publishedCourse->id, 'sequence' => 2]);
 
-            getJson("/api/sections?course_id={$this->publishedCourse->id}")
+            getJson("/api/academy/sections?course_id={$this->publishedCourse->id}")
                 ->assertOk()
                 ->assertJsonPath('data.0.sequence', 1)
                 ->assertJsonPath('data.1.sequence', 2)
@@ -99,7 +99,7 @@ describe('section crud api', function () {
         it('anyone can get single section from published course without auth', function () {
             $section = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            getJson("/api/sections/{$section->id}")
+            getJson("/api/academy/sections/{$section->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $section->id)
                 ->assertJsonPath('data.title', $section->title)
@@ -110,19 +110,19 @@ describe('section crud api', function () {
         it('cannot get section from draft course without auth', function () {
             $section = Section::factory()->create(['course_id' => $this->draftCourse->id]);
 
-            getJson("/api/sections/{$section->id}")
+            getJson("/api/academy/sections/{$section->id}")
                 ->assertForbidden();
         });
 
         it('returns 404 when section not found', function () {
-            getJson('/api/sections/99999')
+            getJson('/api/academy/sections/99999')
                 ->assertNotFound();
         });
 
         it('anyone can set custom per_page for pagination', function () {
             Section::factory()->count(10)->create(['course_id' => $this->publishedCourse->id]);
 
-            getJson('/api/sections?per_page=4')
+            getJson('/api/academy/sections?per_page=4')
                 ->assertOk()
                 ->assertJsonCount(4, 'data');
         });
@@ -137,7 +137,7 @@ describe('section crud api', function () {
             Section::factory()->count(3)->create(['course_id' => $this->publishedCourse->id]);
             Section::factory()->count(2)->create(['course_id' => $this->draftCourse->id]);
 
-            getJson('/api/sections')
+            getJson('/api/academy/sections')
                 ->assertOk()
                 ->assertJsonCount(5, 'data');
         });
@@ -145,7 +145,7 @@ describe('section crud api', function () {
         it('admin can view section from draft course', function () {
             $section = Section::factory()->create(['course_id' => $this->draftCourse->id]);
 
-            getJson("/api/sections/{$section->id}")
+            getJson("/api/academy/sections/{$section->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $section->id);
         });
@@ -158,7 +158,7 @@ describe('section crud api', function () {
                 'objective' => 'Learn the basics'
             ];
 
-            postJson('/api/sections', $sectionData)
+            postJson('/api/academy/sections', $sectionData)
                 ->assertCreated()
                 ->assertJsonPath('data.title', 'Introduction')
                 ->assertJsonPath('data.objective', 'Learn the basics')
@@ -173,7 +173,7 @@ describe('section crud api', function () {
         });
 
         it('validates required fields when creating section', function () {
-            postJson('/api/sections', [])
+            postJson('/api/academy/sections', [])
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['course_id', 'sequence', 'title']);
         });
@@ -187,7 +187,7 @@ describe('section crud api', function () {
                 'sequence' => 5
             ];
 
-            putJson("/api/sections/{$section->id}", $updateData)
+            putJson("/api/academy/sections/{$section->id}", $updateData)
                 ->assertOk()
                 ->assertJsonPath('data.title', 'Updated Section Title')
                 ->assertJsonPath('data.objective', 'Updated objective')
@@ -203,7 +203,7 @@ describe('section crud api', function () {
         it('admin can delete any section', function () {
             $section = Section::factory()->create(['course_id' => $this->draftCourse->id]);
 
-            deleteJson("/api/sections/{$section->id}")
+            deleteJson("/api/academy/sections/{$section->id}")
                 ->assertOk()
                 ->assertJson(['message' => 'Section deleted successfully']);
 
@@ -211,7 +211,7 @@ describe('section crud api', function () {
         });
 
         it('returns 404 when deleting non-existent section', function () {
-            deleteJson('/api/sections/99999')
+            deleteJson('/api/academy/sections/99999')
                 ->assertNotFound();
         });
     });
@@ -226,7 +226,7 @@ describe('section crud api', function () {
             Section::factory()->count(2)->create(['course_id' => $this->draftCourse->id]);
             Section::factory()->count(1)->create(['course_id' => $this->otherInstructorCourse->id]);
 
-            getJson('/api/sections')
+            getJson('/api/academy/sections')
                 ->assertOk()
                 ->assertJsonCount(5, 'data');
         });
@@ -234,7 +234,7 @@ describe('section crud api', function () {
         it('instructor can view section from their own course', function () {
             $section = Section::factory()->create(['course_id' => $this->draftCourse->id]);
 
-            getJson("/api/sections/{$section->id}")
+            getJson("/api/academy/sections/{$section->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $section->id);
         });
@@ -242,7 +242,7 @@ describe('section crud api', function () {
         it('instructor cannot view section from other instructor course', function () {
             $section = Section::factory()->create(['course_id' => $this->otherInstructorCourse->id]);
 
-            getJson("/api/sections/{$section->id}")
+            getJson("/api/academy/sections/{$section->id}")
                 ->assertForbidden();
         });
 
@@ -254,7 +254,7 @@ describe('section crud api', function () {
                 'objective' => 'Master advanced concepts'
             ];
 
-            postJson('/api/sections', $sectionData)
+            postJson('/api/academy/sections', $sectionData)
                 ->assertCreated()
                 ->assertJsonPath('data.title', 'Advanced Topics')
                 ->assertJsonPath('data.objective', 'Master advanced concepts');
@@ -263,7 +263,7 @@ describe('section crud api', function () {
         it('instructor can update section from their own course', function () {
             $section = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            putJson("/api/sections/{$section->id}", [
+            putJson("/api/academy/sections/{$section->id}", [
                 'title' => 'Instructor Updated Section',
                 'sequence' => 10
             ])
@@ -275,7 +275,7 @@ describe('section crud api', function () {
         it('instructor cannot update section from other instructor course', function () {
             $section = Section::factory()->create(['course_id' => $this->otherInstructorCourse->id]);
 
-            putJson("/api/sections/{$section->id}", [
+            putJson("/api/academy/sections/{$section->id}", [
                 'title' => 'Unauthorized Update'
             ])
                 ->assertForbidden();
@@ -284,7 +284,7 @@ describe('section crud api', function () {
         it('instructor can delete section from their own course', function () {
             $section = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            deleteJson("/api/sections/{$section->id}")
+            deleteJson("/api/academy/sections/{$section->id}")
                 ->assertOk()
                 ->assertJson(['message' => 'Section deleted successfully']);
 
@@ -294,7 +294,7 @@ describe('section crud api', function () {
         it('instructor cannot delete section from other instructor course', function () {
             $section = Section::factory()->create(['course_id' => $this->otherInstructorCourse->id]);
 
-            deleteJson("/api/sections/{$section->id}")
+            deleteJson("/api/academy/sections/{$section->id}")
                 ->assertForbidden();
         });
     });
@@ -309,7 +309,7 @@ describe('section crud api', function () {
             Section::factory()->count(2)->create(['course_id' => $this->draftCourse->id]);
             Section::factory()->count(1)->create(['course_id' => $this->otherInstructorCourse->id]);
 
-            getJson('/api/sections')
+            getJson('/api/academy/sections')
                 ->assertOk()
                 ->assertJsonCount(4, 'data');
         });
@@ -317,7 +317,7 @@ describe('section crud api', function () {
         it('student can view section from published course', function () {
             $section = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            getJson("/api/sections/{$section->id}")
+            getJson("/api/academy/sections/{$section->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $section->id);
         });
@@ -325,12 +325,12 @@ describe('section crud api', function () {
         it('student cannot view section from draft course', function () {
             $section = Section::factory()->create(['course_id' => $this->draftCourse->id]);
 
-            getJson("/api/sections/{$section->id}")
+            getJson("/api/academy/sections/{$section->id}")
                 ->assertForbidden();
         });
 
         it('student cannot create section', function () {
-            postJson('/api/sections', [
+            postJson('/api/academy/sections', [
                 'course_id' => $this->publishedCourse->id,
                 'sequence' => 1,
                 'title' => 'Unauthorized Section'
@@ -341,7 +341,7 @@ describe('section crud api', function () {
         it('student cannot update section', function () {
             $section = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            putJson("/api/sections/{$section->id}", [
+            putJson("/api/academy/sections/{$section->id}", [
                 'title' => 'Unauthorized Update'
             ])
                 ->assertForbidden();
@@ -350,14 +350,14 @@ describe('section crud api', function () {
         it('student cannot delete section', function () {
             $section = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            deleteJson("/api/sections/{$section->id}")
+            deleteJson("/api/academy/sections/{$section->id}")
                 ->assertForbidden();
         });
     });
 
     describe('guest access', function () {
         it('guest user cannot create section', function () {
-            postJson('/api/sections', [
+            postJson('/api/academy/sections', [
                 'course_id' => $this->publishedCourse->id,
                 'sequence' => 1,
                 'title' => 'Unauthorized Section'
@@ -368,7 +368,7 @@ describe('section crud api', function () {
         it('guest user cannot update section', function () {
             $section = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            putJson("/api/sections/{$section->id}", [
+            putJson("/api/academy/sections/{$section->id}", [
                 'title' => 'Unauthorized Update'
             ])
                 ->assertUnauthorized();
@@ -377,7 +377,7 @@ describe('section crud api', function () {
         it('guest user cannot delete section', function () {
             $section = Section::factory()->create(['course_id' => $this->publishedCourse->id]);
 
-            deleteJson("/api/sections/{$section->id}")
+            deleteJson("/api/academy/sections/{$section->id}")
                 ->assertUnauthorized();
         });
     });
