@@ -5,16 +5,26 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\QuizResultStoreRequest;
 use App\Http\Requests\QuizResultUpdateRequest;
+use App\Http\Requests\QuizSubmissionRequest;
 use App\Http\Resources\QuizResultResource;
 use App\Jobs\AutoSubmitQuiz;
 use App\Models\QuizResult;
 use App\Models\Quiz;
+use App\Models\Progress;
+use App\Services\QuizValidationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class QuizResultController extends Controller
 {
+    protected $quizValidationService;
+
+    public function __construct(QuizValidationService $quizValidationService)
+    {
+        $this->quizValidationService = $quizValidationService;
+    }
+
     public function index(Request $request)
     {
         $this->authorize('viewAny', QuizResult::class);
@@ -71,55 +81,44 @@ class QuizResultController extends Controller
                     ], 422);
                 }
 
-                $existingActiveQuiz = QuizResult::where('user_id', $user->id)
-                    ->where('quiz_id', $data['quiz_id'])
+                $existingResult = QuizResult::where('user_id', $user->id)
+                    ->where('quiz_id', $quiz->id)
                     ->where('is_submitted', false)
-                    ->exists();
+                    ->first();
 
-                if ($existingActiveQuiz) {
+                if ($existingResult) {
                     return response()->json([
                         'status' => 'error',
-                        'message' => 'You already have an active quiz attempt'
+                        'message' => 'You already have an active quiz session'
                     ], 422);
                 }
-            }
 
-            if ($user->role === 'instructor') {
-                $quiz = Quiz::with('course')->findOrFail($data['quiz_id']);
+                if ($quiz->max_retakes !== null) {
+                    $completedAttempts = QuizResult::where('user_id', $user->id)
+                        ->where('quiz_id', $quiz->id)
+                        ->where('is_submitted', true)
+                        ->count();
 
-                if (!$quiz->course->instructors->contains($user)) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Cannot create quiz result for course you do not teach'
-                    ], 403);
+                    if ($completedAttempts >= $quiz->max_retakes) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'Maximum quiz attempts exceeded'
+                        ], 422);
+                    }
                 }
             }
 
             $quizResult = QuizResult::create($data);
-            $quizResult->load(['user', 'quiz.course', 'lesson']);
 
-            if ($quizResult->quiz->duration && $user->role === 'student') {
-                $duration = $quizResult->quiz->duration;
-                if (is_string($duration)) {
-                    $durationParts = explode(':', $duration);
-                } else {
-                    $durationParts = explode(':', $duration->format('H:i:s'));
-                }
-
-                $hours = (int) $durationParts[0];
-                $minutes = (int) $durationParts[1];
-                $seconds = (int) $durationParts[2];
-
-                $delaySeconds = ($hours * 3600) + ($minutes * 60) + $seconds;
-                $bufferSeconds = 1 * 60;
-                $totalDelaySeconds = $delaySeconds + $bufferSeconds;
-
-                AutoSubmitQuiz::dispatch($quizResult->id)->delay($totalDelaySeconds);
+            if ($quizResult->quiz->duration) {
+                AutoSubmitQuiz::dispatch($quizResult)->delay($quizResult->getExpectedFinishedAt());
             }
+
+            $quizResult->load(['user', 'quiz.course', 'lesson']);
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Quiz result created successfully',
+                'message' => 'Quiz started successfully',
                 'data' => new QuizResultResource($quizResult)
             ], 201);
         } catch (\Exception $e) {
@@ -198,6 +197,71 @@ class QuizResultController extends Controller
         }
     }
 
+    public function submit(QuizSubmissionRequest $request, QuizResult $quizResult)
+    {
+        $this->authorize('submit', $quizResult);
+
+        try {
+            $user = $request->user();
+
+            if ($quizResult->is_submitted) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Quiz already submitted'
+                ], 422);
+            }
+
+            if ($user->role === 'student' && $quizResult->isExpired()) {
+                $quizResult->autoSubmit();
+
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Quiz time has expired and has been automatically submitted',
+                    'data' => new QuizResultResource($quizResult->fresh(['user', 'quiz.course', 'lesson']))
+                ], 422);
+            }
+
+            $answers = $request->validated()['answers'];
+
+            $validationResult = $this->quizValidationService->validateQuizSubmission($answers);
+
+            $quizResult->update([
+                'answered' => $validationResult['answered'],
+                'correct_answers' => $validationResult['correct_answers'],
+                'total_obtained_marks' => $validationResult['total_obtained_marks'],
+                'is_submitted' => true,
+                'finished_at' => now(),
+            ]);
+
+            $enrollment = $quizResult->user->enrollments()
+                ->where('course_id', $quizResult->quiz->course_id)
+                ->first();
+
+            if ($enrollment) {
+                $enrollment->increment('quiz_attempts');
+            }
+
+            if ($quizResult->lesson_id) {
+                $this->updateStudentProgress($quizResult);
+            }
+
+            $quizResult->load(['user', 'quiz.course', 'lesson']);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Quiz submitted successfully',
+                'data' => new QuizResultResource($quizResult)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error submitting quiz: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to submit quiz'
+            ], 500);
+        }
+    }
+
     public function destroy(QuizResult $quizResult)
     {
         $this->authorize('delete', $quizResult);
@@ -219,45 +283,15 @@ class QuizResultController extends Controller
         }
     }
 
-    public function submit(QuizResult $quizResult)
+    private function updateStudentProgress(QuizResult $quizResult): void
     {
-        $this->authorize('submit', $quizResult);
-
-        try {
-            if ($quizResult->is_submitted) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Quiz result already submitted'
-                ], 422);
-            }
-
-            $quizResult->update([
-                'is_submitted' => true,
-                'finished_at' => now()
+        Progress::where('user_id', $quizResult->user_id)
+            ->where('lesson_id', $quizResult->lesson_id)
+            ->where('is_completed', false)
+            ->update([
+                'is_completed' => true,
+                'score' => $quizResult->total_obtained_marks,
+                'updated_at' => now()
             ]);
-
-            $enrollment = $quizResult->user->enrollments()
-                ->where('course_id', $quizResult->quiz->course_id)
-                ->first();
-
-            if ($enrollment) {
-                $enrollment->increment('quiz_attempts');
-            }
-
-            $quizResult->load(['user', 'quiz.course', 'lesson']);
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Quiz submitted successfully',
-                'data' => new QuizResultResource($quizResult)
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error('Error submitting quiz: ' . $e->getMessage());
-
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to submit quiz'
-            ], 500);
-        }
     }
 }

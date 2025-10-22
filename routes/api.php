@@ -59,6 +59,8 @@ Route::get('/reviews/{review}', [ReviewController::class, 'show']);
 Route::post('/payments/callback', [PaymentController::class, 'callback'])->name('payment.callback');
 Route::get('/payments/finish', [PaymentController::class, 'finish'])->name('payment.finish');
 Route::post('/payments/generate-signature', [PaymentController::class, 'generateSignature']);
+Route::get('/payments/cancelled', [PaymentController::class, 'cancelled'])->name('payment.cancelled');
+Route::get('/payments/error', [PaymentController::class, 'error'])->name('payment.error');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -144,6 +146,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
 
     Route::apiResource('enrollments', EnrollmentController::class);
+    Route::get('/enrollments/course/{course:slug}', [EnrollmentController::class, 'showByCourseSlug']);
     Route::post('/enrollments/{enrollment}/finish', [EnrollmentController::class, 'finish']);
 
     Route::apiResource('progress', ProgressController::class);

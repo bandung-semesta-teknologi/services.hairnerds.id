@@ -19,9 +19,6 @@ class EnrollmentResource extends JsonResource
                 ];
             }),
             'course' => $this->when($this->relationLoaded('course'), function () {
-                $lessons = $this->course->relationLoaded('lessons') ? $this->course->lessons : collect();
-                $quizLessons = $lessons->filter(fn($lesson) => $lesson->type === 'quiz');
-                $nonQuizLessons = $lessons->filter(fn($lesson) => $lesson->type !== 'quiz');
                 return [
                     'id' => $this->course->id,
                     'title' => $this->course->title,
@@ -30,8 +27,32 @@ class EnrollmentResource extends JsonResource
                     'thumbnail' => $this->course->thumbnail,
                     'level' => $this->course->level,
                     'price' => $this->course->price,
-                    'instructors' => UserResource::collection($this->whenLoaded('course.instructors')),
-                    'categories' => CategoryResource::collection($this->whenLoaded('course.categories')),
+                    'instructors' => $this->when($this->course->relationLoaded('instructors'), function () {
+                        return UserResource::collection($this->course->instructors);
+                    }),
+                    'categories' => $this->when($this->course->relationLoaded('categories'), function () {
+                        return CategoryResource::collection($this->course->categories);
+                    }),
+                    'sections' => $this->when($this->course->relationLoaded('sections'), function () {
+                        return $this->course->sections->map(function ($section) {
+                            return [
+                                'id' => $section->id,
+                                'title' => $section->title,
+                                'sequence' => $section->sequence,
+                                'lessons' => $section->relationLoaded('lessons') ? $section->lessons->map(function ($lesson) {
+                                    return [
+                                        'id' => $lesson->id,
+                                        'title' => $lesson->title,
+                                        'type' => $lesson->type,
+                                        'sequence' => $lesson->sequence,
+                                        'url' => $lesson->url,
+                                        'summary' => $lesson->summary,
+                                        'duration' => $lesson->duration,
+                                    ];
+                                }) : [],
+                            ];
+                        });
+                    }),
                 ];
             }),
             'enrolled_at' => $this->enrolled_at,
@@ -62,6 +83,11 @@ class EnrollmentResource extends JsonResource
                         'updated_at' => $progress->updated_at,
                     ];
                 });
+            }),
+            'is_reviewed' => $this->when($this->relationLoaded('course'), function() {
+                return $this->course->relationLoaded('reviews')
+                    ? $this->course->reviews->isNotEmpty()
+                    : false;
             }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

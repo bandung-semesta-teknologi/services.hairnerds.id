@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\EnrollmentStoreRequest;
 use App\Http\Requests\EnrollmentUpdateRequest;
 use App\Http\Resources\EnrollmentResource;
+use App\Http\Resources\EnrollmentDetailResource;
 use App\Models\Course;
 use App\Models\Enrollment;
 use Illuminate\Http\Request;
@@ -23,14 +24,14 @@ class EnrollmentController extends Controller
         $enrollments = Enrollment::query()
             ->with([
                 'user',
-                'course' => function($query) {
-                    $query->with([
-                        'instructors' => function($q) {
-                            $q->with('userProfile');
-                        },
-                        'categories'
-                    ]);
-                }
+                'course.instructors',
+                'course.categories',
+                'course.sections.lessons',
+                'course.lessons',
+                'course.reviews' => function($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                },
+                'progress.lesson',
             ])
             ->withCount([
                 'progress as completed_lessons_count' => function($q) {
@@ -207,6 +208,33 @@ class EnrollmentController extends Controller
         ]);
 
         return new EnrollmentResource($enrollment);
+    }
+
+    public function showByCourseSlug(Request $request, Course $course)
+    {
+        $user = $request->user();
+
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->with([
+                'course.instructors',
+                'course.categories',
+                'course.faqs',
+                'course.sections.lessons',
+                'progress.lesson'
+            ])
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Enrollment not found'
+            ], 404);
+        }
+
+        $this->authorize('view', $enrollment);
+
+        return new EnrollmentDetailResource($enrollment);
     }
 
     public function update(EnrollmentUpdateRequest $request, Enrollment $enrollment)

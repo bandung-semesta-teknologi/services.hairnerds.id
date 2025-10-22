@@ -15,27 +15,44 @@ class QuizResultStoreRequest extends FormRequest
     {
         $user = $this->user();
 
-        if ($user && $user->role === 'student') {
-            return [
-                'quiz_id' => 'required|exists:quizzes,id',
-                'lesson_id' => 'required|exists:lessons,id',
-                'answered' => 'nullable|integer|min:0',
-                'correct_answers' => 'nullable|integer|min:0',
-                'total_obtained_marks' => 'nullable|integer|min:0',
-                'started_at' => 'nullable|date',
-            ];
+        $rules = [
+            'quiz_id' => 'required|exists:quizzes,id',
+        ];
+
+        if ($user && $user->role !== 'student') {
+            $rules['user_id'] = 'required|exists:users,id';
+            $rules['lesson_id'] = 'nullable|exists:lessons,id';
+            $rules['answered'] = 'nullable|integer|min:0';
+            $rules['correct_answers'] = 'nullable|integer|min:0';
+            $rules['total_obtained_marks'] = 'nullable|integer|min:0';
+            $rules['is_submitted'] = 'nullable|boolean';
+            $rules['started_at'] = 'nullable|date';
+            $rules['finished_at'] = 'nullable|date|after_or_equal:started_at';
+        } else {
+            $rules['lesson_id'] = 'nullable|exists:lessons,id';
         }
 
+        return $rules;
+    }
+
+    public function messages(): array
+    {
         return [
-            'user_id' => 'required|exists:users,id',
-            'quiz_id' => 'required|exists:quizzes,id',
-            'lesson_id' => 'required|exists:lessons,id',
-            'answered' => 'nullable|integer|min:0',
-            'correct_answers' => 'nullable|integer|min:0',
-            'total_obtained_marks' => 'nullable|integer|min:0',
-            'is_submitted' => 'nullable|boolean',
-            'started_at' => 'nullable|date',
-            'finished_at' => 'nullable|date',
+            'quiz_id.required' => 'Quiz ID is required',
+            'quiz_id.exists' => 'Selected quiz does not exist',
+            'user_id.required' => 'User ID is required',
+            'user_id.exists' => 'Selected user does not exist',
+            'lesson_id.exists' => 'Selected lesson does not exist',
+            'answered.integer' => 'Answered must be a number',
+            'answered.min' => 'Answered must be at least 0',
+            'correct_answers.integer' => 'Correct answers must be a number',
+            'correct_answers.min' => 'Correct answers must be at least 0',
+            'total_obtained_marks.integer' => 'Total obtained marks must be a number',
+            'total_obtained_marks.min' => 'Total obtained marks must be at least 0',
+            'is_submitted.boolean' => 'Is submitted must be true or false',
+            'started_at.date' => 'Started at must be a valid date',
+            'finished_at.date' => 'Finished at must be a valid date',
+            'finished_at.after_or_equal' => 'Finished at must be after or equal to started at',
         ];
     }
 }

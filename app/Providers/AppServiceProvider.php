@@ -11,6 +11,7 @@ use Dedoc\Scramble\Support\RouteInfo;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use App\Services\QuizValidationService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,7 +20,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(QuizValidationService::class, function ($app) {
+            return new QuizValidationService();
+        });
     }
 
     /**
