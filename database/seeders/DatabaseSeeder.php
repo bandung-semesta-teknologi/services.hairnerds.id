@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use App\Models\Course;
+use App\Models\ServiceCategory;
 use App\Models\User;
 use App\Models\UserCredential;
 use App\Models\UserProfile;
@@ -219,6 +220,12 @@ class DatabaseSeeder extends Seeder
             AnswerBankSeeder::class,
             EnrollmentSeeder::class,
             ProgressSeeder::class,
+            StoreSeeder::class,
+            BarberSeeder::class,
+            CatalogCategorySeeder::class,
+            ServiceSeeder::class,
+            ServiceCategorySeeder::class,
+            ServiceBarberSeeder::class,
         ]);
     }
 
