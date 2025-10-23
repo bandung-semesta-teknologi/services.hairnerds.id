@@ -262,6 +262,107 @@ class QuizResultController extends Controller
         }
     }
 
+    public function getLatestByLesson(Request $request, $lessonId)
+    {
+        try {
+            $user = $request->user();
+
+            if ($user->role !== 'student') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Only students can access this endpoint'
+                ], 403);
+            }
+
+            $lessonId = (int) $lessonId;
+
+            $lesson = \App\Models\Lesson::with('quiz')->findOrFail($lessonId);
+
+            if (!$lesson->quiz) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No quiz found for this lesson'
+                ], 404);
+            }
+
+            $quiz = $lesson->quiz;
+
+            // dd($lessonId);
+
+            $latestQuizResult = QuizResult::where('user_id', $user->id)
+                ->where('lesson_id', $lessonId)
+                ->where('is_submitted', 1)
+                ->with(['quiz', 'lesson'])
+                ->latest('finished_at')
+                ->first();
+
+            $totalAttempts = QuizResult::where('user_id', $user->id)
+                ->where('lesson_id', $lessonId)
+                ->where('is_submitted', 1)
+                ->count();
+
+            $inProgressQuiz = QuizResult::where('user_id', $user->id)
+                ->where('lesson_id', $lessonId)
+                ->where('is_submitted', 0)
+                ->first();
+
+            $canTakeQuiz = true;
+            $reason = null;
+
+            if ($inProgressQuiz) {
+                $canTakeQuiz = false;
+                $reason = 'Quiz is already in progress';
+            } elseif ($quiz->max_retakes !== null && $totalAttempts >= $quiz->max_retakes) {
+                $canTakeQuiz = false;
+                $reason = 'Maximum attempts reached';
+            }
+
+            $isEnrolled = $user->enrollments()
+                ->where('course_id', $quiz->course_id)
+                ->exists();
+
+            if (!$isEnrolled) {
+                $canTakeQuiz = false;
+                $reason = 'Not enrolled in course';
+            }
+
+            $responseData = [
+                'quiz' => [
+                    'id' => $quiz->id,
+                    'title' => $quiz->title,
+                    'instruction' => $quiz->instruction,
+                    'duration' => $quiz->duration?->format('H:i:s'),
+                    'total_marks' => $quiz->total_marks,
+                    'pass_marks' => $quiz->pass_marks,
+                    'max_retakes' => $quiz->max_retakes,
+                ],
+                'latest_result' => $latestQuizResult ? new QuizResultResource($latestQuizResult) : null,
+                'attempt_info' => [
+                    'total_attempts' => $totalAttempts,
+                    'max_attempts' => $quiz->max_retakes,
+                    'remaining_attempts' => $quiz->max_retakes !== null ? max(0, $quiz->max_retakes - $totalAttempts) : null,
+                ],
+                'can_take_quiz' => $canTakeQuiz,
+                'reason' => $reason,
+                'has_in_progress' => $inProgressQuiz !== null,
+                'in_progress_quiz' => $inProgressQuiz ? new QuizResultResource($inProgressQuiz->load(['quiz', 'lesson'])) : null,
+            ];
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $responseData
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting latest quiz result: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get latest quiz result'
+            ], 500);
+        }
+    }
+
     public function destroy(QuizResult $quizResult)
     {
         $this->authorize('delete', $quizResult);

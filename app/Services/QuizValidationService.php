@@ -21,12 +21,16 @@ class QuizValidationService
         foreach ($answers as $answer) {
             $questionId = $answer['question_id'];
             $questionType = $answer['type'];
-            $submittedAnswers = $answer['answers'];
+            $submittedAnswers = $answer['answers'] ?? null;
 
             $question = Question::with('answerBanks')->find($questionId);
 
             if (!$question) {
                 Log::warning("Question not found: {$questionId}");
+                continue;
+            }
+
+            if ($this->isAnswerEmpty($submittedAnswers, $questionType)) {
                 continue;
             }
 
@@ -41,6 +45,23 @@ class QuizValidationService
         }
 
         return $result;
+    }
+
+    private function isAnswerEmpty($submittedAnswers, string $type): bool
+    {
+        switch ($type) {
+            case 'single_choice':
+                return empty($submittedAnswers) || $submittedAnswers === null;
+
+            case 'multiple_choice':
+                return empty($submittedAnswers) || !is_array($submittedAnswers) || count($submittedAnswers) === 0;
+
+            case 'fill_blank':
+                return empty(trim($submittedAnswers)) || $submittedAnswers === null;
+
+            default:
+                return true;
+        }
     }
 
     private function validateAnswer(Question $question, string $type, $submittedAnswers): bool

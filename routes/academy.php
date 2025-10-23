@@ -138,6 +138,7 @@ Route::prefix('academy')->name('academy.')->group(function () {
 
         Route::apiResource('quiz-results', QuizResultController::class);
         Route::post('/quiz-results/{quizResult}/submit', [QuizResultController::class, 'submit']);
+        Route::get('/lessons/{lesson}/quiz-result/latest', [QuizResultController::class, 'getLatestByLesson']);
 
         Route::get('/payments', [PaymentController::class, 'index']);
         Route::get('/payments/{payment}', [PaymentController::class, 'show']);
