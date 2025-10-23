@@ -287,8 +287,6 @@ class QuizResultController extends Controller
 
             $quiz = $lesson->quiz;
 
-            // dd($lessonId);
-
             $latestQuizResult = QuizResult::where('user_id', $user->id)
                 ->where('lesson_id', $lessonId)
                 ->where('is_submitted', 1)
