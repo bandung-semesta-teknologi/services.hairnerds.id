@@ -35,7 +35,7 @@ describe('bootcamp crud api', function () {
                 $bootcamp->instructors()->attach($instructor->id);
             });
 
-            getJson('/api/bootcamps')
+            getJson('/api/academy/bootcamps')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -46,7 +46,7 @@ describe('bootcamp crud api', function () {
             $bootcamp->categories()->attach($this->categories->take(2)->pluck('id'));
             $bootcamp->instructors()->attach($instructor->id);
 
-            getJson("/api/bootcamps/{$bootcamp->slug}")
+            getJson("/api/academy/bootcamps/{$bootcamp->slug}")
                 ->assertOk()
                 ->assertJsonPath('data.status', 'publish');
         });
@@ -56,7 +56,7 @@ describe('bootcamp crud api', function () {
             $draftBootcamp = Bootcamp::factory()->draft()->create();
             $draftBootcamp->instructors()->attach($instructor->id);
 
-            getJson("/api/bootcamps/{$draftBootcamp->slug}")
+            getJson("/api/academy/bootcamps/{$draftBootcamp->slug}")
                 ->assertForbidden();
         });
     });
@@ -87,7 +87,7 @@ describe('bootcamp crud api', function () {
 
             expect(Bootcamp::count())->toBe(5);
 
-            getJson('/api/bootcamps')
+            getJson('/api/academy/bootcamps')
                 ->assertOk()
                 ->assertJsonCount(5, 'data');
         });
@@ -109,11 +109,11 @@ describe('bootcamp crud api', function () {
             expect(Bootcamp::where('status', 'draft')->count())->toBe(3);
             expect(Bootcamp::where('status', 'publish')->count())->toBe(2);
 
-            getJson('/api/bootcamps?status=draft')
+            getJson('/api/academy/bootcamps?status=draft')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
 
-            getJson('/api/bootcamps?status=publish')
+            getJson('/api/academy/bootcamps?status=publish')
                 ->assertOk()
                 ->assertJsonCount(2, 'data');
         });
@@ -134,7 +134,7 @@ describe('bootcamp crud api', function () {
                 'instructor_ids' => [$instructor->id],
             ];
 
-            postJson('/api/bootcamps', $bootcampData)
+            postJson('/api/academy/bootcamps', $bootcampData)
                 ->assertCreated()
                 ->assertJsonPath('data.title', 'Test Bootcamp');
         });
@@ -144,7 +144,7 @@ describe('bootcamp crud api', function () {
             $draftBootcamp = Bootcamp::factory()->draft()->create(['verified_at' => null]);
             $draftBootcamp->instructors()->attach($instructor->id);
 
-            postJson("/api/bootcamps/{$draftBootcamp->slug}/verify", [
+            postJson("/api/academy/bootcamps/{$draftBootcamp->slug}/verify", [
                 'status' => 'publish'
             ])
                 ->assertOk()
@@ -174,7 +174,7 @@ describe('bootcamp crud api', function () {
             expect(Bootcamp::count())->toBe(5);
             expect(Bootcamp::whereHas('instructors', fn($q) => $q->where('users.id', $this->instructor->id))->count())->toBe(2);
 
-            getJson('/api/bootcamps')
+            getJson('/api/academy/bootcamps')
                 ->assertOk()
                 ->assertJsonCount(2, 'data');
         });
@@ -193,7 +193,7 @@ describe('bootcamp crud api', function () {
                 'instructor_ids' => [$this->instructor->id],
             ];
 
-            postJson('/api/bootcamps', $bootcampData)
+            postJson('/api/academy/bootcamps', $bootcampData)
                 ->assertCreated()
                 ->assertJsonPath('data.title', 'Instructor Bootcamp')
                 ->assertJsonPath('data.status', 'draft');
@@ -204,7 +204,7 @@ describe('bootcamp crud api', function () {
             $bootcamp->categories()->attach($this->categories->first()->id);
             $bootcamp->instructors()->attach($this->instructor->id);
 
-            putJson("/api/bootcamps/{$bootcamp->slug}", [
+            putJson("/api/academy/bootcamps/{$bootcamp->slug}", [
                 'title' => 'Updated Bootcamp',
                 'location' => 'Bandung',
             ])
@@ -219,7 +219,7 @@ describe('bootcamp crud api', function () {
             $bootcamp->categories()->attach($this->categories->first()->id);
             $bootcamp->instructors()->attach($otherInstructor->id);
 
-            putJson("/api/bootcamps/{$bootcamp->slug}", ['title' => 'Updated Title'])
+            putJson("/api/academy/bootcamps/{$bootcamp->slug}", ['title' => 'Updated Title'])
                 ->assertForbidden();
         });
 
@@ -227,7 +227,7 @@ describe('bootcamp crud api', function () {
             $draftBootcamp = Bootcamp::factory()->draft()->create();
             $draftBootcamp->instructors()->attach($this->instructor->id);
 
-            postJson("/api/bootcamps/{$draftBootcamp->slug}/verify", [
+            postJson("/api/academy/bootcamps/{$draftBootcamp->slug}/verify", [
                 'status' => 'publish'
             ])
                 ->assertForbidden();
@@ -251,13 +251,13 @@ describe('bootcamp crud api', function () {
                 $bootcamp->instructors()->attach($instructor->id);
             });
 
-            getJson('/api/bootcamps')
+            getJson('/api/academy/bootcamps')
                 ->assertOk()
                 ->assertJsonCount(2, 'data');
         });
 
         it('student cannot create bootcamp', function () {
-            postJson('/api/bootcamps', [
+            postJson('/api/academy/bootcamps', [
                 'title' => 'Test Bootcamp',
                 'category_ids' => [$this->categories->first()->id],
                 'instructor_ids' => [User::factory()->instructor()->create()->id],
@@ -276,7 +276,7 @@ describe('bootcamp crud api', function () {
             $bootcamp = Bootcamp::factory()->published()->create();
             $bootcamp->instructors()->attach($instructor->id);
 
-            putJson("/api/bootcamps/{$bootcamp->slug}", ['title' => 'Updated'])
+            putJson("/api/academy/bootcamps/{$bootcamp->slug}", ['title' => 'Updated'])
                 ->assertForbidden();
         });
     });

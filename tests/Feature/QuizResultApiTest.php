@@ -87,7 +87,7 @@ describe('quiz result api', function () {
         it('can start quiz when enrolled', function () {
             Queue::fake();
 
-            postJson('/api/quiz-results', [
+            postJson('/api/academy/quiz-results', [
                 'quiz_id' => $this->quiz->id,
                 'lesson_id' => $this->lesson->id,
                 'started_at' => now()
@@ -113,7 +113,7 @@ describe('quiz result api', function () {
                 'lesson_id' => $this->lesson->id
             ]);
 
-            getJson('/api/quiz-results')
+            getJson('/api/academy/quiz-results')
                 ->assertOk()
                 ->assertJsonCount(2, 'data');
         });
@@ -137,7 +137,7 @@ describe('quiz result api', function () {
                 ];
             }
 
-            $response = postJson("/api/quiz-results/{$quizResult->id}/submit", [
+            $response = postJson("/api/academy/quiz-results/{$quizResult->id}/submit", [
                 'answers' => $answers
             ]);
 
@@ -159,7 +159,7 @@ describe('quiz result api', function () {
                 'is_submitted' => false
             ]);
 
-            postJson("/api/quiz-results/{$quizResult->id}/submit")
+            postJson("/api/academy/quiz-results/{$quizResult->id}/submit")
                 ->assertUnprocessable()
                 ->assertJsonPath('message', 'Quiz answers are required');
         });
@@ -172,7 +172,7 @@ describe('quiz result api', function () {
                 'is_submitted' => true
             ]);
 
-            putJson("/api/quiz-results/{$quizResult->id}", [
+            putJson("/api/academy/quiz-results/{$quizResult->id}", [
                 'answered' => 5
             ])
                 ->assertUnprocessable()
@@ -186,7 +186,7 @@ describe('quiz result api', function () {
                 'lesson_id' => $this->lesson->id
             ]);
 
-            getJson("/api/quiz-results/{$quizResult->id}")
+            getJson("/api/academy/quiz-results/{$quizResult->id}")
                 ->assertForbidden();
         });
     });
@@ -203,7 +203,7 @@ describe('quiz result api', function () {
                 'lesson_id' => $this->lesson->id
             ]);
 
-            getJson('/api/quiz-results')
+            getJson('/api/academy/quiz-results')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -216,7 +216,7 @@ describe('quiz result api', function () {
                 'is_submitted' => false
             ]);
 
-            putJson("/api/quiz-results/{$quizResult->id}", [
+            putJson("/api/academy/quiz-results/{$quizResult->id}", [
                 'answered' => 15,
                 'correct_answers' => 12,
                 'total_obtained_marks' => 120
@@ -232,7 +232,7 @@ describe('quiz result api', function () {
                 'lesson_id' => $this->lesson->id
             ]);
 
-            deleteJson("/api/quiz-results/{$quizResult->id}")
+            deleteJson("/api/academy/quiz-results/{$quizResult->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success');
         });
@@ -250,7 +250,7 @@ describe('quiz result api', function () {
                 'lesson_id' => $this->lesson->id
             ]);
 
-            getJson('/api/quiz-results')
+            getJson('/api/academy/quiz-results')
                 ->assertOk()
                 ->assertJsonCount(2, 'data');
         });
@@ -263,7 +263,7 @@ describe('quiz result api', function () {
                 'is_submitted' => false
             ]);
 
-            putJson("/api/quiz-results/{$quizResult->id}", [
+            putJson("/api/academy/quiz-results/{$quizResult->id}", [
                 'answered' => 10,
                 'correct_answers' => 8,
                 'total_obtained_marks' => 80
@@ -275,12 +275,12 @@ describe('quiz result api', function () {
 
     describe('guest access', function () {
         it('cannot access quiz results', function () {
-            getJson('/api/quiz-results')
+            getJson('/api/academy/quiz-results')
                 ->assertUnauthorized();
         });
 
         it('cannot create quiz result', function () {
-            postJson('/api/quiz-results', [
+            postJson('/api/academy/quiz-results', [
                 'quiz_id' => $this->quiz->id,
                 'lesson_id' => $this->lesson->id
             ])

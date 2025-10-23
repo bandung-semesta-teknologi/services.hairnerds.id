@@ -76,7 +76,7 @@ describe('quiz crud api', function () {
 
     describe('guest access (forbidden)', function () {
         it('guest user cannot view quizzes', function () {
-            getJson('/api/quizzes')
+            getJson('/api/academy/quizzes')
                 ->assertUnauthorized();
         });
 
@@ -87,12 +87,12 @@ describe('quiz crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            getJson("/api/quizzes/{$quiz->id}")
+            getJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertUnauthorized();
         });
 
         it('guest user cannot create quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
                 'course_id' => $this->publishedCourse->id,
@@ -110,7 +110,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            putJson("/api/quizzes/{$quiz->id}", [
+            putJson("/api/academy/quizzes/{$quiz->id}", [
                 'title' => 'Updated title'
             ])
                 ->assertUnauthorized();
@@ -123,7 +123,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/quizzes/{$quiz->id}")
+            deleteJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertUnauthorized();
         });
     });
@@ -150,7 +150,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson('/api/quizzes')
+            getJson('/api/academy/quizzes')
                 ->assertOk()
                 ->assertJsonCount(7, 'data')
                 ->assertJsonStructure([
@@ -194,7 +194,7 @@ describe('quiz crud api', function () {
                 'min_lesson_taken' => 5
             ];
 
-            postJson('/api/quizzes', $quizData)
+            postJson('/api/academy/quizzes', $quizData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Quiz created successfully')
@@ -212,7 +212,7 @@ describe('quiz crud api', function () {
         });
 
         it('validates required fields when creating quiz', function () {
-            postJson('/api/quizzes', [])
+            postJson('/api/academy/quizzes', [])
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['section_id', 'lesson_id', 'course_id', 'title']);
         });
@@ -231,7 +231,7 @@ describe('quiz crud api', function () {
                 'pass_marks' => 90
             ];
 
-            putJson("/api/quizzes/{$quiz->id}", $updateData)
+            putJson("/api/academy/quizzes/{$quiz->id}", $updateData)
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Quiz updated successfully')
@@ -254,7 +254,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/quizzes/{$quiz->id}")
+            deleteJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Quiz deleted successfully');
@@ -269,7 +269,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->draftCourse->id
             ]);
 
-            getJson("/api/quizzes/{$quiz->id}")
+            getJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $quiz->id);
         });
@@ -297,7 +297,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson('/api/quizzes')
+            getJson('/api/academy/quizzes')
                 ->assertOk()
                 ->assertJsonCount(5, 'data');
         });
@@ -314,7 +314,7 @@ describe('quiz crud api', function () {
                 'pass_marks' => 60
             ];
 
-            postJson('/api/quizzes', $quizData)
+            postJson('/api/academy/quizzes', $quizData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Quiz created successfully')
@@ -329,7 +329,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            putJson("/api/quizzes/{$quiz->id}", [
+            putJson("/api/academy/quizzes/{$quiz->id}", [
                 'title' => 'Instructor Updated Quiz',
                 'instruction' => 'Updated by instructor',
                 'total_marks' => 120
@@ -347,7 +347,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/quizzes/{$quiz->id}")
+            deleteJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Quiz deleted successfully');
@@ -362,7 +362,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->draftCourse->id
             ]);
 
-            getJson("/api/quizzes/{$quiz->id}")
+            getJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $quiz->id);
         });
@@ -374,7 +374,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            putJson("/api/quizzes/{$quiz->id}", [
+            putJson("/api/academy/quizzes/{$quiz->id}", [
                 'title' => 'Unauthorized update'
             ])
                 ->assertForbidden();
@@ -387,7 +387,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            deleteJson("/api/quizzes/{$quiz->id}")
+            deleteJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertForbidden();
         });
 
@@ -398,7 +398,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson("/api/quizzes/{$quiz->id}")
+            getJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertForbidden();
         });
     });
@@ -425,7 +425,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson('/api/quizzes')
+            getJson('/api/academy/quizzes')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -437,7 +437,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            getJson("/api/quizzes/{$quiz->id}")
+            getJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $quiz->id);
         });
@@ -449,7 +449,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->draftCourse->id
             ]);
 
-            getJson("/api/quizzes/{$quiz->id}")
+            getJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertForbidden();
         });
 
@@ -460,12 +460,12 @@ describe('quiz crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson("/api/quizzes/{$quiz->id}")
+            getJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertForbidden();
         });
 
         it('student cannot create quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
                 'course_id' => $this->publishedCourse->id,
@@ -482,7 +482,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            putJson("/api/quizzes/{$quiz->id}", [
+            putJson("/api/academy/quizzes/{$quiz->id}", [
                 'title' => 'Student Updated Quiz'
             ])
                 ->assertForbidden();
@@ -495,7 +495,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/quizzes/{$quiz->id}")
+            deleteJson("/api/academy/quizzes/{$quiz->id}")
                 ->assertForbidden();
         });
     });
@@ -517,7 +517,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->draftCourse->id
             ]);
 
-            getJson("/api/quizzes?section_id={$this->publishedSection->id}")
+            getJson("/api/academy/quizzes?section_id={$this->publishedSection->id}")
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -534,7 +534,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->draftCourse->id
             ]);
 
-            getJson("/api/quizzes?lesson_id={$this->publishedLesson->id}")
+            getJson("/api/academy/quizzes?lesson_id={$this->publishedLesson->id}")
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -551,7 +551,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson("/api/quizzes?course_id={$this->publishedCourse->id}")
+            getJson("/api/academy/quizzes?course_id={$this->publishedCourse->id}")
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -570,7 +570,7 @@ describe('quiz crud api', function () {
                 'title' => 'PHP Advanced Quiz'
             ]);
 
-            getJson('/api/quizzes?search=Laravel')
+            getJson('/api/academy/quizzes?search=Laravel')
                 ->assertOk()
                 ->assertJsonCount(1, 'data')
                 ->assertJsonPath('data.0.title', 'Laravel Basics Quiz');
@@ -583,7 +583,7 @@ describe('quiz crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            getJson('/api/quizzes?per_page=10')
+            getJson('/api/academy/quizzes?per_page=10')
                 ->assertOk()
                 ->assertJsonCount(10, 'data')
                 ->assertJsonStructure([
@@ -605,7 +605,7 @@ describe('quiz crud api', function () {
         });
 
         it('validates section_id exists when creating quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => 99999,
                 'lesson_id' => $this->publishedLesson->id,
                 'course_id' => $this->publishedCourse->id,
@@ -616,7 +616,7 @@ describe('quiz crud api', function () {
         });
 
         it('validates lesson_id exists when creating quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => 99999,
                 'course_id' => $this->publishedCourse->id,
@@ -627,7 +627,7 @@ describe('quiz crud api', function () {
         });
 
         it('validates course_id exists when creating quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
                 'course_id' => 99999,
@@ -638,7 +638,7 @@ describe('quiz crud api', function () {
         });
 
         it('validates title is required when creating quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
                 'course_id' => $this->publishedCourse->id
@@ -648,7 +648,7 @@ describe('quiz crud api', function () {
         });
 
         it('validates title is string when creating quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
                 'course_id' => $this->publishedCourse->id,
@@ -659,7 +659,7 @@ describe('quiz crud api', function () {
         });
 
         it('validates duration format when creating quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
                 'course_id' => $this->publishedCourse->id,
@@ -671,7 +671,7 @@ describe('quiz crud api', function () {
         });
 
         it('validates total_marks is numeric when creating quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
                 'course_id' => $this->publishedCourse->id,
@@ -683,7 +683,7 @@ describe('quiz crud api', function () {
         });
 
         it('validates pass_marks is numeric when creating quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
                 'course_id' => $this->publishedCourse->id,
@@ -695,7 +695,7 @@ describe('quiz crud api', function () {
         });
 
         it('validates max_retakes is numeric when creating quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
                 'course_id' => $this->publishedCourse->id,
@@ -707,7 +707,7 @@ describe('quiz crud api', function () {
         });
 
         it('validates min_lesson_taken is numeric when creating quiz', function () {
-            postJson('/api/quizzes', [
+            postJson('/api/academy/quizzes', [
                 'section_id' => $this->publishedSection->id,
                 'lesson_id' => $this->publishedLesson->id,
                 'course_id' => $this->publishedCourse->id,
@@ -725,19 +725,19 @@ describe('quiz crud api', function () {
         });
 
         it('returns 404 for non-existent quiz', function () {
-            getJson('/api/quizzes/99999')
+            getJson('/api/academy/quizzes/99999')
                 ->assertNotFound();
         });
 
         it('returns 404 when updating non-existent quiz', function () {
-            putJson('/api/quizzes/99999', [
+            putJson('/api/academy/quizzes/99999', [
                 'title' => 'Updated Title'
             ])
                 ->assertNotFound();
         });
 
         it('returns 404 when deleting non-existent quiz', function () {
-            deleteJson('/api/quizzes/99999')
+            deleteJson('/api/academy/quizzes/99999')
                 ->assertNotFound();
         });
     });
