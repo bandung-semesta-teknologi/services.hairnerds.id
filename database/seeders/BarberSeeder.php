@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Barber;
+use App\Models\User;
 
 class BarberSeeder extends Seeder
 {
@@ -27,9 +28,15 @@ class BarberSeeder extends Seeder
             [159, 'nurdin@hairnerds.id', 'Nurdin', 6, '#87a040', '6281234567815'],
         ];
 
+        $existingUserIds = User::pluck('id')->toArray();
+
         foreach ($barbers as $data) {
+            $randomUserId = count($existingUserIds) > 0
+                ? $existingUserIds[array_rand($existingUserIds)]
+                : null;
+
             Barber::create([
-                'id_user'   => null,
+                'id_user'   => $randomUserId,
                 'id_store'  => $data[3],
                 'email'     => $data[1],
                 'full_name' => $data[2],

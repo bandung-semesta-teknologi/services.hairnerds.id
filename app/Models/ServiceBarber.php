@@ -12,19 +12,6 @@ class ServiceBarber extends Model
 
     protected $guarded = ['id'];
 
-    protected $table = 'service_barber';
-
-    protected $fillable = [
-        'id_service',
-        'id_barber',
-        'price',
-        'weekend_price',
-        'status',
-        'created_by',
-        'updated_by',
-        'deleted_by',
-    ];
-
     public function service()
     {
         return $this->belongsTo(Service::class);

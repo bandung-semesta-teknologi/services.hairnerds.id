@@ -3,9 +3,9 @@
 use App\Models\User;
 use App\Models\UserCredential;
 use App\Models\UserProfile;
+use App\Notifications\CustomResetPasswordNotification;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
@@ -164,7 +164,7 @@ describe('restful api authentication flow', function () {
         $response->assertOk()
             ->assertJson(['message' => 'Reset link sent to your email.']);
 
-        Notification::assertSentTo($user, ResetPassword::class);
+        Notification::assertSentTo($user, CustomResetPasswordNotification::class);
     });
 
     it('user can reset password with valid token', function () {

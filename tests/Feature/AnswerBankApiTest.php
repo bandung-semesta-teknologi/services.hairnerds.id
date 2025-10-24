@@ -79,12 +79,12 @@ describe('answer bank crud api', function () {
 
     describe('guest access (forbidden)', function () {
         it('guest user cannot view answer banks', function () {
-            getJson('/api/answer-banks')
+            getJson('/api/academy/answer-banks')
                 ->assertUnauthorized();
         });
 
         it('guest user cannot create answer bank', function () {
-            postJson('/api/answer-banks', [
+            postJson('/api/academy/answer-banks', [
                 'question_id' => $this->publishedQuestion->id,
                 'answer' => 'Test answer',
                 'is_true' => true
@@ -102,7 +102,7 @@ describe('answer bank crud api', function () {
             AnswerBank::factory()->count(3)->create(['question_id' => $this->publishedQuestion->id]);
             AnswerBank::factory()->count(2)->create(['question_id' => $this->otherQuestion->id]);
 
-            getJson('/api/answer-banks')
+            getJson('/api/academy/answer-banks')
                 ->assertOk()
                 ->assertJsonCount(5, 'data')
                 ->assertJsonStructure([
@@ -129,7 +129,7 @@ describe('answer bank crud api', function () {
                 'is_true' => true
             ];
 
-            postJson('/api/answer-banks', $answerData)
+            postJson('/api/academy/answer-banks', $answerData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Answer created successfully')
@@ -151,7 +151,7 @@ describe('answer bank crud api', function () {
                 'is_true' => false
             ];
 
-            putJson("/api/answer-banks/{$answerBank->id}", $updateData)
+            putJson("/api/academy/answer-banks/{$answerBank->id}", $updateData)
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Answer updated successfully')
@@ -168,7 +168,7 @@ describe('answer bank crud api', function () {
         it('admin can delete any answer bank', function () {
             $answerBank = AnswerBank::factory()->create(['question_id' => $this->publishedQuestion->id]);
 
-            deleteJson("/api/answer-banks/{$answerBank->id}")
+            deleteJson("/api/academy/answer-banks/{$answerBank->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Answer deleted successfully');
@@ -179,7 +179,7 @@ describe('answer bank crud api', function () {
         it('admin can view any answer bank', function () {
             $answerBank = AnswerBank::factory()->create(['question_id' => $this->otherQuestion->id]);
 
-            getJson("/api/answer-banks/{$answerBank->id}")
+            getJson("/api/academy/answer-banks/{$answerBank->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $answerBank->id);
         });
@@ -194,7 +194,7 @@ describe('answer bank crud api', function () {
             AnswerBank::factory()->count(3)->create(['question_id' => $this->publishedQuestion->id]);
             AnswerBank::factory()->count(2)->create(['question_id' => $this->otherQuestion->id]);
 
-            getJson('/api/answer-banks')
+            getJson('/api/academy/answer-banks')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -206,7 +206,7 @@ describe('answer bank crud api', function () {
                 'is_true' => true
             ];
 
-            postJson('/api/answer-banks', $answerData)
+            postJson('/api/academy/answer-banks', $answerData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Answer created successfully')
@@ -217,7 +217,7 @@ describe('answer bank crud api', function () {
         it('instructor can update answer bank from their own course', function () {
             $answerBank = AnswerBank::factory()->create(['question_id' => $this->publishedQuestion->id]);
 
-            putJson("/api/answer-banks/{$answerBank->id}", [
+            putJson("/api/academy/answer-banks/{$answerBank->id}", [
                 'answer' => 'Instructor updated answer',
                 'is_true' => false
             ])
@@ -230,7 +230,7 @@ describe('answer bank crud api', function () {
         it('instructor can delete answer bank from their own course', function () {
             $answerBank = AnswerBank::factory()->create(['question_id' => $this->publishedQuestion->id]);
 
-            deleteJson("/api/answer-banks/{$answerBank->id}")
+            deleteJson("/api/academy/answer-banks/{$answerBank->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Answer deleted successfully');
@@ -241,7 +241,7 @@ describe('answer bank crud api', function () {
         it('instructor can view answer bank from their own course', function () {
             $answerBank = AnswerBank::factory()->create(['question_id' => $this->publishedQuestion->id]);
 
-            getJson("/api/answer-banks/{$answerBank->id}")
+            getJson("/api/academy/answer-banks/{$answerBank->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $answerBank->id);
         });
@@ -249,7 +249,7 @@ describe('answer bank crud api', function () {
         it('instructor cannot update answer bank from other instructor course', function () {
             $answerBank = AnswerBank::factory()->create(['question_id' => $this->otherQuestion->id]);
 
-            putJson("/api/answer-banks/{$answerBank->id}", [
+            putJson("/api/academy/answer-banks/{$answerBank->id}", [
                 'answer' => 'Unauthorized update'
             ])
                 ->assertForbidden();
@@ -258,14 +258,14 @@ describe('answer bank crud api', function () {
         it('instructor cannot delete answer bank from other instructor course', function () {
             $answerBank = AnswerBank::factory()->create(['question_id' => $this->otherQuestion->id]);
 
-            deleteJson("/api/answer-banks/{$answerBank->id}")
+            deleteJson("/api/academy/answer-banks/{$answerBank->id}")
                 ->assertForbidden();
         });
 
         it('instructor cannot view answer bank from other instructor course', function () {
             $answerBank = AnswerBank::factory()->create(['question_id' => $this->otherQuestion->id]);
 
-            getJson("/api/answer-banks/{$answerBank->id}")
+            getJson("/api/academy/answer-banks/{$answerBank->id}")
                 ->assertForbidden();
         });
     });
@@ -278,12 +278,12 @@ describe('answer bank crud api', function () {
         it('student cannot view answer banks', function () {
             AnswerBank::factory()->count(3)->create(['question_id' => $this->publishedQuestion->id]);
 
-            getJson('/api/answer-banks')
+            getJson('/api/academy/answer-banks')
                 ->assertForbidden();
         });
 
         it('student cannot create answer bank', function () {
-            postJson('/api/answer-banks', [
+            postJson('/api/academy/answer-banks', [
                 'question_id' => $this->publishedQuestion->id,
                 'answer' => 'Student answer',
                 'is_true' => true

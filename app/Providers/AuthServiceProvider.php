@@ -17,6 +17,9 @@ use App\Models\Quiz;
 use App\Models\QuizResult;
 use App\Models\Review;
 use App\Models\Section;
+use App\Models\ServiceBarber;
+use App\Models\ServiceCategory;
+use App\Models\Store;
 use App\Models\User;
 use App\Policies\AnswerBankPolicy;
 use App\Policies\AttachmentPolicy;
@@ -33,6 +36,10 @@ use App\Policies\QuizPolicy;
 use App\Policies\QuizResultPolicy;
 use App\Policies\ReviewPolicy;
 use App\Policies\SectionPolicy;
+use App\Policies\ServicePolicy;
+use App\Policies\ServiceBarberPolicy;
+use App\Policies\ServiceCategoryPolicy;
+use App\Policies\StorePolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
@@ -41,7 +48,9 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         AnswerBank::class => AnswerBankPolicy::class,
         Attachment::class => AttachmentPolicy::class,
+        Barber::class => BarberPolicy::class,
         Bootcamp::class => BootcampPolicy::class,
+        CatalogCategory::class => CatalogCategoryPolicy::class,
         Category::class => CategoryPolicy::class,
         Course::class => CoursePolicy::class,
         Faq::class => FaqPolicy::class,
@@ -54,6 +63,10 @@ class AuthServiceProvider extends ServiceProvider
         QuizResult::class => QuizResultPolicy::class,
         Review::class => ReviewPolicy::class,
         Section::class => SectionPolicy::class,
+        Service::class => ServicePolicy::class,
+        ServiceBarber::class => ServiceBarberPolicy::class,
+        ServiceCategory::class => ServiceCategoryPolicy::class,
+        Store::class => StorePolicy::class,
         User::class => UserPolicy::class,
     ];
 

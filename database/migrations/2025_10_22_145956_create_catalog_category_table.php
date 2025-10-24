@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('catalog_category', function (Blueprint $table) {
+        Schema::create('catalog_categories', function (Blueprint $table) {
             $table->id();
             $table->string('category_name', 100)->unique();
             $table->text('picture')->nullable();
@@ -28,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('catalog_category');
+        Schema::dropIfExists('catalog_categories');
     }
 };

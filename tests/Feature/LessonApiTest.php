@@ -67,7 +67,7 @@ describe('lesson crud api', function () {
 
     describe('guest access (forbidden)', function () {
         it('guest user cannot view lessons', function () {
-            getJson('/api/lessons')
+            getJson('/api/academy/lessons')
                 ->assertUnauthorized();
         });
 
@@ -77,12 +77,12 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            getJson("/api/lessons/{$lesson->id}")
+            getJson("/api/academy/lessons/{$lesson->id}")
                 ->assertUnauthorized();
         });
 
         it('guest user cannot create lesson', function () {
-            postJson('/api/lessons', [
+            postJson('/api/academy/lessons', [
                 'section_id' => $this->publishedSection->id,
                 'course_id' => $this->publishedCourse->id,
                 'sequence' => 1,
@@ -99,7 +99,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            postJson("/api/lessons/{$lesson->id}", [
+            postJson("/api/academy/lessons/{$lesson->id}", [
                 'title' => 'Updated title'
             ])
                 ->assertUnauthorized();
@@ -111,7 +111,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/lessons/{$lesson->id}")
+            deleteJson("/api/academy/lessons/{$lesson->id}")
                 ->assertUnauthorized();
         });
     });
@@ -135,7 +135,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson('/api/lessons')
+            getJson('/api/academy/lessons')
                 ->assertOk()
                 ->assertJsonCount(7, 'data')
                 ->assertJsonStructure([
@@ -174,7 +174,7 @@ describe('lesson crud api', function () {
                 'summary' => 'Basic introduction to Laravel framework'
             ];
 
-            postJson('/api/lessons', $lessonData)
+            postJson('/api/academy/lessons', $lessonData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Lesson created successfully')
@@ -204,7 +204,7 @@ describe('lesson crud api', function () {
                 'attachment_urls' => [null, 'https://youtube.com/watch?v=demo']
             ];
 
-            $response = postJson('/api/lessons', $lessonData)
+            $response = postJson('/api/academy/lessons', $lessonData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('data.attachments_count', 2);
@@ -215,7 +215,7 @@ describe('lesson crud api', function () {
         });
 
         it('validates required attachments for document type', function () {
-            postJson('/api/lessons', [
+            postJson('/api/academy/lessons', [
                 'section_id' => $this->publishedSection->id,
                 'course_id' => $this->publishedCourse->id,
                 'sequence' => 1,
@@ -227,7 +227,7 @@ describe('lesson crud api', function () {
         });
 
         it('validates required attachments for audio type', function () {
-            postJson('/api/lessons', [
+            postJson('/api/academy/lessons', [
                 'section_id' => $this->publishedSection->id,
                 'course_id' => $this->publishedCourse->id,
                 'sequence' => 1,
@@ -239,7 +239,7 @@ describe('lesson crud api', function () {
         });
 
         it('validates file size for attachments', function () {
-            postJson('/api/lessons', [
+            postJson('/api/academy/lessons', [
                 'section_id' => $this->publishedSection->id,
                 'course_id' => $this->publishedCourse->id,
                 'sequence' => 1,
@@ -254,7 +254,7 @@ describe('lesson crud api', function () {
         });
 
         it('validates file type for document attachments', function () {
-            postJson('/api/lessons', [
+            postJson('/api/academy/lessons', [
                 'section_id' => $this->publishedSection->id,
                 'course_id' => $this->publishedCourse->id,
                 'sequence' => 1,
@@ -279,7 +279,7 @@ describe('lesson crud api', function () {
                 'summary' => 'Updated lesson summary'
             ];
 
-            postJson("/api/lessons/{$lesson->id}", $updateData)
+            postJson("/api/academy/lessons/{$lesson->id}", $updateData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Lesson updated successfully')
@@ -302,7 +302,7 @@ describe('lesson crud api', function () {
 
             $file = UploadedFile::fake()->create('material.pdf', 1024);
 
-            postJson('/api/attachments', [
+            postJson('/api/academy/attachments', [
                 'lesson_id' => $lesson->id,
                 'type' => 'document',
                 'title' => 'Additional Material',
@@ -321,7 +321,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/lessons/{$lesson->id}")
+            deleteJson("/api/academy/lessons/{$lesson->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Lesson deleted successfully');
@@ -335,7 +335,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->draftCourse->id
             ]);
 
-            getJson("/api/lessons/{$lesson->id}")
+            getJson("/api/academy/lessons/{$lesson->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $lesson->id);
         });
@@ -360,7 +360,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson('/api/lessons')
+            getJson('/api/academy/lessons')
                 ->assertOk()
                 ->assertJsonCount(5, 'data');
         });
@@ -375,7 +375,7 @@ describe('lesson crud api', function () {
                 'url' => 'https://youtube.com/watch?v=example123'
             ];
 
-            postJson('/api/lessons', $lessonData)
+            postJson('/api/academy/lessons', $lessonData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success');
         });
@@ -392,7 +392,7 @@ describe('lesson crud api', function () {
                 'attachment_files' => [UploadedFile::fake()->create('podcast.mp3', 2048)]
             ];
 
-            postJson('/api/lessons', $lessonData)
+            postJson('/api/academy/lessons', $lessonData)
                 ->assertCreated()
                 ->assertJsonPath('data.attachments_count', 1);
         });
@@ -403,7 +403,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            postJson("/api/lessons/{$lesson->id}", [
+            postJson("/api/academy/lessons/{$lesson->id}", [
                 'title' => 'Instructor Updated Lesson',
                 'summary' => 'Updated by instructor'
             ])
@@ -419,7 +419,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/lessons/{$lesson->id}")
+            deleteJson("/api/academy/lessons/{$lesson->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'Lesson deleted successfully');
@@ -433,7 +433,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->draftCourse->id
             ]);
 
-            getJson("/api/lessons/{$lesson->id}")
+            getJson("/api/academy/lessons/{$lesson->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $lesson->id);
         });
@@ -444,7 +444,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            postJson("/api/lessons/{$lesson->id}", [
+            postJson("/api/academy/lessons/{$lesson->id}", [
                 'title' => 'Unauthorized update'
             ])
                 ->assertForbidden();
@@ -456,7 +456,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            deleteJson("/api/lessons/{$lesson->id}")
+            deleteJson("/api/academy/lessons/{$lesson->id}")
                 ->assertForbidden();
         });
 
@@ -466,7 +466,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson("/api/lessons/{$lesson->id}")
+            getJson("/api/academy/lessons/{$lesson->id}")
                 ->assertForbidden();
         });
     });
@@ -490,7 +490,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson('/api/lessons')
+            getJson('/api/academy/lessons')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -505,7 +505,7 @@ describe('lesson crud api', function () {
                 'lesson_id' => $lesson->id
             ]);
 
-            getJson("/api/lessons/{$lesson->id}")
+            getJson("/api/academy/lessons/{$lesson->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $lesson->id)
                 ->assertJsonPath('data.attachments_count', 2)
@@ -524,7 +524,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            getJson("/api/lessons/{$lesson->id}")
+            getJson("/api/academy/lessons/{$lesson->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $lesson->id);
         });
@@ -535,7 +535,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->otherCourse->id
             ]);
 
-            getJson("/api/lessons/{$lesson->id}")
+            getJson("/api/academy/lessons/{$lesson->id}")
                 ->assertForbidden();
         });
 
@@ -550,7 +550,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->draftCourse->id
             ]);
 
-            getJson("/api/lessons/{$lesson->id}")
+            getJson("/api/academy/lessons/{$lesson->id}")
                 ->assertForbidden();
         });
 
@@ -560,7 +560,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            getJson("/api/lessons?course_id={$this->publishedCourse->id}")
+            getJson("/api/academy/lessons?course_id={$this->publishedCourse->id}")
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
         });
@@ -571,13 +571,13 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            getJson("/api/lessons?section_id={$this->publishedSection->id}")
+            getJson("/api/academy/lessons?section_id={$this->publishedSection->id}")
                 ->assertOk()
                 ->assertJsonCount(2, 'data');
         });
 
         it('student cannot create lesson', function () {
-            postJson('/api/lessons', [
+            postJson('/api/academy/lessons', [
                 'section_id' => $this->publishedSection->id,
                 'course_id' => $this->publishedCourse->id,
                 'sequence' => 1,
@@ -594,7 +594,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            postJson("/api/lessons/{$lesson->id}", [
+            postJson("/api/academy/lessons/{$lesson->id}", [
                 'title' => 'Unauthorized update'
             ])
                 ->assertForbidden();
@@ -606,12 +606,12 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/lessons/{$lesson->id}")
+            deleteJson("/api/academy/lessons/{$lesson->id}")
                 ->assertForbidden();
         });
 
         it('returns 404 when lesson not found', function () {
-            getJson('/api/lessons/99999')
+            getJson('/api/academy/lessons/99999')
                 ->assertNotFound();
         });
 
@@ -621,7 +621,7 @@ describe('lesson crud api', function () {
                 'course_id' => $this->publishedCourse->id
             ]);
 
-            getJson('/api/lessons?per_page=4')
+            getJson('/api/academy/lessons?per_page=4')
                 ->assertOk()
                 ->assertJsonCount(4, 'data');
         });

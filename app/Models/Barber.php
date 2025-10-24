@@ -12,19 +12,6 @@ class Barber extends Model
 
     protected $guarded = ['id'];
 
-    protected $table = 'barber';
-
-    protected $fillable = [
-        'id_user',
-        'id_store',
-        'email',
-        'full_name',
-        'color',
-        'phone',
-        'is_active',
-        'sync_status',
-    ];
-
     public function store()
     {
         return $this->belongsTo(Store::class);

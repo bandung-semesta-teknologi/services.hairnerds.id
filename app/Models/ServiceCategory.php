@@ -12,22 +12,6 @@ class ServiceCategory extends Model
 
     protected $guarded = ['id'];
 
-    protected $table = 'service_category';
-
-    protected $fillable = [
-        'name_category',
-        'gender',
-        'status',
-        'sequence',
-        'image',
-        'id_store',
-        'is_recommendation',
-        'is_distance_matter',
-        'created_by',
-        'updated_by',
-        'deleted_by',
-    ];
-
     public function store()
     {
         return $this->belongsTo(Store::class);

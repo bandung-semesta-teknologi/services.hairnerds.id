@@ -12,27 +12,6 @@ class Service extends Model
 
     protected $guarded = ['id'];
 
-    protected $table = 'service';
-
-    protected $fillable = [
-        'gender',
-        'name_service',
-        'service_subtitle',
-        'id_category',
-        'description',
-        'youtube_code',
-        'price_type',
-        'price_description',
-        'allow_visible',
-        'session_duration',
-        'buffer_time',
-        'image',
-        'id_store',
-        'created_by',
-        'updated_by',
-        'deleted_by',
-    ];
-
     public function catalogCategory()
     {
         return $this->belongsTo(CatalogCategory::class);

@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('service_category', function (Blueprint $table) {
+        Schema::create('service_categories', function (Blueprint $table) {
             $table->id();
             $table->string('name_category', 25)->nullable();
             $table->smallInteger('gender')->nullable();
             $table->smallInteger('status')->nullable();
             $table->integer('sequence');
             $table->string('image', 50);
-            $table->foreignId('id_store')->constrained('store')->onDelete('cascade');
+            $table->foreignId('id_store')->constrained('stores')->onDelete('cascade');
             $table->integer('is_recommendation')->nullable();
             $table->boolean('is_distance_matter')->default(false)->nullable();
             $table->timestamps();
@@ -34,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('service_category');
+        Schema::dropIfExists('service_categories');
     }
 };

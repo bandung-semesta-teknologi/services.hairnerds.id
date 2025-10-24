@@ -12,27 +12,6 @@ class Store extends Model
 
     protected $guarded = ['id'];
 
-    protected $table = 'store';
-
-    protected $fillable = [
-        'store_name',
-        'address',
-        'phone',
-        'picture',
-        'website',
-        'id_owner',
-        'social_facebook',
-        'social_instagram',
-        'social_twitter',
-        'is_active',
-        'latitude',
-        'longitude',
-        'delivery_charge',
-        'created_by',
-        'updated_by',
-        'deleted_by',
-    ];
-
     public function barber()
     {
         return $this->hasMany(Barber::class);

@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('service', function (Blueprint $table) {
+        Schema::create('services', function (Blueprint $table) {
             $table->id();
             $table->smallInteger('gender')->nullable();
             $table->string('name_service')->nullable();
             $table->string('service_subtitle', 50)->nullable();
-            $table->foreignId('id_category')->constrained('catalog_category');
+            $table->foreignId('id_category')->constrained('catalog_categories');
             $table->text('description')->nullable();
             $table->string('youtube_code')->nullable();
             $table->smallInteger('price_type')->nullable();
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->time('session_duration')->nullable();
             $table->time('buffer_time')->nullable();
             $table->string('image', 50)->nullable();
-            $table->foreignId('id_store')->constrained('store');
+            $table->foreignId('id_store')->constrained('stores');
             $table->timestamps();
             $table->softDeletes();
             $table->uuid('created_by')->nullable();
@@ -39,6 +39,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('service');
+        Schema::dropIfExists('services');
     }
 };

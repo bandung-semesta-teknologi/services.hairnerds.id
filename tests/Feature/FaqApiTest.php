@@ -77,7 +77,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->draftBootcamp->id
             ]);
 
-            getJson('/api/faqs')
+            getJson('/api/academy/faqs')
                 ->assertOk()
                 ->assertJsonCount(5, 'data')
                 ->assertJsonStructure([
@@ -105,11 +105,11 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedBootcamp->id
             ]);
 
-            getJson('/api/faqs?faqable_type=App\\Models\\Course')
+            getJson('/api/academy/faqs?faqable_type=App\\Models\\Course')
                 ->assertOk()
                 ->assertJsonCount(3, 'data');
 
-            getJson('/api/faqs?faqable_type=App\\Models\\Bootcamp')
+            getJson('/api/academy/faqs?faqable_type=App\\Models\\Bootcamp')
                 ->assertOk()
                 ->assertJsonCount(2, 'data');
         });
@@ -120,7 +120,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedCourse->id
             ]);
 
-            getJson("/api/faqs/{$faq->id}")
+            getJson("/api/academy/faqs/{$faq->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $faq->id)
                 ->assertJsonPath('data.question', $faq->question)
@@ -133,7 +133,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedBootcamp->id
             ]);
 
-            getJson("/api/faqs/{$faq->id}")
+            getJson("/api/academy/faqs/{$faq->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $faq->id);
         });
@@ -144,7 +144,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->draftCourse->id
             ]);
 
-            getJson("/api/faqs/{$faq->id}")
+            getJson("/api/academy/faqs/{$faq->id}")
                 ->assertForbidden();
         });
 
@@ -154,12 +154,12 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->draftBootcamp->id
             ]);
 
-            getJson("/api/faqs/{$faq->id}")
+            getJson("/api/academy/faqs/{$faq->id}")
                 ->assertForbidden();
         });
 
         it('guest user cannot create faq', function () {
-            postJson('/api/faqs', [
+            postJson('/api/academy/faqs', [
                 'faqable_type' => 'App\\Models\\Course',
                 'faqable_id' => $this->publishedCourse->id,
                 'faqs' => [
@@ -178,7 +178,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedCourse->id
             ]);
 
-            putJson("/api/faqs/{$faq->id}", [
+            putJson("/api/academy/faqs/{$faq->id}", [
                 'question' => 'Unauthorized update?'
             ])
                 ->assertUnauthorized();
@@ -190,12 +190,12 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/faqs/{$faq->id}")
+            deleteJson("/api/academy/faqs/{$faq->id}")
                 ->assertUnauthorized();
         });
 
         it('returns 404 when faq not found', function () {
-            getJson('/api/faqs/99999')
+            getJson('/api/academy/faqs/99999')
                 ->assertNotFound();
         });
     });
@@ -223,7 +223,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->draftBootcamp->id
             ]);
 
-            getJson('/api/faqs')
+            getJson('/api/academy/faqs')
                 ->assertOk()
                 ->assertJsonCount(8, 'data');
         });
@@ -244,7 +244,7 @@ describe('faq crud api', function () {
                 ]
             ];
 
-            postJson('/api/faqs', $faqData)
+            postJson('/api/academy/faqs', $faqData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'FAQs created successfully')
@@ -274,7 +274,7 @@ describe('faq crud api', function () {
                 ]
             ];
 
-            postJson('/api/faqs', $faqData)
+            postJson('/api/academy/faqs', $faqData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonCount(2, 'data');
@@ -287,13 +287,13 @@ describe('faq crud api', function () {
         });
 
         it('validates required fields when creating faqs', function () {
-            postJson('/api/faqs', [])
+            postJson('/api/academy/faqs', [])
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['faqable_type', 'faqable_id', 'faqs']);
         });
 
         it('validates faqs array must not be empty', function () {
-            postJson('/api/faqs', [
+            postJson('/api/academy/faqs', [
                 'faqable_type' => 'App\\Models\\Course',
                 'faqable_id' => $this->publishedCourse->id,
                 'faqs' => []
@@ -303,7 +303,7 @@ describe('faq crud api', function () {
         });
 
         it('validates faqable_type must be valid', function () {
-            postJson('/api/faqs', [
+            postJson('/api/academy/faqs', [
                 'faqable_type' => 'App\\Models\\InvalidModel',
                 'faqable_id' => 1,
                 'faqs' => [
@@ -328,7 +328,7 @@ describe('faq crud api', function () {
                 'answer' => 'Updated answer.'
             ];
 
-            putJson("/api/faqs/{$faq->id}", $updateData)
+            putJson("/api/academy/faqs/{$faq->id}", $updateData)
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'FAQ updated successfully')
@@ -348,7 +348,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/faqs/{$faq->id}")
+            deleteJson("/api/academy/faqs/{$faq->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success')
                 ->assertJsonPath('message', 'FAQ deleted successfully');
@@ -366,11 +366,11 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->draftBootcamp->id
             ]);
 
-            getJson("/api/faqs/{$courseFaq->id}")
+            getJson("/api/academy/faqs/{$courseFaq->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $courseFaq->id);
 
-            getJson("/api/faqs/{$bootcampFaq->id}")
+            getJson("/api/academy/faqs/{$bootcampFaq->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $bootcampFaq->id);
         });
@@ -399,7 +399,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->otherBootcamp->id
             ]);
 
-            getJson('/api/faqs')
+            getJson('/api/academy/faqs')
                 ->assertOk();
         });
 
@@ -415,7 +415,7 @@ describe('faq crud api', function () {
                 ]
             ];
 
-            postJson('/api/faqs', $faqData)
+            postJson('/api/academy/faqs', $faqData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success');
         });
@@ -432,7 +432,7 @@ describe('faq crud api', function () {
                 ]
             ];
 
-            postJson('/api/faqs', $faqData)
+            postJson('/api/academy/faqs', $faqData)
                 ->assertCreated()
                 ->assertJsonPath('status', 'success');
         });
@@ -443,7 +443,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedCourse->id
             ]);
 
-            putJson("/api/faqs/{$faq->id}", [
+            putJson("/api/academy/faqs/{$faq->id}", [
                 'question' => 'Updated by instructor?',
                 'answer' => 'Yes, by instructor.'
             ])
@@ -462,7 +462,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedBootcamp->id
             ]);
 
-            putJson("/api/faqs/{$faq->id}", [
+            putJson("/api/academy/faqs/{$faq->id}", [
                 'question' => 'Updated bootcamp faq?',
                 'answer' => 'Yes, updated.'
             ])
@@ -476,7 +476,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/faqs/{$faq->id}")
+            deleteJson("/api/academy/faqs/{$faq->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success');
         });
@@ -492,7 +492,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedBootcamp->id
             ]);
 
-            deleteJson("/api/faqs/{$faq->id}")
+            deleteJson("/api/academy/faqs/{$faq->id}")
                 ->assertOk()
                 ->assertJsonPath('status', 'success');
         });
@@ -503,7 +503,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->otherCourse->id
             ]);
 
-            putJson("/api/faqs/{$faq->id}", [
+            putJson("/api/academy/faqs/{$faq->id}", [
                 'question' => 'Unauthorized?'
             ])
                 ->assertForbidden();
@@ -515,7 +515,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->otherBootcamp->id
             ]);
 
-            putJson("/api/faqs/{$faq->id}", [
+            putJson("/api/academy/faqs/{$faq->id}", [
                 'question' => 'Unauthorized?'
             ])
                 ->assertForbidden();
@@ -527,7 +527,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->otherCourse->id
             ]);
 
-            deleteJson("/api/faqs/{$faq->id}")
+            deleteJson("/api/academy/faqs/{$faq->id}")
                 ->assertForbidden();
         });
 
@@ -537,7 +537,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->otherBootcamp->id
             ]);
 
-            deleteJson("/api/faqs/{$faq->id}")
+            deleteJson("/api/academy/faqs/{$faq->id}")
                 ->assertForbidden();
         });
     });
@@ -561,7 +561,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedBootcamp->id
             ]);
 
-            getJson('/api/faqs')
+            getJson('/api/academy/faqs')
                 ->assertOk()
                 ->assertJsonCount(5, 'data');
         });
@@ -572,7 +572,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedCourse->id
             ]);
 
-            getJson("/api/faqs/{$faq->id}")
+            getJson("/api/academy/faqs/{$faq->id}")
                 ->assertOk()
                 ->assertJsonPath('data.id', $faq->id);
         });
@@ -583,12 +583,12 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->draftCourse->id
             ]);
 
-            getJson("/api/faqs/{$faq->id}")
+            getJson("/api/academy/faqs/{$faq->id}")
                 ->assertForbidden();
         });
 
         it('student cannot create faq', function () {
-            postJson('/api/faqs', [
+            postJson('/api/academy/faqs', [
                 'faqable_type' => 'App\\Models\\Course',
                 'faqable_id' => $this->publishedCourse->id,
                 'faqs' => [
@@ -607,7 +607,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedCourse->id
             ]);
 
-            putJson("/api/faqs/{$faq->id}", [
+            putJson("/api/academy/faqs/{$faq->id}", [
                 'question' => 'Unauthorized?'
             ])
                 ->assertForbidden();
@@ -619,7 +619,7 @@ describe('faq crud api', function () {
                 'faqable_id' => $this->publishedCourse->id
             ]);
 
-            deleteJson("/api/faqs/{$faq->id}")
+            deleteJson("/api/academy/faqs/{$faq->id}")
                 ->assertForbidden();
         });
     });

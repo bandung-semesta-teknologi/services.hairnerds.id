@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('barber', function (Blueprint $table) {
+        Schema::create('barbers', function (Blueprint $table) {
             $table->id();
-            $table->uuid('id_user')->nullable();
-            $table->foreignId('id_store')->constrained('store')->onDelete('cascade');
+            $table->foreignId('id_user')->nullable()->constrained('users')->onDelete('cascade');
+            $table->foreignId('id_store')->constrained('stores')->onDelete('cascade');
             $table->text('calendar_accesstoken')->nullable();
             $table->string('hairdnerds_calendarid')->nullable();
             $table->string('primary_calendarid')->nullable();
@@ -47,6 +47,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('barber');
+        Schema::dropIfExists('barbers');
     }
 };

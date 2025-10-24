@@ -1,65 +1,102 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api\Booking;
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Booking\ServiceCategoryStoreRequest;
+use App\Http\Requests\Booking\ServiceCategoryUpdateRequest;
+use App\Http\Resources\Booking\ServiceCategoryResource;
 use App\Models\ServiceCategory;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ServiceCategoryController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $serviceCategory = ServiceCategory::all();
+        $this->authorize('viewAny', ServiceCategory::class);
+
+        $categories = ServiceCategory::all();
+
+        return ServiceCategoryResource::collection($categories);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function store(ServiceCategoryStoreRequest $request)
     {
-        //
+        $this->authorize('create', ServiceCategory::class);
+
+        try {
+            $category = ServiceCategory::create($request->validated());
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Service category created successfully',
+                'data' => new ServiceCategoryResource($category)
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating service category: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create service category'
+            ], 500);
+        }
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function show(ServiceCategory $serviceCategory)
     {
-        //
+        $this->authorize('view', $serviceCategory);
+
+        return new ServiceCategoryResource($serviceCategory);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function update(ServiceCategoryUpdateRequest $request, ServiceCategory $serviceCategory)
     {
-        //
+        $this->authorize('update', $serviceCategory);
+
+        try {
+            $serviceCategory->update($request->validated());
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Service category updated successfully',
+                'data' => new ServiceCategoryResource($serviceCategory)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating service category: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update service category'
+            ], 500);
+        }
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function destroy(ServiceCategory $serviceCategory)
     {
-        //
-    }
+        $this->authorize('delete', $serviceCategory);
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
+        try {
+            if ($serviceCategory->services()->exists()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Cannot delete category with existing services'
+                ], 422);
+            }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+            $serviceCategory->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Service category deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error deleting service category: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete service category'
+            ], 500);
+        }
     }
 }
